@@ -2,6 +2,14 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.4.0 — Efeito de margem
+
+- Perto de uma margem, banco ou cais, a popa é sugada para ela e a proa é empurrada para fora. O efeito cresce com o quadrado da velocidade na água e com a pouca profundidade, e some com o navio parado ou no meio do canal.
+- O navio sonda a margem a 8, 20, 38 e 62 m de cada bordo, na proa e na popa; água com menos de duas vezes o calado já conta como margem.
+- O imediato avisa quando a sucção passa de 12 kN e lembra o remédio: leme para o lado da margem.
+- O prático mantém distância da margem rasa até a bacia do berço, usa toques de máquina para governar, chega mais devagar e, se a aproximação sair ruim, sai a ré e entra de novo.
+- 2 testes novos de física; as viagens com prático continuam atracando sem multas.
+
 ## v0.3.0 — Interface
 
 - Lista de passos da missão no canto da vista, com o passo atual em destaque e os concluídos marcados.

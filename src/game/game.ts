@@ -269,6 +269,10 @@ export class Game {
     if (this.status !== 'running') return;
 
     stepShip(s, p, env, DT, ext);
+    if (Math.abs(s.bankForce) > 12e3 && this.mooring <= 0) {
+      const bb = s.bankForce < 0;
+      this.say('Imediato', `Margem a ${bb ? 'bombordo' : 'boreste'} sugando a popa e jogando a proa para ${bb ? 'boreste' : 'bombordo'}. Leme para o lado da margem para segurar.`, 'warn', 'bank', 45);
+    }
     if (s.noAir) { this.say('Máquinas', 'Sem ar de partida! Aguardando os compressores.', 'bad', 'air', 25); this.trustEvent(-8, 'máquina sem ar de partida', 'air', 120); }
     else if (s.air < 2 && s.n === 0) this.say('Máquinas', `Ar de partida baixo: só ${Math.floor(s.air)} partida${s.air >= 2 ? 's' : ''}.`, 'warn', 'airlow', 60);
 

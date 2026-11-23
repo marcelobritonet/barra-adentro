@@ -31,7 +31,6 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 14 | Prático comandar os rebocadores | Hoje quem ordena é o comandante |
 | 15 | Calibrar rebocadores jogando | Empurrar a 25% por 45 s já encosta a 0,3 nó; ver se as potências fazem sentido |
 | 5 | Tráfego e interação entre navios | Inclui atracar a contrabordo |
-| 6 | Efeito de margem | |
 | 7 | Resto do canal de Santos | O mapa já tem as curvas; faltam berços e missões |
 | 8 | Oficina, tripulação e contratos | Parâmetros do navio já estão isolados em `makeCoaster` |
 | 9 | AIS e alvos de tráfego no radar | Depende do tráfego |
@@ -57,3 +56,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | Rebocadores de proa e popa por rádio, com 6 testes |
 | v0.2.0: impelidor de proa, doppler, radar, ECDIS, tela multifunção e painel sem rolagem |
 | v0.3.0: passos da missão, botões de câmera, ajuda, alertas nas abas, predefinições de equipamento |
+| v0.4.0: efeito de margem; prático refaz aproximação ruim |

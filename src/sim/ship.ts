@@ -53,6 +53,8 @@ export interface ShipState {
   thrusterOrder: number; // impelidor de proa, -1 (bombordo) a +1 (boreste)
   thruster: number;      // empuxo real, -1..1
   thrusterEff: number;   // quanto rende agora, 0..1 (cai com o seguimento)
+  bankSide: number;      // margem sentida: -1 toda a bombordo, +1 toda a boreste
+  bankForce: number;     // sucção lateral da margem, N (+ boreste)
   revTimer: number;
   rudder: number;       // ângulo real, rad
   rudderOrder: number;  // ordem, rad
@@ -99,7 +101,7 @@ export function makeState(x: number, y: number, psiDeg: number, speedKn = 0, tel
     x, y, psi: psiDeg * D2R, u: speedKn * KN, v: 0, r: 0,
     n: TELEGRAPH[telegraph], telegraph, revTimer: 0, rudder: 0, rudderOrder: 0,
     telAck: telegraph, ackTimer: 0, helmAck: 0, helmTimer: 0, air: 5, noAir: false, starts: 0, wearEngine: 0, wearRudder: 0,
-    thrusterOrder: 0, thruster: 0, thrusterEff: 1,
+    thrusterOrder: 0, thruster: 0, thrusterEff: 1, bankSide: 0, bankForce: 0,
     stw: speedKn * KN, sway: 0, depth: 99, squat: 0, ukc: 99,
     relWindDir: 0, relWindSpeed: 0, curE: 0, curN: 0,
   };
@@ -108,6 +110,21 @@ export function makeState(x: number, y: number, psiDeg: number, speedKn = 0, tel
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 function toward(v: number, target: number, step: number) {
   return v < target ? Math.min(target, v + step) : Math.max(target, v - step);
+}
+
+const BANK_D = [8, 20, 38, 62]; // distâncias do costado onde se sonda a margem, m
+/** Quanto de margem há a boreste menos a bombordo, numa seção do navio: -1 a +1. */
+function bankAsym(s: ShipState, p: ShipParams, env: Env, xf: number, sin: number, cos: number) {
+  const bx = s.x + xf * sin, by = s.y + xf * cos;
+  let a = 0, wsum = 0;
+  for (const d of BANK_D) {
+    const w = Math.exp(-d / (2 * p.B)), off = p.B / 2 + d;
+    // "parede": 1 se é terra ou muito raso, 0 se há o dobro do calado de água
+    const wall = (h: number) => clamp((2 * p.T - h) / (1.3 * p.T), 0, 1);
+    a += w * (wall(env.depth(bx + off * cos, by - off * sin)) - wall(env.depth(bx - off * cos, by + off * sin)));
+    wsum += w;
+  }
+  return a / wsum;
 }
 
 /** Afundamento dinâmico (Barrass), m. */
@@ -183,6 +200,13 @@ export function stepShip(s: ShipState, p: ShipParams, env: Env, dt: number, ext:
   const Yr = -1.3 * FN * cd;
   const Nr = 0.635 * L * FN * cd;
 
+  // --- efeito de margem: a água acelera entre o casco e a margem mais próxima.
+  // A popa é sugada para a margem e a proa é empurrada para fora (almofada de proa).
+  const aBow = bankAsym(s, p, env, 0.3 * L, sin, cos), aStern = bankAsym(s, p, env, -0.3 * L, sin, cos);
+  const Ybank = q * ur * ur * 0.03 * (0.7 * aStern + 0.3 * aBow) * (1 + 2 * k);
+  const Nbank = -q * L * ur * Math.abs(ur) * 0.006 * (aBow + aStern) / 2 * (1 + 2 * k);
+  s.bankSide = (aBow + aStern) / 2; s.bankForce = Ybank;
+
   // --- impelidor lateral de proa: só rende com o navio quase parado
   s.thruster = toward(s.thruster, clamp(s.thrusterOrder, -1, 1), 0.2 * dt);
   s.thrusterEff = clamp(1 - Math.abs(ur) / (4.5 * KN), 0, 1) ** 2;
@@ -199,8 +223,8 @@ export function stepShip(s: ShipState, p: ShipParams, env: Env, dt: number, ext:
   const Nw = Yw * p.xWind;
 
   const X = Xh + thrust + Xr + Xw + ext.X;
-  const Y = Yh + Ywalk + Yr + Yw + Ft + ext.Y;
-  const N = Nh + Nwalk + Nr + Nw + 0.42 * L * Ft + ext.N;
+  const Y = Yh + Ywalk + Yr + Yw + Ft + Ybank + ext.Y;
+  const N = Nh + Nwalk + Nr + Nw + 0.42 * L * Ft + Nbank + ext.N;
 
   const mxx = p.mass + p.mx, myy = p.mass + p.my * (1 + 2 * k);
   const du = (X + (p.mass + 0.25 * p.my) * s.v * r) / mxx; // parte da massa adicional é cancelada pelo casco (X_vr)

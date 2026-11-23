@@ -24,7 +24,7 @@ export class Pilot {
   tel = 4;           // ordem de máquina em vigor (índice do telégrafo)
   ready = false;     // já mandou passar as espias
   private lastHelm = -99; private lastTel = -99; private think = 0;
-  private final = false; private kick = 0;
+  private final = false; private kick = 0; private retry = false;
 
   get name() { return PILOTS[this.grade].label; }
 
@@ -64,18 +64,19 @@ export class Pilot {
       // rota em coordenadas do cais (a = ao longo, b = distância da face ao centro do navio):
       // sai do eixo, converge em ângulo raso e fica paralela só na hora de encostar
       const end = Q.fender + 7.5;
-      const path: [number, number][] = [[-800, 200], [-250, 55], [-20, end]];
-      const seg = (a: number) => (a < -250 ? 0 : 1);
+      // fica afastado da margem rasa até a bacia do berço: perto dela a proa é empurrada para fora
+      const path: [number, number][] = [[-800, 200], [-240, 78], [-15, end]];
+      const seg = (a: number) => (a < -240 ? 0 : 1);
       const pathB = (a: number) => {
-        if (a >= -20) return end;
+        if (a >= -15) return end;
         const [a0, b0] = path[seg(a)], [a1, b1] = path[seg(a) + 1];
         return b0 + (b1 - b0) * Math.max(0, (a - a0) / (a1 - a0));
       };
-      const slope = (a: number) => { if (a >= -20) return 0; const [a0, b0] = path[seg(a)], [a1, b1] = path[seg(a) + 1]; return (b1 - b0) / (a1 - a0); };
+      const slope = (a: number) => { if (a >= -15) return 0; const [a0, b0] = path[seg(a)], [a1, b1] = path[seg(a) + 1]; return (b1 - b0) / (a1 - a0); };
       const a = b.along, [, bc] = W.quayLocal(s.x, s.y);
       const qh = Math.atan2(Q.tx, Q.ty);
       const Lk = 160;
-      const lead = a + (this.grade === 'senior' ? 60 : 20);  // o bom prático já prepara a próxima pernada
+      const lead = a + (this.grade === 'senior' ? 110 : 80);  // o bom prático já prepara a próxima pernada
       const want = (Math.atan(slope(lead)) - Math.atan((bc - pathB(a)) / Lk)) * -1 * -1; // rumo desejado em relação ao cais (+ = abrindo)
       const dh = wrap(s.psi - qh);
       const track = (max: number) => Math.max(-max, Math.min(max, (wrap(want - dh) / D2R) * P.kp * 1.6 - (s.r / D2R) * P.kd));
@@ -90,8 +91,21 @@ export class Pilot {
         if (rem > 520) tel = 6;
         else if (rem > 260) tel = g.sog > 1.3 ? 4 : 5;
         else tel = g.sog < 0.4 ? 5 : g.sog > 0.6 ? 4 : this.tel === 5 ? 5 : 4;
+        // sem máquina o leme não governa: se o rumo está fugindo (a margem empurra a proa para fora), dá um toque adiante
+        const off = Math.abs(wrap(want - dh)) / D2R;
+        if (tel === 4 && off > 4 && rem > stopDist + 40) tel = 5;
+        if (off > 9 && rem > 150 && g.sog < 1.6) tel = 6;
+        if (rem < 140 && b.bow < 30 && g.sog > 0.5) tel = 2;     // chega devagar: o toque tem de ser macio
         if (rem < stopDist + 15) tel = u > 0.5 ? 2 : 4;
-        return [track(25), tel];
+        return [track(off > 6 ? 35 : 25), tel];
+      }
+      // chegou torto ou longe demais: sai a ré e aproxima de novo, em vez de insistir
+      if (!this.retry && Math.abs(u) < 0.25 && b.bow > 14) {
+        this.retry = true; g.say(this.name, 'Aproximação ruim. Vamos sair a ré e entrar de novo.', 'warn');
+      }
+      if (this.retry) {
+        if (a < -190 || bc > 160) { this.retry = false; this.final = false; return [0, 4]; }
+        return [0, u > -0.9 ? 2 : 4];
       }
       // junto ao berço
       if (inPos && bowIn && sternIn && g.sog < 0.25) {

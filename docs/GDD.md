@@ -68,7 +68,8 @@ Três graus de liberdade (avanço, deriva, guinada), passo fixo de 0,05 s, deter
 | Águas rasas | Mais resistência, curva mais larga, afundamento (squat) com a velocidade | Feito |
 | Ferro | Amarra em quartéis; unha conforme o filame; garra se o esforço passa do limite | Feito (simples) |
 | Defensas do cais | Mola e atrito; multa pela velocidade do toque | Feito |
-| Margem e interação entre navios | Sucção de popa junto à margem e a outro navio | A fazer |
+| Efeito de margem | Sucção da popa para a margem e proa empurrada para fora; cresce com o quadrado da velocidade e com a pouca água; sondado a até 62 m de cada bordo | Feito |
+| Interação entre navios | Sucção ao passar perto de outro navio | A fazer (depende do tráfego) |
 | Rebocadores | Forças externas na proa e na popa, com atraso | Feito |
 | Impelidor de proa | Força lateral na proa, com atraso e perda de rendimento com o seguimento | Feito |
 | Carga e lastro | Calado e área vélica mudam com a carga (`makeCoaster(load)`) | Parâmetro existe, sem uso no jogo |
@@ -88,6 +89,8 @@ Números do costeiro de 90 m carregado, medidos nos testes:
 | Depois de pôr o leme a meio, o navio ainda gira | 47° (é preciso quebrar a guinada com leme contrário) |
 | Só parando a máquina, até 1 nó | 24 comprimentos, 26 min |
 | Abatimento parado, vento de través de 20 nós | 0,8 nó |
+| Margem a 15 m do costado, a 6 nós | 39 kN de sucção e 6°/min de guinada para fora |
+| Impelidor de proa, navio parado | 34°/min; a 4 nós, quase nada |
 
 ## Confiança da tripulação
 

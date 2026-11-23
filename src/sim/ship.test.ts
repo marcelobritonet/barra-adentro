@@ -145,6 +145,29 @@ describe('costeiro de 90 m', () => {
     expect(Math.abs(f.r)).toBeLessThan(s.r * 0.1);
   });
 
+  it('margem a boreste: suga o navio para ela e joga a proa para fora', () => {
+    const wall: Env = { depth: (x) => (x > 22 ? -2 : 20), current: () => [0, 0], windFrom: 0, windSpeed: 0 };
+    const s = makeState(0, 0, 0, 6, 7); run(s, wall, 20);
+    console.log('margem a 15 m, 6 nós: sucção', (s.bankForce / 1000).toFixed(0), 'kN; guinada', (s.r / D2R * 60).toFixed(0), '°/min; lado', s.bankSide.toFixed(2));
+    expect(s.bankSide).toBeGreaterThan(0.3);
+    expect(s.bankForce).toBeGreaterThan(5e3);   // puxa para boreste, para a margem
+    expect(s.r).toBeLessThan(-0.05 * D2R);       // proa foge para bombordo
+    const open = makeState(0, 0, 0, 6, 7); run(open, sea(), 20);
+    expect(Math.abs(open.r)).toBeLessThan(0.01 * D2R);
+  });
+
+  it('efeito de margem cresce com a velocidade e some com o navio parado ou no meio do canal', () => {
+    const wall: Env = { depth: (x) => (x > 32 ? -2 : 20), current: () => [0, 0], windFrom: 0, windSpeed: 0 };
+    const slow = makeState(0, 0, 0, 3, 6), fast = makeState(0, 0, 0, 6, 7), still = makeState(0, 0, 0, 0, 4);
+    run(slow, wall, 1); run(fast, wall, 1); run(still, wall, 1);
+    expect(fast.bankForce).toBeGreaterThan(slow.bankForce * 3);
+    expect(still.bankForce).toBe(0);
+    const canal: Env = { depth: (x) => (Math.abs(x) > 32 ? -2 : 20), current: () => [0, 0], windFrom: 0, windSpeed: 0 };
+    const mid = makeState(0, 0, 0, 6, 7); run(mid, canal, 20);
+    expect(Math.abs(mid.bankSide)).toBeLessThan(0.01);
+    expect(Math.abs(mid.r)).toBeLessThan(0.01 * D2R);
+  });
+
   it('a corrente carrega o navio parado', () => {
     const env: Env = { depth: () => 200, current: () => [0.5, 0], windFrom: 0, windSpeed: 0 };
     const s = makeState(0, 0, 0, 0, 4);
