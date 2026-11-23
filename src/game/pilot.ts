@@ -1,0 +1,129 @@
+// Prático: só dá ordens. Quem executa é o comandante.
+import { D2R, KN } from '../sim/ship';
+import * as W from '../world/santos';
+import type { Game } from './game';
+
+export type PilotGrade = 'padrao' | 'senior';
+export const PILOTS = {
+  // look: quão longe olha à frente (m); kd: quanto antecipa a guinada; step: finura das ordens (graus); gap: intervalo mínimo entre ordens (s)
+  padrao: { label: 'Prático', fee: 2500, eta: 330, look: 320, kp: 1.4, kd: 46, step: 5, gap: 9 },
+  senior: { label: 'Prático sênior', fee: 5500, eta: 170, look: 360, kp: 1.5, kd: 52, step: 5, gap: 6 },
+};
+const TEL_PHRASE = [
+  'Toda força a ré', 'Meia força a ré', 'Devagar a ré', 'Muito devagar a ré', 'Para a máquina',
+  'Muito devagar adiante', 'Devagar adiante', 'Meia força adiante', 'Toda força adiante',
+];
+const helmPhrase = (d: number) => d === 0 ? 'Leme a meio' : Math.abs(d) >= 35 ? `Todo o leme a ${d < 0 ? 'bombordo' : 'boreste'}` : `${d < 0 ? 'Bombordo' : 'Boreste'} ${Math.abs(d)}`;
+const wrap = (a: number) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+
+export class Pilot {
+  state: 'none' | 'called' | 'aboard' = 'none';
+  grade: PilotGrade = 'padrao';
+  eta = 0;
+  helm = 0;          // ordem de leme em vigor, graus (+ boreste)
+  tel = 4;           // ordem de máquina em vigor (índice do telégrafo)
+  ready = false;     // já mandou passar as espias
+  private lastHelm = -99; private lastTel = -99; private think = 0;
+  private final = false; private kick = 0;
+
+  get name() { return PILOTS[this.grade].label; }
+
+  call(g: Game, grade: PilotGrade) {
+    this.state = 'called'; this.grade = grade; this.eta = PILOTS[grade].eta;
+    g.ledger.pilot = PILOTS[grade].fee;
+    g.say('Praticagem', `${this.name} a caminho, embarque em ${Math.round(this.eta / 60)} minutos. Mantenha no máximo 7 nós e fora da barra.`, 'info');
+  }
+
+  update(g: Game, dt: number) {
+    if (this.state === 'called') {
+      this.eta -= dt;
+      if (this.eta > 0) return;
+      if (g.sog > 7 * KN) return g.say('Lancha da praticagem', 'Reduza para 7 nós para o prático embarcar.', 'warn', 'board', 30);
+      this.state = 'aboard'; this.tel = g.s.telegraph; this.helm = Math.round(g.s.rudderOrder / D2R);
+      g.say(this.name, 'A bordo. Eu dou as ordens de leme e máquina; o senhor executa.', 'info');
+    }
+    if (this.state !== 'aboard' || g.scenario !== 'entrada') return;
+    this.think -= dt; this.kick -= dt;
+    if (this.think > 0) return;
+    this.think = 1;
+    const [helm, tel] = this.decide(g);
+    this.order(g, helm, tel);
+  }
+
+  private decide(g: Game): [number, number] {
+    const P = PILOTS[this.grade], s = g.s, Q = W.QUAY;
+    const n = W.nearest(s.x, s.y), ds = W.QUAY_S - n.s, b = g.berth();
+    const steer = (tx: number, ty: number, max: number) => {
+      const e = wrap(Math.atan2(tx - s.x, ty - s.y) - s.psi) / D2R;
+      return Math.max(-max, Math.min(max, e * P.kp - (s.r / D2R) * P.kd));
+    };
+    if (g.mooring > 0) return [0, 4];
+
+    // --- aproximação e atracação
+    if (ds < 800 || this.final) {
+      // rota em coordenadas do cais (a = ao longo, b = distância da face ao centro do navio):
+      // sai do eixo, converge em ângulo raso e fica paralela só na hora de encostar
+      const end = Q.fender + 7.5;
+      const path: [number, number][] = [[-800, 200], [-250, 55], [-20, end]];
+      const seg = (a: number) => (a < -250 ? 0 : 1);
+      const pathB = (a: number) => {
+        if (a >= -20) return end;
+        const [a0, b0] = path[seg(a)], [a1, b1] = path[seg(a) + 1];
+        return b0 + (b1 - b0) * Math.max(0, (a - a0) / (a1 - a0));
+      };
+      const slope = (a: number) => { if (a >= -20) return 0; const [a0, b0] = path[seg(a)], [a1, b1] = path[seg(a) + 1]; return (b1 - b0) / (a1 - a0); };
+      const a = b.along, [, bc] = W.quayLocal(s.x, s.y);
+      const qh = Math.atan2(Q.tx, Q.ty);
+      const Lk = 160;
+      const lead = a + (this.grade === 'senior' ? 60 : 20);  // o bom prático já prepara a próxima pernada
+      const want = (Math.atan(slope(lead)) - Math.atan((bc - pathB(a)) / Lk)) * -1 * -1; // rumo desejado em relação ao cais (+ = abrindo)
+      const dh = wrap(s.psi - qh);
+      const track = (max: number) => Math.max(-max, Math.min(max, (wrap(want - dh) / D2R) * P.kp * 1.6 - (s.r / D2R) * P.kd));
+      const u = s.u, rem = -a;                                 // quanto falta até o meio do berço
+      const stopDist = u > 0 ? u * 30 + u * u / 0.012 : 0;     // o navio é pesado: começa a parar cedo
+      const bowIn = b.bow <= 7, sternIn = b.stern <= 30, inPos = Math.abs(a) <= Q.berthHalf - 8;
+
+      if (!this.final) {
+        if (rem < 60 || (inPos && bowIn)) this.final = true;
+        // perfil de velocidade: chegar aos últimos 250 m com cerca de 1 nó no fundo
+        let tel: number;
+        if (rem > 520) tel = 6;
+        else if (rem > 260) tel = g.sog > 1.3 ? 4 : 5;
+        else tel = g.sog < 0.4 ? 5 : g.sog > 0.6 ? 4 : this.tel === 5 ? 5 : 4;
+        if (rem < stopDist + 15) tel = u > 0.5 ? 2 : 4;
+        return [track(25), tel];
+      }
+      // junto ao berço
+      if (inPos && bowIn && sternIn && g.sog < 0.25) {
+        if (!this.ready) { this.ready = true; g.say(this.name, 'Navio em posição. Pode passar as espias.', 'info'); }
+        return [0, 4];
+      }
+      if (rem < -15) return [0, u < -0.25 ? 4 : 3];                          // passou do berço: volta a ré
+      if (u > 0.15 && rem < stopDist + 8) return [0, u > 0.5 ? 1 : 2];        // quebra o seguimento a ré; o hélice puxa a popa para o cais
+      if (rem > 25) return [track(20), u < 0.35 ? 5 : 4];                     // falta avançar
+      if (!sternIn) return [0, u > -0.15 ? 1 : 4];                             // popa muito aberta: ré forte, o hélice puxa a popa para o cais
+      if (!bowIn) { if (this.kick <= -40) this.kick = 16; return [-35, this.kick > 0 ? 5 : 4]; } // proa aberta: toque de máquina com leme a bombordo
+      return [0, 4];
+    }
+
+    // --- canal: mira num ponto do eixo à frente e quebra a guinada antes
+    const [tx, ty] = W.pointAt(n.s + P.look);
+    let tel = n.s < W.S_MOUTH - 500 ? 7 : 6;
+    if (n.s >= W.S_MOUTH - 500 && g.sog > (W.SPEED_LIMIT_KN - 0.8) * KN) tel = 5;
+    return [steer(tx, ty, 25), tel];
+  }
+
+  private order(g: Game, helmRaw: number, tel: number) {
+    const P = PILOTS[this.grade];
+    const helm = Math.max(-35, Math.min(35, Math.round(helmRaw / P.step) * P.step)) || 0;
+    const urgent = Math.abs(helm - this.helm) >= 20 || this.final;
+    if (helm !== this.helm && (urgent || g.time - this.lastHelm >= P.gap)) {
+      this.helm = helm; this.lastHelm = g.time;
+      g.say(this.name, helmPhrase(helm) + '.', 'pilot');
+    }
+    if (tel !== this.tel && g.time - this.lastTel >= 4) {
+      this.tel = tel; this.lastTel = g.time;
+      g.say(this.name, TEL_PHRASE[tel] + '.', 'pilot');
+    }
+  }
+}

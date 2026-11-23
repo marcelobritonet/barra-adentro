@@ -1,0 +1,173 @@
+# Barra Adentro — documento de design (rascunho)
+
+Nome provisório. Simulador de entrada em canal e manobra de navio, em pixel art 3D isométrico. A graça é a **antecipação**: o navio responde devagar, então toda ordem precisa ser dada antes da hora.
+
+## Pilares
+
+| Pilar | O que significa |
+|---|---|
+| Antecipação | Ordem ≠ efeito. Máquina, leme e casco têm atraso. Quem reage, perde. |
+| Instrumentos mandam | Sem o equipamento, a informação não aparece na tela. |
+| Erro custa dinheiro | Multas, avarias e demora saem do frete. |
+| Progressão por peças | Oficina estilo Top Gear: cada peça muda a física ou a informação disponível. |
+
+## Loop
+
+Contrato de carga → chegada à barra → rádio (Capitania/VTS, prático, rebocadores) → fundeio ou entrada no canal → manobra → atracação → frete menos multas e custos → oficina e tripulação → contrato mais valioso e mais difícil.
+
+## Tela
+
+| Lado | Conteúdo |
+|---|---|
+| Esquerda | Mundo em isométrica pixelizada. Giro em passos de 90° e zoom. |
+| Direita | Passadiço: instrumentos e comandos. |
+
+A vista superior não é câmera do mundo: ela vive na carta (e depois no ECDIS e no radar, com os modos "norte para cima" e "proa para cima"). No protótipo há uma tecla de teste (T) só para comparar.
+
+## Porto: Santos
+
+Um porto só, aprofundado. A carta é uma aproximação estilizada (baía ao sul, barra entre a Ponta da Praia e o Guarujá, canal que guina para oeste); profundidades e bancos são do jogo, não de carta oficial.
+
+| Fase | Trecho | Desafio novo | Estado |
+|---|---|---|---|
+| 1 | Fundeadouro externo | Fundear: aproar ao vento, parar, largar o ferro | No protótipo |
+| 2 | Barra + primeiro trecho | Entrar alinhado, calado, limite de velocidade | No protótipo |
+| 3 | Duas curvas a bombordo | Antecipar a guinada e quebrá-la a tempo, com corrente | No protótipo |
+| 4 | Berço depois da segunda curva | Atracação por bombordo, sem rebocador | No protótipo |
+| 5 | Berço apertado no fundo | Prático, rebocadores, giro na bacia de evolução | A fazer |
+| 6 | Tráfego | Pedir a navio que saia/aguarde, cruzamento, a contrabordo | A fazer |
+
+## Física do navio
+
+Três graus de liberdade (avanço, deriva, guinada), passo fixo de 0,05 s, determinístico. Código em `src/sim/ship.ts`, testes em `src/sim/ship.test.ts`.
+
+| Efeito | Como entra | Estado |
+|---|---|---|
+| Inércia | Massa = deslocamento; massa adicional lateral e em guinada | Feito |
+| Ordens | A máquina leva 6 s e o timoneiro 2 s para começar a cumprir; a confiança da tripulação muda isso em ±30% | Feito |
+| Máquina | A rotação sobe e desce devagar: de parado a meia força leva 47 s, e de meia para toda força mais 60 s (programa de carga); inverter exige parar o motor (15 s) | Feito |
+| Ar de partida | Cada partida ou inversão gasta uma de 5 garrafadas de ar; os compressores repõem uma a cada 90 s; sem ar, a máquina não parte | Feito |
+| Desgaste | Variação de rotação, partidas e curso do leme viram custo no fim da viagem | Feito |
+| Leme | Gira a 1,8°/s (navio velho, uma bomba só); a força vem da água que passa por ele (seguimento + jato do hélice) | Feito |
+| Toque de máquina | Parado, leme carregado + máquina adiante gira o navio quase sem avançar | Feito |
+| Efeito do hélice | Em ré, a popa cai para bombordo (passo direito) | Feito |
+| Vento | Força na obra morta, com rajadas | Feito |
+| Corrente | Forças usam a velocidade na água; o odômetro não vê a corrente | Feito |
+| Águas rasas | Mais resistência, curva mais larga, afundamento (squat) com a velocidade | Feito |
+| Ferro | Amarra em quartéis; unha conforme o filame; garra se o esforço passa do limite | Feito (simples) |
+| Defensas do cais | Mola e atrito; multa pela velocidade do toque | Feito |
+| Margem e interação entre navios | Sucção de popa junto à margem e a outro navio | A fazer |
+| Rebocadores | Forças externas na proa e na popa, com atraso | Feito |
+| Thruster | Força lateral na proa | A fazer |
+| Carga e lastro | Calado e área vélica mudam com a carga (`makeCoaster(load)`) | Parâmetro existe, sem uso no jogo |
+
+Números do costeiro de 90 m carregado, medidos nos testes:
+
+| Medida | Valor |
+|---|---|
+| Velocidade a toda força / meia / devagar / muito devagar | 9,4 / 6,5 / 3,8 / 1,9 nós |
+| Diâmetro tático (leme 35°) | 3,8 comprimentos |
+| Diâmetro tático em água rasa (h = 1,25 T) | 5,1 comprimentos |
+| Parada com toda força ré, vindo de toda força | 7,0 comprimentos, 4 min |
+| De devagar (3,8 nós), parar com meia força ré | 250 m, 4 min |
+| Do repouso a 3 nós em meia força | 136 s |
+| Leme 10° em meia força: tempo até 63% da guinada | 59 s |
+| Leme 20° até guinar 30° | 89 s |
+| Depois de pôr o leme a meio, o navio ainda gira | 47° (é preciso quebrar a guinada com leme contrário) |
+| Só parando a máquina, até 1 nó | 24 comprimentos, 26 min |
+| Abatimento parado, vento de través de 20 nós | 0,8 nó |
+
+## Confiança da tripulação
+
+Uma medida só, de −100 a +100, que começa em 0 e persiste entre viagens. O comandante ganha e perde.
+
+| Tópico | Regra |
+|---|---|
+| Perde | Pouca água sob o casco (−3), excesso de velocidade (−2), ordens de máquina demais (−3), ré de emergência (−4), ferro garrando (−3), ficar sem ar (−8), boia (−8), encostar duro (−6), pancada no cais (−18), ferro perdido (−20), encalhe ou colisão (−30), atraso (−5) |
+| Ganha | Atracação macia (+8), entrada concluída (+15), fundeio concluído (+8), manobra sem nenhuma multa (+10) |
+| Efeito nas ordens | Atraso da máquina, do timoneiro e tempo de amarração multiplicados por 0,7 (confiança +100) a 1,3 (−100) |
+| Efeito nos avisos | Com confiança alta o imediato avisa pouca água mais cedo, avisa antes do limite de velocidade e a proa informa distâncias com mais frequência; com confiança baixa os avisos chegam em cima da hora ou não chegam |
+| Tom do rádio | Acima de +40: "…, comandante."; abaixo de −40: respostas secas e hesitantes |
+| Desembarque | Terminar uma viagem com −60 ou menos: o timoneiro vai embora (R$ 6.000) e a confiança volta para −30 |
+| A fazer | Quando houver contratação: tripulantes bons e caros também desembarcam, e cada um tolera um nível diferente |
+
+## Passadiço
+
+| Instrumento | Para que serve | Disponível | Estado |
+|---|---|---|---|
+| Timão + indicador de ângulo do leme | Ordem ≠ ângulo real | Início | Feito |
+| Telégrafo + tacômetro | Ordem ≠ rotação real | Início | Feito |
+| Agulha | Rumo, com um pouco de atraso | Início | Feito |
+| Odômetro | Velocidade na água, só avanço | Início | Feito |
+| Ecobatímetro | Menor água sob o casco (proa, popa e bordos), traço e alarme | Início | Feito |
+| Anemômetro | Vento relativo | Início | Feito |
+| Carta de papel | Sem a posição do navio | Início | Feito |
+| Molinete | Largar e virar o ferro, escolher quartéis | Início | Feito |
+| Comunicações | Mensagens sobre a água, embaixo da tela do jogo; VHF com VTS e praticagem | Início | Feito |
+| GPS | Velocidade e rumo no fundo; posição na carta | Upgrade | Feito (chave de teste) |
+| Indicador de taxa de guinada | Antecipar o fim da curva | Upgrade | Feito (chave de teste) |
+| Radar / AIS | Tráfego, nevoeiro | Upgrade | A fazer |
+| ECDIS | Vetor de previsão, alarme de rota | Upgrade | A fazer |
+| Doppler de atracação | Velocidade lateral de proa e popa | Upgrade | A fazer |
+| Bow thruster | Controle lateral da proa | Upgrade | A fazer |
+
+Sem doppler, quem informa a distância ao cais é a proa, pelo rádio ("Proa a 12 m, popa a 30 m do cais").
+
+## Prático, rebocadores e rádio
+
+| Item | Estado |
+|---|---|
+| VTS: pedir entrada antes da barra (resposta em 20 s; cruzar sem autorização custa R$ 8.000 e confiança) | Feito |
+| Prático opcional, em dois níveis, que embarca depois de um tempo e só com o navio a até 7 nós | Feito |
+| Ordens do prático no rádio e num quadro do painel, em vermelho enquanto não cumpridas | Feito |
+| Amarração: basta a proa encostada (até 8 m) e a popa a até 35 m; os cabos trazem a popa | Feito |
+| Rebocadores de proa e de popa, chamados e comandados pelo rádio | Feito |
+| Pedir a navio que aguarde ou saia | A fazer |
+
+| Prático | Custo | Embarque | Diferença |
+|---|---|---|---|
+| Padrão | R$ 2.500 | 5,5 min | Ordens corretas, prepara a pernada seguinte mais tarde |
+| Sênior | R$ 5.500 | 3 min | Embarca antes e ordena mais cedo |
+
+| Rebocadores | Regra |
+|---|---|
+| Chamada | Um na proa (Tupi) e um na popa (Guará); R$ 1.800 de saída cada, mais R$ 60/min com cabo passado |
+| Chegada | 4 min; só operam da barra para dentro e só passam o cabo com o navio a até 5 nós; largam o cabo acima de 6,5 nós |
+| Ordens | Empurrar (leva para bombordo, para o cais), puxar (para boreste), parar; o de popa também segura o seguimento. Potência de 10, 25, 50 ou 100% |
+| Força | 120 kN cada (80 kN segurando); rendem menos com o navio andando e nada acima de 6 nós |
+| Atraso | 4 s para cumprir, a força sobe aos poucos, e trocar entre empurrar e puxar leva 15 s de reposicionamento |
+| O prático ainda não comanda os rebocadores | A fazer |
+
+Com um comandante que obedece na hora (teste automático), os dois atracam: o sênior em 56 min e o padrão em 59 min de jogo. A diferença entre eles ainda é pequena e precisa de calibragem.
+
+Ideias ainda não feitas:
+
+- O prático demora a embarcar; enquanto isso o jogador avança até o ponto de espera ou fundeia.
+- O prático **só dá ordens** ("leme 10 a boreste", "devagar adiante") e o jogador executa. Prático melhor (mais caro) ordena mais cedo e com mais precisão.
+- Rebocadores recebem ordens por rádio (empurrar/puxar, proa/popa, potência) e cobram por hora.
+- VHF por menu: pedir entrada, pedir a um navio que aguarde ou saia, avisar intenção.
+
+## Economia
+
+| Item | Protótipo | Ideia completa |
+|---|---|---|
+| Frete | R$ 28.000 (entrada), R$ 3.500 (fundeio) | Contratos por carga, prazo e risco |
+| Óleo | Proporcional ao cubo da rotação | Idem, por tipo de máquina |
+| Desgaste da máquina | R$ 350 por variação completa de rotação + R$ 120 por partida | Peças melhores desgastam menos |
+| Desgaste do leme | R$ 0,60 por grau de curso | Idem |
+| Demora | R$ 300/min além de 75 min (entrada) ou 40 min (fundeio) | Janela de maré e de berço |
+| Excesso de velocidade | R$ 40/s acima de 8 nós no canal | Limites por trecho |
+| Boia abalroada | R$ 2.500 | Idem |
+| Toque no cais | 0,3–0,6 nó: R$ 3.000; 0,6–1,2 nó: R$ 15.000; acima: fim de jogo | Avaria por zona do casco |
+| Ferro perdido | R$ 25.000 (largar acima de 3 nós) | Idem |
+| Encalhe / margem | R$ 45.000 / R$ 60.000, fim de jogo | Salvamento, vistoria, tempo parado |
+| Praticagem | R$ 2.500 ou R$ 5.500 | Por porte do navio |
+| Rebocadores | R$ 1.800 de saída + R$ 60/min com cabo, cada | Por hora e por potência |
+
+## Progressão (a fazer)
+
+| Eixo | Exemplos |
+|---|---|
+| Oficina | Máquina (resposta e potência), leme (área e velocidade), hélice, thruster, ferros, instrumentos |
+| Tripulação | Timoneiro (precisão do leme), chefe de máquinas (resposta), imediato (avisos mais cedo), marinheiros (tempo de amarração) |
+| Navios | Costeiro → graneleiro → porta-contêineres: mais frete, mais massa, mais calado, mais equipamento |

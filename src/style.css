@@ -1,0 +1,82 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #0b1016; color: #d8e2ea; font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; overflow: hidden; }
+#app { display: flex; height: 100%; }
+#world { flex: 1; position: relative; min-width: 0; background: #16304f; }
+#world > canvas { display: block; }
+#bigchart[hidden] { display: none; }
+#hud { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+#north { position: absolute; top: 12px; left: 12px; width: 44px; height: 44px; border-radius: 50%; background: #0b1016cc; border: 2px solid #d8e2ea; }
+#north span { position: absolute; left: 50%; top: 2px; transform: translateX(-50%); color: #ff5a4a; font-weight: 700; }
+#north::after { content: ''; position: absolute; left: 50%; top: 16px; width: 2px; height: 20px; background: #d8e2ea; transform: translateX(-50%); }
+#goal { position: absolute; top: 12px; left: 68px; right: 12px; background: #0b1016cc; padding: 6px 10px; border-left: 3px solid #ffe14a; max-width: 560px; }
+#keys { position: absolute; top: 64px; left: 12px; background: #0b101699; padding: 2px 8px; color: #9fb0bd; font-size: 11px; }
+#bigchart { position: absolute; z-index: 3; top: 50%; left: 50%; transform: translate(-50%, -50%); height: 94%; image-rendering: pixelated; border: 6px solid #e9dfc4; box-shadow: 0 8px 40px #000a; background: #e9dfc4; }
+
+#bridge { width: 440px; flex: none; background: #1a2026; border-left: 4px solid #0b0e12; padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; gap: 8px; }
+.inst { background: #10151a; border: 2px solid #2c363f; border-radius: 4px; padding: 6px; flex: 1; min-width: 0; box-shadow: inset 0 0 0 1px #05080b; }
+.inst h4 { margin: 0 0 4px; font-size: 10px; letter-spacing: 1px; color: #7f93a3; font-weight: 600; text-transform: uppercase; }
+.inst canvas { display: block; margin: 0 auto; }
+.big { font-size: 22px; color: #ffd76a; font-weight: 700; letter-spacing: 1px; }
+.unit { font-size: 10px; color: #7f93a3; }
+.dim { color: #5d6d7a; }
+.lcd { background: #0a1410; border: 1px solid #1e3a2c; color: #7dffb0; padding: 4px 6px; border-radius: 2px; margin-bottom: 4px; }
+.lcd .big { color: #7dffb0; }
+.lcd.off { color: #2f4a3c; } .lcd.off .big { color: #2f4a3c; }
+button, select { font: inherit; color: #d8e2ea; background: #2a333c; border: 1px solid #45525e; border-radius: 3px; padding: 4px 8px; cursor: pointer; }
+button:hover { background: #36424d; }
+button.on { background: #b8860b; border-color: #ffd76a; color: #10151a; font-weight: 700; }
+button.danger { background: #6b2a22; border-color: #b04a3d; }
+#telegraph { display: flex; flex-direction: column-reverse; gap: 2px; }
+#telegraph button { padding: 3px 4px; font-size: 10px; text-align: left; position: relative; }
+#telegraph button.ahead { border-left: 4px solid #2fb85a; } #telegraph button.astern { border-left: 4px solid #e23b3b; } #telegraph button.stop { border-left: 4px solid #d8e2ea; }
+#helm { width: 100%; accent-color: #ffd76a; }
+#helmrow { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
+#helmrow button { padding: 2px 6px; }
+#topbar { display: flex; gap: 4px; align-items: center; }
+#clock { flex: 1; }
+label.sw { display: flex; gap: 6px; align-items: center; cursor: pointer; margin: 2px 0; }
+
+#overlay { position: fixed; inset: 0; background: #060a0ee0; display: flex; align-items: center; justify-content: center; z-index: 10; }
+#overlay[hidden] { display: none; }
+.card { background: #1a2026; border: 2px solid #45525e; border-radius: 6px; padding: 22px 26px; width: min(680px, 92vw); max-height: 92vh; overflow: auto; }
+.card h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: 3px; color: #ffd76a; }
+.card h2 { margin: 0 0 6px; font-size: 20px; }
+.card p { color: #a9b8c4; margin: 6px 0 12px; }
+.card table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+.card td { padding: 4px 6px; border-bottom: 1px solid #2c363f; }
+.card td:last-child { text-align: right; white-space: nowrap; }
+.card kbd { background: #2a333c; border: 1px solid #45525e; border-radius: 3px; padding: 0 5px; color: #ffd76a; }
+.card .choices { display: flex; gap: 10px; margin: 14px 0; }
+.card .choices button { flex: 1; padding: 12px; text-align: left; font-size: 13px; }
+.card .choices small { display: block; color: #9fb0bd; margin-top: 4px; font-size: 11px; }
+.pos { color: #7dffb0; } .neg { color: #ff7a6a; }
+.total td { font-size: 16px; font-weight: 700; border-top: 2px solid #45525e; border-bottom: none; }
+
+button.pending { animation: blink 0.4s steps(2) infinite; border-color: #ffd76a; }
+@keyframes blink { 50% { background: #6b5410; } }
+#air { font-size: 14px; letter-spacing: 2px; }
+
+#trustbar { position: relative; height: 10px; background: #05080b; border: 1px solid #2c363f; border-radius: 2px; }
+#trustbar i { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: #d8e2ea; z-index: 1; }
+#trustbar b { position: absolute; top: 0; bottom: 0; transition: all 0.4s; }
+#trustnote { float: right; letter-spacing: 0; text-transform: none; font-size: 11px; }
+
+/* comunicações sobre a água, embaixo da tela do jogo */
+#log { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
+#log div { background: #0b1016d9; padding: 4px 10px; border-left: 3px solid #45525e; width: fit-content; max-width: 100%; opacity: 0.55; }
+#log div:nth-last-child(-n+3) { opacity: 0.8; }
+#log div:last-child { opacity: 1; font-size: 16px; border-left-color: #d8e2ea; }
+#log div b { color: #8fb8d8; } #log .t { color: #7f93a3; font-size: 11px; }
+#log .warn { color: #ffcf6a; border-left-color: #ffcf6a; } #log .bad { color: #ff7a6a; border-left-color: #ff7a6a; }
+#log .pilot { color: #7dffb0; border-left-color: #7dffb0; font-weight: 700; } #log .pilot b { color: #7dffb0; }
+#vhf { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
+#vhf button { flex: 1; font-size: 11px; white-space: nowrap; }
+button:disabled { opacity: 0.55; cursor: default; }
+#pilotbox .big { font-size: 20px; } #pilotbox .neg { color: #ff7a6a; }
+
+.tug { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; margin: 3px 0; }
+.tug button, .tug select { padding: 2px 5px; font-size: 11px; }
+.tugname { width: 78px; } .tugname b { color: #ffd76a; }
+.tugst { color: #7dffb0; font-size: 11px; flex-basis: 100%; padding-left: 81px; }
+#tugbox h4 { letter-spacing: 0; }

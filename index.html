@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Barra Adentro</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="world">
+      <div id="hud">
+        <div id="north"><span>N</span></div>
+        <div id="goal"></div>
+        <div id="keys">Q/E gira a vista · Z/X zoom · T vista superior (teste) · C carta</div>
+        <div id="log"></div>
+      </div>
+      <canvas id="bigchart" hidden></canvas>
+    </div>
+    <aside id="bridge"></aside>
+  </div>
+  <div id="overlay"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
