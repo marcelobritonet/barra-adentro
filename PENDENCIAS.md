@@ -8,7 +8,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 |---|---|---|---|
 | 1 | Porto | Santos | Usado no protótipo; falta confirmar |
 | 2 | Nome do jogo | "Barra Adentro" | Provisório |
-| 3 | Onde mora o projeto | `~/WebstormProjects/barra-adentro` | Decidido; git local, uma tag por entrega |
+| 3 | Onde mora o projeto | `~/WebstormProjects/barra-adentro` | Decidido; git com remoto no GitHub, uma tag e uma release por entrega |
 | 4 | Idioma | Português, termos náuticos reais | Usado no protótipo; falta confirmar |
 | 5 | Controles | Teclado + mouse; toque depois | Usado no protótipo; falta confirmar |
 | 6 | Câmera | Isométrica com giro de 90°; superior só na carta | Decidido; tecla T existe para comparar jogando |
@@ -18,7 +18,8 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 11 | Valores da confiança | Tabela no GDD | Implementado; calibrar jogando |
 | 9 | Canal mais estreito ou corrente mais forte | Só se as curvas ainda parecerem fáceis | Em aberto |
 | 12 | Validar a interface jogando | Passada feita na v0.3.0; falta a sua revisão: o que está pequeno, escondido ou confuso | Em aberto |
-| 13 | Onde publicar as releases | Hoje há tags locais e CHANGELOG; release de verdade precisa de um repositório remoto | Em aberto |
+| 13 | Onde publicar as releases | github.com/marcelobritonet/barra-adentro (público) | Decidido; v0.1.0 a v0.5.0 publicadas |
+| 14 | Publicar o jogo em produção | GitHub Pages a partir do build, a cada release | Em aberto |
 
 ## A fazer
 
