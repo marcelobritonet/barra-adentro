@@ -124,3 +124,7 @@ label.sw { margin: 5px 0; }
 #help .cols { display: flex; gap: 40px; flex-wrap: wrap; }
 .tabs button.alert { border-color: #ffcf6a; color: #ffcf6a; animation: blink 0.8s steps(2) infinite; }
 .card .preset { display: flex; gap: 6px; align-items: center; margin: 8px 0; }
+
+#tidebox { flex: none; padding: 3px 8px; font-size: 11px; color: #9fd0e8; white-space: nowrap; overflow: hidden; }
+#tidebox b { color: #7f93a3; font-size: 10px; letter-spacing: 1px; margin-right: 4px; }
+.card .preset small { color: #9fb0bd; }

@@ -25,6 +25,8 @@ export class Pilot {
   ready = false;     // já mandou passar as espias
   private lastHelm = -99; private lastTel = -99; private think = 0;
   private final = false; private kick = 0; private retry = false;
+  /** Recusou atracar com corrente a favor; volta a orientar quando a maré virar. */
+  declined = false;
 
   get name() { return PILOTS[this.grade].label; }
 
@@ -59,6 +61,24 @@ export class Pilot {
     };
     if (g.mooring > 0) return [0, 4];
 
+    // --- com corrente a favor não se atraca: o navio não para nem governa. Espera a maré virar.
+    if (ds < 1000 && !this.final && g.mooring <= 0) {
+      if (g.tide.flow < -0.1 && !this.declined) {
+        this.declined = true;
+        g.say(this.name, `Corrente a favor no berço: assim eu não atraco. Tire o seguimento, largue o ferro e aguarde a maré virar, em ${Math.round(g.tide.toSlack / 60)} min. Se quiser atracar agora, é por sua conta, com rebocadores.`, 'warn');
+      }
+      if (this.declined) {
+        const anchored = g.anchor.state === 'down' || g.anchor.state === 'heaving';
+        if (g.tide.flow > 0.12 && !anchored && b.along < -200) {
+          this.declined = false;
+          g.say(this.name, 'A maré virou, corrente pela proa. Vamos atracar.', 'info');
+        } else {
+          if (g.tide.flow > 0.12 && anchored) g.say(this.name, 'A maré virou. Suspenda o ferro e eu levo o navio ao berço.', 'info', 'pilotheave', 120);
+          return [0, anchored ? 4 : s.u > 0.25 ? 2 : s.u < -0.25 ? 5 : 4]; // só segura o navio
+        }
+      }
+    }
+
     // --- aproximação e atracação
     if (ds < 800 || this.final) {
       // rota em coordenadas do cais (a = ao longo, b = distância da face ao centro do navio):
@@ -77,7 +97,8 @@ export class Pilot {
       const qh = Math.atan2(Q.tx, Q.ty);
       const Lk = 160;
       const lead = a + (this.grade === 'senior' ? 110 : 80);  // o bom prático já prepara a próxima pernada
-      const want = (Math.atan(slope(lead)) - Math.atan((bc - pathB(a)) / Lk)) * -1 * -1; // rumo desejado em relação ao cais (+ = abrindo)
+      // rumo desejado em relação ao cais (+ = abrindo); nunca aponta de frente para o cais
+      const want = Math.max(-24 * D2R, Math.min(18 * D2R, Math.atan(slope(lead)) - Math.atan((bc - pathB(a)) / Lk)));
       const dh = wrap(s.psi - qh);
       const track = (max: number) => Math.max(-max, Math.min(max, (wrap(want - dh) / D2R) * P.kp * 1.6 - (s.r / D2R) * P.kd));
       const u = s.u, rem = -a;                                 // quanto falta até o meio do berço
@@ -86,11 +107,13 @@ export class Pilot {
 
       if (!this.final) {
         if (rem < 60 || (inPos && bowIn)) this.final = true;
-        // perfil de velocidade: chegar aos últimos 250 m com cerca de 1 nó no fundo
-        let tel: number;
-        if (rem > 520) tel = 6;
-        else if (rem > 260) tel = g.sog > 1.3 ? 4 : 5;
-        else tel = g.sog < 0.4 ? 5 : g.sog > 0.6 ? 4 : this.tel === 5 ? 5 : 4;
+        // perfil de velocidade NO FUNDO: com corrente a favor ou parada, a mesma máquina dá muito mais seguimento
+        const vT = rem > 520 ? 1.5 : rem > 260 ? 1.0 : 0.55;
+        let tel = this.tel < 4 && g.sog <= vT + 0.15 ? 4 : this.tel;
+        if (g.sog > vT + 0.5) tel = 2;
+        else if (g.sog > vT + 0.15) tel = Math.min(tel, 4);
+        else if (g.sog < vT - 0.15) tel = vT > 1.2 ? 6 : 5;
+        else if (tel > 5) tel = 5;
         // sem máquina o leme não governa: se o rumo está fugindo (a margem empurra a proa para fora), dá um toque adiante
         const off = Math.abs(wrap(want - dh)) / D2R;
         if (tel === 4 && off > 4 && rem > stopDist + 40) tel = 5;
@@ -105,14 +128,14 @@ export class Pilot {
       }
       if (this.retry) {
         if (a < -190 || bc > 160) { this.retry = false; this.final = false; return [0, 4]; }
-        return [0, u > -0.9 ? 2 : 4];
+        return [0, u > -0.9 ? (u > 0 ? 1 : 2) : 4];
       }
       // junto ao berço
       if (inPos && bowIn && sternIn && g.sog < 0.25) {
         if (!this.ready) { this.ready = true; g.say(this.name, 'Navio em posição. Pode passar as espias.', 'info'); }
         return [0, 4];
       }
-      if (rem < -15) return [0, u < -0.25 ? 4 : 3];                          // passou do berço: volta a ré
+      if (rem < -15) return [0, u < -0.3 ? 4 : u > 0.1 ? 1 : 2];             // passou do berço: volta a ré, com força se a corrente empurra
       if (u > 0.15 && rem < stopDist + 8) return [0, u > 0.5 ? 1 : 2];        // quebra o seguimento a ré; o hélice puxa a popa para o cais
       if (rem > 25) return [track(20), u < 0.35 ? 5 : 4];                     // falta avançar
       if (!sternIn) return [0, u > -0.15 ? 1 : 4];                             // popa muito aberta: ré forte, o hélice puxa a popa para o cais
@@ -123,7 +146,8 @@ export class Pilot {
     // --- canal: mira num ponto do eixo à frente e quebra a guinada antes
     const [tx, ty] = W.pointAt(n.s + P.look);
     let tel = n.s < W.S_MOUTH - 500 ? 7 : 6;
-    if (n.s >= W.S_MOUTH - 500 && g.sog > (W.SPEED_LIMIT_KN - 0.8) * KN) tel = 5;
+    if (n.s >= W.S_MOUTH - 500 && g.sog > 6 * KN) tel = 5;       // folga do limite de 8 nós, mesmo com a corrente a favor
+    if (ds < 1900 && g.sog > 1.6) tel = g.sog > 2.4 ? 2 : g.sog > 1.9 ? 4 : 5; // já vai tirando seguimento para o berço
     return [steer(tx, ty, 25), tel];
   }
 

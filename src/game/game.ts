@@ -6,6 +6,7 @@ import {
 import * as W from '../world/santos';
 import { Pilot, PilotGrade, PILOTS } from './pilot';
 import { makeTugs, TugMode } from './tugs';
+import { Tide, tideAt, TidePreset, tideText } from '../world/tide';
 
 export type Scenario = 'entrada' | 'fundeio';
 export interface Msg { t: number; text: string; level: 'info' | 'warn' | 'bad' | 'pilot'; who: string }
@@ -31,6 +32,8 @@ export class Game {
   time = 0; warp = 1; paused = false;
   status: 'menu' | 'running' | 'done' = 'menu';
   scenario: Scenario = 'entrada';
+  tidePreset: TidePreset = 'vazante';
+  tide: Tide = tideAt(0, 'vazante');
   equip = { gps: false, rot: false, radar: false, ecdis: false, doppler: false, thruster: false };
   shackles = 4;
   msgs: Msg[] = [];
@@ -59,7 +62,12 @@ export class Game {
   private windBase = 7; private windFromBase = 160 * D2R;
 
   constructor() {
-    this.env = { depth: W.depth, current: (x, y) => W.current(x, y, 1), windFrom: this.windFromBase, windSpeed: this.windBase };
+    // a carta dá a profundidade na baixa-mar de referência; a maré soma água por cima
+    this.env = {
+      depth: (x, y) => { const d = W.depth(x, y); return d > 0 ? d + this.tide.height : d; },
+      current: (x, y) => W.current(x, y, this.tide.flow),
+      windFrom: this.windFromBase, windSpeed: this.windBase,
+    };
   }
 
   start(sc: Scenario) {
@@ -73,6 +81,7 @@ export class Game {
       this.s = makeState(-700, -5100, 320, 5, 6);
     }
     this.anchor = makeAnchor();
+    this.tide = tideAt(0, this.tidePreset);
     this.time = 0; this.warp = 1; this.paused = false; this.acc = 0;
     this.msgs = []; this.result = null; this.hitBuoys.clear();
     this.ledger = { fuel: 0, speeding: 0, buoys: 0, contact: 0, anchor: 0, pilot: 0, vts: 0, tugs: 0 };
@@ -83,11 +92,12 @@ export class Game {
     this.trustStart = this.trust; this.trustNote = ''; this.trustNoteAt = -99; this.telTimes = [];
     this.baseAck = this.p.ackDelay; this.baseHelm = this.p.helmDelay;
     if (sc === 'entrada') {
-      this.say('Imediato', 'Maré vazante, vento sueste. Precisamos da autorização do VTS antes da barra. Prático é opcional: chame pelo rádio se quiser.', 'info');
+      this.say('Imediato', `Vento sueste. Maré: ${tideText(this.tide)}.`, 'info');
+      this.say('Imediato', 'Precisamos da autorização do VTS antes da barra. Prático é opcional: chame pelo rádio se quiser.', 'info');
       this.say('Imediato', 'Berço no cais de bombordo, depois da segunda curva. Calado 5,2 m. Temos ar para 5 partidas de máquina.', 'info');
     } else {
       this.say('Capitania', 'Berço ocupado. Fundeie no fundeadouro a noroeste e aguarde.', 'info');
-      this.say('Imediato', 'Fundo de 17 m. Sugiro 4 quartéis, aproado ao vento, quase parado.', 'info');
+      this.say('Imediato', `Fundo de 17 m na carta. Sugiro 4 quartéis, aproado ao vento, quase parado. Maré: ${tideText(this.tide)}.`, 'info');
     }
   }
 
@@ -206,6 +216,9 @@ export class Game {
   private tick() {
     const s = this.s, p = this.p, env = this.env;
     this.time += DT;
+    const flowBefore = this.tide.flow;
+    this.tide = tideAt(this.time, this.tidePreset);
+    if (flowBefore * this.tide.flow < 0) this.say('Imediato', `A maré virou: começa a ${this.tide.flow > 0 ? 'vazante' : 'enchente'}.`, 'warn');
     env.windSpeed = this.windBase * (1 + 0.2 * Math.sin(this.time / 37) + 0.1 * Math.sin(this.time / 11 + 1));
     env.windFrom = this.windFromBase + 8 * D2R * Math.sin(this.time / 53);
 
@@ -215,7 +228,7 @@ export class Game {
 
     if (this.vts === 'asked' && (this.vtsTimer -= DT) <= 0) {
       this.vts = 'ok';
-      this.say('Santos VTS', `Maré Mansa, entrada autorizada. Canal livre, limite de ${W.SPEED_LIMIT_KN} nós da barra para dentro.`, 'info');
+      this.say('Santos VTS', `Maré Mansa, entrada autorizada. Canal livre, limite de ${W.SPEED_LIMIT_KN} nós da barra para dentro. Maré ${tideText(this.tide)}.`, 'info');
     }
     this.pilot.update(this, DT);
 

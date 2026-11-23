@@ -64,7 +64,8 @@ Três graus de liberdade (avanço, deriva, guinada), passo fixo de 0,05 s, deter
 | Toque de máquina | Parado, leme carregado + máquina adiante gira o navio quase sem avançar | Feito |
 | Efeito do hélice | Em ré, a popa cai para bombordo (passo direito) | Feito |
 | Vento | Força na obra morta, com rajadas | Feito |
-| Corrente | Forças usam a velocidade na água; o odômetro não vê a corrente | Feito |
+| Corrente | Forças usam a velocidade na água; o odômetro não vê a corrente; muda e inverte com a maré | Feito |
+| Maré | Soma água à profundidade da carta | Feito |
 | Águas rasas | Mais resistência, curva mais larga, afundamento (squat) com a velocidade | Feito |
 | Ferro | Amarra em quartéis; unha conforme o filame; garra se o esforço passa do limite | Feito (simples) |
 | Defensas do cais | Mola e atrito; multa pela velocidade do toque | Feito |
@@ -91,6 +92,26 @@ Números do costeiro de 90 m carregado, medidos nos testes:
 | Abatimento parado, vento de través de 20 nós | 0,8 nó |
 | Margem a 15 m do costado, a 6 nós | 39 kN de sucção e 6°/min de guinada para fora |
 | Impelidor de proa, navio parado | 34°/min; a 4 nós, quase nada |
+
+## Marés
+
+| Tópico | Regra |
+|---|---|
+| Ciclo | Semidiurno, 2× mais rápido que o real: 6 h 12 min de jogo |
+| Altura | 0,1 m (baixa-mar) a 1,4 m (preamar) sobre o nível da carta; soma à profundidade em toda a água |
+| Corrente | Vazante com o nível caindo (contra quem entra), enchente com o nível subindo (a favor), com metade da força |
+| Condições no menu | Vazante (padrão), enchente, baixa-mar (vira para enchente em uns 16 min), preamar (corrente parada, começa a vazar) |
+| Informação | Faixa no painel, VTS ao autorizar, imediato quando vira |
+| Prático | Não atraca com corrente a favor: manda fundear e esperar a virada |
+| A fazer | Faixa entre-marés que seca, tábua de maré para planejar, prático que gira o navio para aproar a corrente |
+
+Estado do prático por maré, com comandante obediente (teste automático):
+
+| Maré | Resultado |
+|---|---|
+| Vazante | Atraca limpo em 56 min (sênior) e 59 min (padrão) |
+| Preamar | Atraca, mas em 84 min e com prejuízo: a manobra em corrente parada ainda é ruim |
+| Enchente e baixa-mar | Leva o navio inteiro até perto do berço e recusa atracar |
 
 ## Confiança da tripulação
 

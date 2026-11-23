@@ -2,6 +2,17 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.5.0 — Marés
+
+- Maré semidiurna que corre 2× mais rápido que a real (um ciclo em 6 h 12 min de jogo): numa viagem de 1 h a altura e a corrente mudam de verdade.
+- A altura da maré (0,1 a 1,4 m) soma água à profundidade da carta: na baixa-mar os bancos ficam mais perigosos.
+- A corrente acompanha a maré e inverte: vazante contra quem entra, enchente a favor (com metade da força). O navio fundeado gira quando ela vira.
+- Quatro condições no menu: vazante, enchente, baixa-mar e preamar.
+- Faixa de maré no painel: altura, tendência, corrente no canal e tempo até virar. O VTS informa a maré ao autorizar e o imediato avisa quando ela vira.
+- Com corrente a favor no berço o prático recusa atracar: manda tirar o seguimento, fundear e aguardar a virada, e retoma quando a corrente vier pela proa.
+- O prático passou a controlar a velocidade no fundo e nunca aponta de frente para o cais.
+- 4 testes de maré e 3 novos de prático.
+
 ## v0.4.0 — Efeito de margem
 
 - Perto de uma margem, banco ou cais, a popa é sugada para ela e a proa é empurrada para fora. O efeito cresce com o quadrado da velocidade na água e com a pouca profundidade, e some com o navio parado ou no meio do canal.

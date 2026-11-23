@@ -5,6 +5,7 @@ import { TUG_FEE, TUG_PER_MIN, TugMode } from '../game/tugs';
 import { SHACKLE } from '../sim/anchor';
 import { D2R, KN, TELEGRAPH, TELEGRAPH_LABELS, TELEGRAPH_STOP } from '../sim/ship';
 import * as W from '../world/santos';
+import { tideText } from '../world/tide';
 import { drawDoppler, Ecdis, ECDIS_SCALES, Radar, RADAR_RANGES } from './mfd';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -42,6 +43,7 @@ export class Panel {
         <button id="pause" title="Pausa (P)">Pausa</button>
         <div id="trustbox" title="Confiança da tripulação: muda a rapidez das ordens e os avisos"><span>Confiança <span id="trustnote"></span></span><div id="trustbar"><i></i><b id="trustfill"></b></div></div>
       </div>
+      <div class="inst" id="tidebox" title="A carta mostra a profundidade na baixa-mar de referência; a maré soma água por cima"><b>MARÉ</b> <span id="tide"></span></div>
       <div class="row">
         <div class="inst"><h4>Agulha</h4><canvas id="cCompass"></canvas></div>
         <div class="inst" style="flex:1.25">
@@ -189,6 +191,7 @@ export class Panel {
     $('trustnote').textContent = fresh ? g.trustNote : `${tr > 0 ? '+' : ''}${Math.round(tr)}`;
     $('trustnote').className = fresh ? (g.trustNote[0] === '▲' ? 'pos' : 'neg') : 'dim';
 
+    const tt = tideText(g.tide); if ($('tide').textContent !== tt) $('tide').textContent = tt;
     $('stw').textContent = (s.stw / KN).toFixed(1);
     const gps = $('gps'), hasPos = g.equip.gps || g.equip.ecdis;
     gps.classList.toggle('off', !hasPos);

@@ -34,7 +34,9 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 7 | Resto do canal de Santos | O mapa já tem as curvas; faltam berços e missões |
 | 8 | Oficina, tripulação e contratos | Parâmetros do navio já estão isolados em `makeCoaster` |
 | 9 | AIS e alvos de tráfego no radar | Depende do tráfego |
-| 10 | Maré (enchente/vazante) e noite/nevoeiro | A corrente já aceita o sentido da maré |
+| 10 | Noite e nevoeiro | O radar já existe para isso |
+| 16 | Prático na corrente parada e a favor | Na preamar ele atraca mal (84 min, prejuízo); na enchente recusa. Falta girar o navio para aproar a corrente ou comandar rebocadores |
+| 17 | Prazo da viagem conforme a maré | Hoje é fixo em 75 min; esperar a virada estoura o prazo |
 | 11 | Som | |
 
 ## Feito
@@ -57,3 +59,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.2.0: impelidor de proa, doppler, radar, ECDIS, tela multifunção e painel sem rolagem |
 | v0.3.0: passos da missão, botões de câmera, ajuda, alertas nas abas, predefinições de equipamento |
 | v0.4.0: efeito de margem; prático refaz aproximação ruim |
+| v0.5.0: marés (altura, corrente que inverte, 4 condições), prático recusa atracar com corrente a favor |

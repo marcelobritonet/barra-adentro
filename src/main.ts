@@ -5,6 +5,7 @@ import { D2R } from './sim/ship';
 import { KN } from './sim/ship';
 import * as W from './world/santos';
 import { buildGrid } from './world/santos';
+import { TIDE_PRESETS, TidePreset } from './world/tide';
 
 const game = new Game();
 const grid = buildGrid();
@@ -104,6 +105,8 @@ function menu() {
       <tr><td><kbd>Q</kbd> <kbd>E</kbd> <kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd></td><td>Girar a vista / zoom / carta</td></tr>
     </table>
     <p>Confiança da tripulação: <b>${sign(game.trust)}</b> (de −100 a +100). Ela muda a rapidez com que as ordens são cumpridas e o quanto a tripulação avisa. <button data-reset="1">Zerar</button></p>
+    <div class="preset">Maré: ${(Object.keys(TIDE_PRESETS) as TidePreset[]).map(k => `<button data-tide="${k}" class="${game.tidePreset === k ? 'on' : ''}">${TIDE_PRESETS[k].label}</button>`).join('')}</div>
+    <p class="dim" style="margin-top:0">${TIDE_PRESETS[game.tidePreset].hint} A maré corre 2× mais rápido que a real.</p>
     <div class="preset">Equipamentos de teste: <button data-eq="off" class="${Object.values(game.equip).some(Boolean) ? '' : 'on'}">Navio básico</button><button data-eq="on" class="${Object.values(game.equip).every(Boolean) ? 'on' : ''}">Tudo ligado</button><span class="dim">(radar, ECDIS, doppler, impelidor, GPS)</span></div>
     <p class="dim">Ajuda durante o jogo: tecla <kbd>H</kbd>. A carta é estilizada e não serve para navegação.</p>
   </div>`;
@@ -126,6 +129,7 @@ overlay.addEventListener('click', e => {
   if (b.dataset.menu) return menu();
   if (b.dataset.reset) { game.resetTrust(); return menu(); }
   if (b.dataset.eq) { setAllEquip(b.dataset.eq === 'on'); return menu(); }
+  if (b.dataset.tide) { game.tidePreset = b.dataset.tide as TidePreset; return menu(); }
   if (b.dataset.sc) {
     game.start(b.dataset.sc as Scenario);
     panel.reset(); overlay.hidden = true; shown = false; help.hidden = true;
