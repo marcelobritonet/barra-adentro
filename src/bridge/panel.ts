@@ -239,7 +239,14 @@ export class Panel {
     document.querySelectorAll<HTMLButtonElement>('[data-mfdz]').forEach(b => { b.disabled = this.mfd === 'carta'; });
 
     // --- abas de operação
-    document.querySelectorAll<HTMLElement>('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
+    const bk = g.scenario === 'entrada' ? g.berth() : null;
+    const alert: Record<string, boolean> = {
+      radio: g.scenario === 'entrada' && (g.vts === 'none' || (g.pilot.state === 'aboard' && (Math.round(s.rudderOrder / D2R) !== g.pilot.helm || s.telegraph !== g.pilot.tel))),
+      tugs: g.tugs.some(t => t.state === 'waiting'),
+      deck: g.anchor.dragging || (!!bk && Math.abs(bk.along) < 60 && bk.bow < 10 && g.mooring <= 0),
+      equip: false,
+    };
+    document.querySelectorAll<HTMLElement>('[data-tab]').forEach(b => { b.classList.toggle('on', b.dataset.tab === this.tab); b.classList.toggle('alert', alert[b.dataset.tab!] && b.dataset.tab !== this.tab); });
     document.querySelectorAll<HTMLElement>('[data-pane]').forEach(el => { el.style.display = el.dataset.pane === this.tab ? '' : 'none'; });
     document.querySelectorAll<HTMLInputElement>('[data-eq]').forEach(cb => { cb.checked = g.equip[cb.dataset.eq as keyof Game['equip']]; });
 

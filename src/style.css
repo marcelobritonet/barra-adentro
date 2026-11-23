@@ -8,8 +8,6 @@ html, body { margin: 0; height: 100%; background: #0b1016; color: #d8e2ea; font:
 #north { position: absolute; top: 12px; left: 12px; width: 44px; height: 44px; border-radius: 50%; background: #0b1016cc; border: 2px solid #d8e2ea; }
 #north span { position: absolute; left: 50%; top: 2px; transform: translateX(-50%); color: #ff5a4a; font-weight: 700; }
 #north::after { content: ''; position: absolute; left: 50%; top: 16px; width: 2px; height: 20px; background: #d8e2ea; transform: translateX(-50%); }
-#goal { position: absolute; top: 12px; left: 68px; right: 12px; background: #0b1016cc; padding: 6px 10px; border-left: 3px solid #ffe14a; max-width: 560px; }
-#keys { position: absolute; top: 64px; left: 12px; background: #0b101699; padding: 2px 8px; color: #9fb0bd; font-size: 11px; }
 #bigchart { position: absolute; z-index: 3; top: 50%; left: 50%; transform: translate(-50%, -50%); height: 94%; image-rendering: pixelated; border: 6px solid #e9dfc4; box-shadow: 0 8px 40px #000a; background: #e9dfc4; }
 
 #bridge { width: 500px; flex: none; background: #1a2026; border-left: 4px solid #0b0e12; padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
@@ -101,7 +99,7 @@ button:disabled { opacity: 0.55; cursor: default; }
 label.sw { margin: 5px 0; }
 #berthbox { font-size: 11px; }
 /* ordens do prático sobre a vista */
-#pilothud { position: absolute; top: 96px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; background: #0b1016e6; border: 2px solid #7dffb0; padding: 6px 14px; font-size: 20px; font-weight: 700; white-space: nowrap; }
+#pilothud { position: absolute; top: 150px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; background: #0b1016e6; border: 2px solid #7dffb0; padding: 6px 14px; font-size: 20px; font-weight: 700; white-space: nowrap; }
 #pilothud[hidden] { display: none; }
 #pilothud small { font-size: 11px; font-weight: 400; color: #9fb0bd; text-transform: uppercase; letter-spacing: 1px; }
 #pilothud .ok { color: #7dffb0; } #pilothud .todo { color: #10151a; background: #ffcf6a; padding: 0 8px; animation: blink 0.5s steps(2) infinite; }
@@ -109,3 +107,20 @@ label.sw { margin: 5px 0; }
 #vhf button { white-space: normal; flex: none; }
 #ops .tabs button { padding: 3px 5px; }
 .inst h4 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- interface v0.3 */
+#mission { position: absolute; top: 12px; left: 68px; background: #0b1016d9; padding: 6px 10px; border-left: 3px solid #ffe14a; font-size: 12px; }
+#mission b { display: block; color: #ffe14a; letter-spacing: 1px; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
+#mission div { color: #7f93a3; } #mission .done { color: #7dffb0; } #mission .now { color: #fff; font-weight: 700; }
+#camctl { position: absolute; top: 12px; right: 12px; display: flex; gap: 3px; pointer-events: auto; }
+#camctl button { background: #0b1016d9; min-width: 30px; padding: 5px 8px; font-size: 13px; }
+#warpflag { position: absolute; top: 52px; right: 12px; background: #b8860b; color: #10151a; font-weight: 700; padding: 3px 10px; font-size: 14px; }
+#warpflag[hidden] { display: none; }
+#help { position: absolute; inset: 0; z-index: 4; background: #060a0ee6; padding: 24px 30px; overflow: auto; font-size: 13px; }
+#help[hidden] { display: none; }
+#help h2 { margin: 0 0 10px; color: #ffd76a; letter-spacing: 2px; } #help h3 { margin: 16px 0 6px; color: #8fb8d8; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+#help table { border-collapse: collapse; } #help td { padding: 3px 14px 3px 0; vertical-align: top; border-bottom: 1px solid #1f2a33; }
+#help kbd { background: #2a333c; border: 1px solid #45525e; border-radius: 3px; padding: 0 5px; color: #ffd76a; }
+#help .cols { display: flex; gap: 40px; flex-wrap: wrap; }
+.tabs button.alert { border-color: #ffcf6a; color: #ffcf6a; animation: blink 0.8s steps(2) infinite; }
+.card .preset { display: flex; gap: 6px; align-items: center; margin: 8px 0; }

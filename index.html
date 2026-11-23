@@ -11,12 +11,18 @@
     <div id="world">
       <div id="hud">
         <div id="north"><span>N</span></div>
-        <div id="goal"></div>
-        <div id="keys">Q/E gira a vista · Z/X zoom · T vista superior (teste) · C carta</div>
+        <div id="mission"></div>
+        <div id="camctl">
+          <button data-cam="rl" title="Girar a vista (Q)">⟲</button><button data-cam="rr" title="Girar a vista (E)">⟳</button>
+          <button data-cam="zi" title="Aproximar (Z)">+</button><button data-cam="zo" title="Afastar (X)">−</button>
+          <button data-cam="chart" title="Carta grande (C)">Carta</button><button data-cam="help" title="Ajuda (H)">?</button>
+        </div>
+        <div id="warpflag" hidden></div>
         <div id="pilothud" hidden></div>
         <div id="log"></div>
       </div>
       <canvas id="bigchart" hidden></canvas>
+      <div id="help" hidden></div>
     </div>
     <aside id="bridge"></aside>
   </div>

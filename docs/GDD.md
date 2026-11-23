@@ -17,6 +17,18 @@ Contrato de carga → chegada à barra → rádio (Capitania/VTS, prático, rebo
 
 ## Tela
 
+Estado atual da interface (v0.3.0):
+
+| Área | Conteúdo |
+|---|---|
+| Vista, canto superior esquerdo | Norte e lista de passos da missão |
+| Vista, canto superior direito | Girar, zoom, carta grande, ajuda; indicador de tempo acelerado |
+| Vista, centro alto | Faixa com as ordens do prático (amarelo piscando até cumprir) |
+| Vista, embaixo | As 6 últimas mensagens do rádio |
+| Painel, de cima para baixo | Relógio e confiança; agulha, velocidades e vento; leme, telégrafo e tacômetro; ecobatímetro, doppler e impelidor; tela multifunção e abas (rádio, rebocadores, convés, equipamentos) |
+
+O painel encolhe inteiro em janelas baixas, sem rolagem.
+
 | Lado | Conteúdo |
 |---|---|
 | Esquerda | Mundo em isométrica pixelizada. Giro em passos de 90° e zoom. |

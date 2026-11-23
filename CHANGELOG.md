@@ -2,6 +2,16 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.3.0 — Interface
+
+- Lista de passos da missão no canto da vista, com o passo atual em destaque e os concluídos marcados.
+- Botões de câmera (girar, zoom, carta) e ajuda (tecla H) com comandos e lembretes de manobra.
+- Abas de operação piscam quando pedem atenção: rádio (VTS pendente ou ordem do prático não cumprida), rebocadores (sem cabo), convés (ferro garrando ou proa encostada).
+- Aba Convés mostra a distância ao berço e o que falta para passar as espias.
+- Indicador de tempo acelerado e de pausa sobre a vista.
+- Menu com predefinições de equipamento ("navio básico" e "tudo ligado"); a escolha fica guardada entre partidas.
+- Conferido em 1440×900 e 1280×720, sem rolagem.
+
 ## v0.2.0 — Instrumentos
 
 - Impelidor de proa: 35 kN, sobe aos poucos e perde rendimento com o seguimento (nada acima de 4,5 nós). Teclas J, K, L.

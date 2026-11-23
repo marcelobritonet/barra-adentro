@@ -8,7 +8,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 |---|---|---|---|
 | 1 | Porto | Santos | Usado no protótipo; falta confirmar |
 | 2 | Nome do jogo | "Barra Adentro" | Provisório |
-| 3 | Onde mora o projeto | `~/WebstormProjects/barra-adentro` | Decidido; ainda sem controle de versão (git) |
+| 3 | Onde mora o projeto | `~/WebstormProjects/barra-adentro` | Decidido; git local, uma tag por entrega |
 | 4 | Idioma | Português, termos náuticos reais | Usado no protótipo; falta confirmar |
 | 5 | Controles | Teclado + mouse; toque depois | Usado no protótipo; falta confirmar |
 | 6 | Câmera | Isométrica com giro de 90°; superior só na carta | Decidido; tecla T existe para comparar jogando |
@@ -17,6 +17,8 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 10 | Peso do navio | Máquina 6 s + 47 s até meia força; leme 2 s + 1,8°/s | Segunda rodada de lentidão aplicada; confirmar se ainda parece arcade e em quê |
 | 11 | Valores da confiança | Tabela no GDD | Implementado; calibrar jogando |
 | 9 | Canal mais estreito ou corrente mais forte | Só se as curvas ainda parecerem fáceis | Em aberto |
+| 12 | Validar a interface jogando | Passada feita na v0.3.0; falta a sua revisão: o que está pequeno, escondido ou confuso | Em aberto |
+| 13 | Onde publicar as releases | Hoje há tags locais e CHANGELOG; release de verdade precisa de um repositório remoto | Em aberto |
 
 ## A fazer
 
@@ -54,3 +56,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | Mensagens sobre a água, embaixo da tela do jogo |
 | Rebocadores de proa e popa por rádio, com 6 testes |
 | v0.2.0: impelidor de proa, doppler, radar, ECDIS, tela multifunção e painel sem rolagem |
+| v0.3.0: passos da missão, botões de câmera, ajuda, alertas nas abas, predefinições de equipamento |
