@@ -1,13 +1,19 @@
 // Passadiço: instrumentos e comandos. Regra: sem o equipamento, a informação não aparece.
 import { Game } from '../game/game';
+import { PILOTS, PilotGrade } from '../game/pilot';
+import { TUG_FEE, TUG_PER_MIN, TugMode } from '../game/tugs';
 import { SHACKLE } from '../sim/anchor';
 import { D2R, KN, TELEGRAPH, TELEGRAPH_LABELS, TELEGRAPH_STOP } from '../sim/ship';
 import * as W from '../world/santos';
-import { PILOTS, PilotGrade } from '../game/pilot';
-import { TUG_FEE, TUG_PER_MIN, TugMode } from '../game/tugs';
+import { drawDoppler, Ecdis, ECDIS_SCALES, Radar, RADAR_RANGES } from './mfd';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const TAU = Math.PI * 2;
+const MFD = 236;
+type MfdMode = 'carta' | 'ecdis' | 'radar';
+const EQUIP: [keyof Game['equip'], string][] = [
+  ['gps', 'GPS'], ['rot', 'Indicador de guinada'], ['radar', 'Radar'], ['ecdis', 'ECDIS'], ['doppler', 'Doppler de atracação'], ['thruster', 'Impelidor de proa'],
+];
 
 function canvas(id: string, w: number, h: number) {
   const c = $<HTMLCanvasElement>(id);
@@ -19,85 +25,103 @@ const fmtTime = (t: number) => `${String(Math.floor(t / 3600)).padStart(2, '0')}
 const deg3 = (rad: number) => String(Math.round(((rad / D2R) % 360 + 360) % 360) % 360).padStart(3, '0');
 
 export class Panel {
-  private cCompass; private cRudder; private cRpm; private cWind; private cEcho; private cChart;
+  private cCompass; private cRudder; private cRpm; private cWind; private cEcho; private cDoppler; private cMfd;
   private big: HTMLCanvasElement;
-  private chartBase: HTMLCanvasElement;
   private echo: number[] = []; private echoT = 0;
   private hdgShown = 0; private logCount = -1;
+  private radar = new Radar(MFD); private ecdis: Ecdis;
+  mfd: MfdMode = 'carta'; tab = 'radio';
   bigChart = false;
 
-  constructor(private g: Game, chartBase: HTMLCanvasElement) {
-    this.chartBase = chartBase;
+  constructor(private g: Game, grid: Float32Array, private chartBase: HTMLCanvasElement) {
+    this.ecdis = new Ecdis(grid, g.p.T + 1.5);
     $('bridge').innerHTML = `
       <div id="topbar" class="inst">
         <div id="clock"></div>
-        ${[1, 2, 4, 8].map(w => `<button data-warp="${w}">${w}×</button>`).join('')}
-        <button id="pause">Pausa</button>
-      </div>
-      <div class="inst" id="trustbox"><h4>Confiança da tripulação <span id="trustnote"></span></h4><div id="trustbar"><i></i><b id="trustfill"></b></div></div>
-      <div class="inst" id="vhfbox"><h4>VHF</h4>
-        <div id="vhf">
-          <button id="vts">Santos VTS: pedir entrada</button>
-          <button data-pilot="padrao">Prático · R$ ${PILOTS.padrao.fee.toLocaleString('pt-BR')} · ${Math.round(PILOTS.padrao.eta / 60)} min</button>
-          <button data-pilot="senior">Prático sênior · R$ ${PILOTS.senior.fee.toLocaleString('pt-BR')} · ${Math.round(PILOTS.senior.eta / 60)} min</button>
-        </div>
-        <div class="lcd" id="pilotbox"></div>
-      </div>
-      <div class="inst" id="tugbox"><h4>Rebocadores · saída R$ ${TUG_FEE.toLocaleString('pt-BR')} + R$ ${TUG_PER_MIN}/min com cabo · empurrar leva para bombordo</h4>
-        ${g.tugs.map((t, i) => `<div class="tug" data-tug="${i}">
-          <span class="tugname"><b>${t.name}</b> ${t.where}</span>
-          <button data-tcall="1">Chamar</button>
-          <button data-tmode="push">◀ Empurrar</button><button data-tmode="stop">Parar</button><button data-tmode="pull">Puxar ▶</button>${i === 1 ? '<button data-tmode="brake">Segurar</button>' : ''}
-          <select data-tpow="1">${[10, 25, 50, 100].map(p => `<option value="${p / 100}" ${p === 25 ? 'selected' : ''}>${p}%</option>`).join('')}</select>
-          <span class="tugst"></span>
-        </div>`).join('')}
+        ${[1, 2, 4, 8].map(w => `<button data-warp="${w}" title="Acelerar o tempo (teclas 1 a 4)">${w}×</button>`).join('')}
+        <button id="pause" title="Pausa (P)">Pausa</button>
+        <div id="trustbox" title="Confiança da tripulação: muda a rapidez das ordens e os avisos"><span>Confiança <span id="trustnote"></span></span><div id="trustbar"><i></i><b id="trustfill"></b></div></div>
       </div>
       <div class="row">
         <div class="inst"><h4>Agulha</h4><canvas id="cCompass"></canvas></div>
-        <div class="inst" style="flex:1.1">
-          <h4>Odômetro (na água)</h4><div class="lcd"><span class="big" id="stw">0.0</span> <span class="unit">nós</span></div>
-          <h4>GPS</h4><div class="lcd" id="gps"></div>
+        <div class="inst" style="flex:1.25">
+          <h4>Odômetro, na água</h4><div class="lcd"><span class="big" id="stw">0.0</span> <span class="unit">nós</span></div>
+          <h4>GPS, no fundo</h4><div class="lcd" id="gps"></div>
           <h4>Taxa de guinada</h4><div class="lcd" id="rot"></div>
         </div>
         <div class="inst"><h4>Anemômetro</h4><canvas id="cWind"></canvas></div>
       </div>
       <div class="row">
-        <div class="inst" style="flex:1.5">
-          <h4>Leme: ordem e ângulo real</h4><canvas id="cRudder"></canvas>
+        <div class="inst" style="flex:1.6">
+          <h4>Leme (A D, espaço)</h4><canvas id="cRudder"></canvas>
           <input id="helm" type="range" min="-35" max="35" step="1" value="0" />
-          <div id="helmrow"><button data-helm="-35">BB 35</button><button data-helm="-10">BB 10</button><button data-helm="0">A MEIO</button><button data-helm="10">BE 10</button><button data-helm="35">BE 35</button></div>
+          <div id="helmrow"><button data-helm="-35">BB 35</button><button data-helm="-10">BB 10</button><button data-helm="0">MEIO</button><button data-helm="10">BE 10</button><button data-helm="35">BE 35</button></div>
         </div>
         <div class="inst">
-          <h4>Telégrafo de máquinas</h4>
+          <h4>Telégrafo (W S)</h4>
           <div id="telegraph">${TELEGRAPH_LABELS.map((l, i) => `<button data-tel="${i}" class="${i > TELEGRAPH_STOP ? 'ahead' : i < TELEGRAPH_STOP ? 'astern' : 'stop'}">${l}</button>`).join('')}</div>
         </div>
+        <div class="inst" style="flex:0.95"><h4>Tacômetro</h4><canvas id="cRpm"></canvas><h4 style="margin-top:6px">Ar de partida</h4><div class="lcd" id="air"></div></div>
       </div>
       <div class="row">
-        <div class="inst"><h4>Tacômetro</h4><canvas id="cRpm"></canvas><h4 style="margin-top:4px">Ar de partida</h4><div class="lcd" id="air"></div></div>
-        <div class="inst" style="flex:1.4"><h4>Ecobatímetro: menor água sob o casco</h4><canvas id="cEcho"></canvas></div>
-      </div>
-      <div class="row">
-        <div class="inst">
-          <h4>Carta (C amplia)</h4><canvas id="cChart"></canvas>
+        <div class="inst"><h4>Ecobatímetro</h4><canvas id="cEcho"></canvas></div>
+        <div class="inst"><h4>Doppler</h4><canvas id="cDoppler"></canvas></div>
+        <div class="inst" id="thrbox"><h4>Impelidor (J K L)</h4>
+          <div id="thrbar"><i></i><b id="thrfill"></b></div>
+          <div id="thrrow">${[[-1, '◀◀'], [-0.5, '◀'], [0, '0'], [0.5, '▶'], [1, '▶▶']].map(([v, l]) => `<button data-thr="${v}">${l}</button>`).join('')}</div>
+          <div class="unit" id="thrnote"></div>
         </div>
-        <div class="inst">
-          <h4>Molinete</h4>
-          <div class="lcd" id="anchor"></div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap">
-            <select id="shackles">${[2, 3, 4, 5, 6].map(n => `<option ${n === 4 ? 'selected' : ''} value="${n}">${n} quartéis</option>`).join('')}</select>
-            <button id="letgo" class="danger">Largar (F)</button><button id="heave">Virar (G)</button>
+      </div>
+      <div class="row" id="lower">
+        <div class="inst" id="mfd">
+          <div class="tabs">
+            <button data-mfd="carta">Carta</button><button data-mfd="ecdis">ECDIS</button><button data-mfd="radar">Radar</button>
+            <span class="sp"></span><button data-mfdz="-1" title="Afastar">−</button><button data-mfdz="1" title="Aproximar">+</button><button id="mfdmode" title="Norte ou proa para cima">N</button>
           </div>
-          <h4 style="margin-top:8px">Atracação</h4>
-          <button id="moor">Passar espias (M)</button>
-          <h4 style="margin-top:8px">Equipamentos (teste de upgrades)</h4>
-          <label class="sw"><input type="checkbox" id="eqGps"> GPS</label>
-          <label class="sw"><input type="checkbox" id="eqRot"> Indicador de guinada</label>
+          <canvas id="cMfd"></canvas>
+        </div>
+        <div class="inst" id="ops">
+          <div class="tabs"><button data-tab="radio">Rádio</button><button data-tab="tugs">Reboc.</button><button data-tab="deck">Convés</button><button data-tab="equip">Equip.</button></div>
+          <div class="tab" data-pane="radio">
+            <div id="vhf">
+              <button id="vts">Santos VTS: pedir entrada</button>
+              <button data-pilot="padrao">Prático · R$ ${PILOTS.padrao.fee.toLocaleString('pt-BR')} · ${Math.round(PILOTS.padrao.eta / 60)} min</button>
+              <button data-pilot="senior">Prático sênior · R$ ${PILOTS.senior.fee.toLocaleString('pt-BR')} · ${Math.round(PILOTS.senior.eta / 60)} min</button>
+            </div>
+            <div class="lcd" id="pilotbox"></div>
+            <div class="unit" id="radionote">O VTS autoriza a entrada. O prático é opcional e só dá ordens.</div>
+          </div>
+          <div class="tab" data-pane="tugs" style="display:none">
+            <div class="unit">Saída R$ ${TUG_FEE.toLocaleString('pt-BR')} + R$ ${TUG_PER_MIN}/min com cabo. Empurrar leva o navio para bombordo.</div>
+            ${g.tugs.map((t, i) => `<div class="tug" data-tug="${i}">
+              <div class="tugname"><b>${t.name}</b> · ${t.where} <span class="tugst"></span></div>
+              <button data-tcall="1">Chamar</button>
+              <button data-tmode="push">◀ Empurrar</button><button data-tmode="stop">Parar</button><button data-tmode="pull">Puxar ▶</button>${i === 1 ? '<button data-tmode="brake">Segurar</button>' : ''}
+              <select data-tpow="1">${[10, 25, 50, 100].map(p => `<option value="${p / 100}" ${p === 25 ? 'selected' : ''}>${p}%</option>`).join('')}</select>
+            </div>`).join('')}
+          </div>
+          <div class="tab" data-pane="deck" style="display:none">
+            <h4>Molinete</h4>
+            <div class="lcd" id="anchor"></div>
+            <div class="btnrow">
+              <select id="shackles">${[2, 3, 4, 5, 6].map(n => `<option ${n === 4 ? 'selected' : ''} value="${n}">${n} quartéis</option>`).join('')}</select>
+              <button id="letgo" class="danger">Largar (F)</button><button id="heave">Virar (G)</button>
+            </div>
+            <h4 style="margin-top:10px">Atracação</h4>
+            <div class="lcd" id="berthbox"></div>
+            <button id="moor">Passar espias (M)</button>
+          </div>
+          <div class="tab" data-pane="equip" style="display:none">
+            <div class="unit">Chaves de teste: ligam equipamentos que serão upgrades.</div>
+            ${EQUIP.map(([k, l]) => `<label class="sw"><input type="checkbox" data-eq="${k}"> ${l}</label>`).join('')}
+          </div>
         </div>
       </div>`;
 
-    this.cCompass = canvas('cCompass', 118, 118); this.cWind = canvas('cWind', 118, 118);
-    this.cRudder = canvas('cRudder', 220, 96); this.cRpm = canvas('cRpm', 150, 92);
-    this.cEcho = canvas('cEcho', 216, 92); this.cChart = canvas('cChart', 150, 245);
+    this.cCompass = canvas('cCompass', 112, 112); this.cWind = canvas('cWind', 112, 112);
+    this.cRudder = canvas('cRudder', 210, 92); this.cRpm = canvas('cRpm', 124, 78);
+    this.cEcho = canvas('cEcho', 150, 78); this.cDoppler = canvas('cDoppler', 140, 78);
+    this.cMfd = canvas('cMfd', MFD, MFD);
     this.big = $<HTMLCanvasElement>('bigchart'); this.big.width = 600; this.big.height = 980;
 
     const br = $('bridge');
@@ -106,6 +130,11 @@ export class Panel {
       if (t.dataset.tel) g.setTelegraph(+t.dataset.tel);
       if (t.dataset.helm) g.setRudderDeg(+t.dataset.helm);
       if (t.dataset.warp) g.warp = +t.dataset.warp;
+      if (t.dataset.thr) g.setThruster(+t.dataset.thr);
+      if (t.dataset.mfd) this.mfd = t.dataset.mfd as MfdMode;
+      if (t.dataset.mfdz) this.zoomMfd(+t.dataset.mfdz);
+      if (t.id === 'mfdmode') this.ecdis.headUp = !this.ecdis.headUp;
+      if (t.dataset.tab) this.tab = t.dataset.tab;
       if (t.id === 'pause') g.paused = !g.paused;
       if (t.id === 'letgo') g.letGoAnchor();
       if (t.id === 'heave') g.heaveAnchor();
@@ -126,15 +155,21 @@ export class Panel {
       if (t.mode === 'stop') t.power = +sel.value; else g.tugOrder(i, t.mode, +sel.value);
     }));
     $<HTMLSelectElement>('shackles').addEventListener('change', e => { g.shackles = +(e.target as HTMLSelectElement).value; });
-    $<HTMLInputElement>('eqGps').addEventListener('change', e => { g.equip.gps = (e.target as HTMLInputElement).checked; });
-    $<HTMLInputElement>('eqRot').addEventListener('change', e => { g.equip.rot = (e.target as HTMLInputElement).checked; });
+    br.querySelectorAll<HTMLInputElement>('[data-eq]').forEach(cb => cb.addEventListener('change', () => {
+      g.equip[cb.dataset.eq as keyof Game['equip']] = cb.checked;
+      if (cb.checked && (cb.dataset.eq === 'radar' || cb.dataset.eq === 'ecdis')) this.mfd = cb.dataset.eq;
+    }));
   }
 
-  reset() { this.echo = []; this.logCount = -1; this.hdgShown = this.g.s.psi; }
+  zoomMfd(d: number) {
+    if (this.mfd === 'radar') this.radar.rangeI = Math.max(0, Math.min(RADAR_RANGES.length - 1, this.radar.rangeI - d));
+    if (this.mfd === 'ecdis') this.ecdis.scaleI = Math.max(0, Math.min(ECDIS_SCALES.length - 1, this.ecdis.scaleI - d));
+  }
+  reset() { this.echo = []; this.logCount = -1; this.hdgShown = this.g.s.psi; this.radar.reset(); }
 
   update(dt: number) {
     const g = this.g, s = g.s, p = g.p;
-    $('clock').textContent = `${fmtTime(g.time)}  ${g.paused ? 'PAUSADO' : ''}`;
+    $('clock').textContent = `${fmtTime(g.time)}${g.paused ? ' PAUSA' : ''}`;
     document.querySelectorAll<HTMLElement>('[data-warp]').forEach(b => b.classList.toggle('on', +b.dataset.warp! === g.warp));
     $('pause').classList.toggle('on', g.paused);
     document.querySelectorAll<HTMLElement>('[data-tel]').forEach(b => {
@@ -143,7 +178,7 @@ export class Panel {
       b.classList.toggle('pending', i === s.telegraph && i !== s.telAck);
     });
     const full = Math.floor(s.air + 1e-6);
-    $('air').innerHTML = `<span class="${s.noAir ? 'neg' : ''}">${'●'.repeat(full)}${'○'.repeat(p.airStarts - full)}</span> ${s.noAir ? 'SEM AR' : s.n === 0 && s.revTimer > 0 && TELEGRAPH[s.telAck] !== 0 ? 'revertendo' : ''}`;
+    $('air').innerHTML = `<span class="${s.noAir ? 'neg' : ''}">${'●'.repeat(full)}${'○'.repeat(p.airStarts - full)}</span>${s.noAir ? ' SEM AR' : ''}`;
     const helm = $<HTMLInputElement>('helm');
     if (document.activeElement !== helm) helm.value = String(Math.round(s.rudderOrder / D2R));
 
@@ -155,11 +190,11 @@ export class Panel {
     $('trustnote').className = fresh ? (g.trustNote[0] === '▲' ? 'pos' : 'neg') : 'dim';
 
     $('stw').textContent = (s.stw / KN).toFixed(1);
-    const gps = $('gps');
-    gps.classList.toggle('off', !g.equip.gps);
-    gps.innerHTML = g.equip.gps
-      ? `<span class="big">${(g.sog / KN).toFixed(1)}</span> <span class="unit">nós no fundo</span><br>rumo no fundo ${g.sog > 0.1 ? deg3(g.cog) : '---'}°`
-      : `<span class="big">--.-</span><br>não instalado`;
+    const gps = $('gps'), hasPos = g.equip.gps || g.equip.ecdis;
+    gps.classList.toggle('off', !hasPos);
+    gps.innerHTML = hasPos
+      ? `<span class="big">${(g.sog / KN).toFixed(1)}</span> <span class="unit">nós</span> rumo ${g.sog > 0.1 ? deg3(g.cog) : '---'}°`
+      : `<span class="big">--.-</span> não instalado`;
     const rot = $('rot');
     rot.classList.toggle('off', !g.equip.rot);
     const rpm = s.r / D2R * 60;
@@ -174,16 +209,45 @@ export class Panel {
     this.rpm(this.cRpm, s.n * p.rpmMax, TELEGRAPH[s.telegraph] * p.rpmMax, p.rpmMax);
 
     this.echoT += dt * g.warp;
-    if (this.echoT > 1.5 && g.status === 'running' && !g.paused) { this.echoT = 0; this.echo.push(g.ukcMin); if (this.echo.length > 108) this.echo.shift(); }
+    if (this.echoT > 1.5 && g.status === 'running' && !g.paused) { this.echoT = 0; this.echo.push(g.ukcMin); if (this.echo.length > 75) this.echo.shift(); }
     this.echoDraw(this.cEcho, g.status === 'menu' ? 99 : g.ukcMin);
+    drawDoppler(this.cDoppler, 140, 78, g);
 
-    // --- rádio e prático
+    // --- impelidor de proa
+    const thr = g.equip.thruster, tb = $('thrfill');
+    $('thrbox').classList.toggle('offbox', !thr);
+    tb.style.left = (s.thruster >= 0 ? 50 : 50 + s.thruster * 50) + '%'; tb.style.width = Math.abs(s.thruster) * 50 + '%';
+    document.querySelectorAll<HTMLButtonElement>('[data-thr]').forEach(b => { b.disabled = !thr; b.classList.toggle('on', thr && +b.dataset.thr! === s.thrusterOrder); });
+    $('thrnote').textContent = !thr ? 'não instalado' : `rende ${Math.round(s.thrusterEff * 100)}% a ${(Math.abs(s.stw) / KN).toFixed(1)} nós`;
+
+    // --- tela multifunção
+    if (this.mfd !== 'carta' && !g.equip[this.mfd]) {
+      const c = this.cMfd; c.fillStyle = '#05080b'; c.fillRect(0, 0, MFD, MFD);
+      c.fillStyle = '#2f4a3c'; c.font = '12px ui-monospace, monospace'; c.textAlign = 'center';
+      c.fillText(`${this.mfd.toUpperCase()} não instalado`, MFD / 2, MFD / 2 - 4); c.fillText('ligue na aba Equip.', MFD / 2, MFD / 2 + 12);
+    } else if (this.mfd === 'radar') this.radar.draw(this.cMfd, g, dt);
+    else if (this.mfd === 'ecdis') this.ecdis.draw(this.cMfd, MFD, g, this.chartBase);
+    else {
+      const c = this.cMfd, cw = Math.round(MFD * (W.BOUNDS.x1 - W.BOUNDS.x0) / (W.BOUNDS.y1 - W.BOUNDS.y0));
+      c.fillStyle = '#e9dfc4'; c.fillRect(0, 0, MFD, MFD);
+      c.save(); c.translate((MFD - cw) / 2, 0); this.chart(c, cw, MFD, false); c.restore();
+      c.fillStyle = '#3a2a1a'; c.font = '9px ui-monospace, monospace'; c.textAlign = 'left'; c.fillText('C amplia', 4, MFD - 5);
+    }
+    document.querySelectorAll<HTMLElement>('[data-mfd]').forEach(b => b.classList.toggle('on', b.dataset.mfd === this.mfd));
+    $('mfdmode').textContent = this.ecdis.headUp ? 'P' : 'N';
+    $<HTMLButtonElement>('mfdmode').disabled = this.mfd !== 'ecdis';
+    document.querySelectorAll<HTMLButtonElement>('[data-mfdz]').forEach(b => { b.disabled = this.mfd === 'carta'; });
+
+    // --- abas de operação
+    document.querySelectorAll<HTMLElement>('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
+    document.querySelectorAll<HTMLElement>('[data-pane]').forEach(el => { el.style.display = el.dataset.pane === this.tab ? '' : 'none'; });
+    document.querySelectorAll<HTMLInputElement>('[data-eq]').forEach(cb => { cb.checked = g.equip[cb.dataset.eq as keyof Game['equip']]; });
+
     const entry = g.scenario === 'entrada', pl = g.pilot;
-    $('vhfbox').style.display = entry ? '' : 'none';
     const vts = $<HTMLButtonElement>('vts');
-    vts.disabled = g.vts !== 'none'; vts.classList.toggle('on', g.vts === 'ok');
-    vts.textContent = g.vts === 'none' ? 'Santos VTS: pedir entrada' : g.vts === 'asked' ? 'VTS: aguardando resposta…' : 'VTS: entrada autorizada';
-    document.querySelectorAll<HTMLButtonElement>('[data-pilot]').forEach(b => { b.disabled = pl.state !== 'none'; b.classList.toggle('on', pl.state !== 'none' && b.dataset.pilot === pl.grade); });
+    vts.disabled = g.vts !== 'none' || !entry; vts.classList.toggle('on', g.vts === 'ok' && entry);
+    vts.textContent = !entry ? 'VTS: não se aplica' : g.vts === 'none' ? 'Santos VTS: pedir entrada' : g.vts === 'asked' ? 'VTS: aguardando resposta…' : 'VTS: entrada autorizada';
+    document.querySelectorAll<HTMLButtonElement>('[data-pilot]').forEach(b => { b.disabled = pl.state !== 'none' || !entry; b.classList.toggle('on', pl.state !== 'none' && b.dataset.pilot === pl.grade); });
     const pb = $('pilotbox');
     pb.classList.toggle('off', pl.state === 'none');
     if (pl.state === 'none') pb.innerHTML = 'Sem prático: a manobra é por sua conta';
@@ -193,11 +257,19 @@ export class Panel {
       const hd = pl.helm === 0 ? 'A MEIO' : `${pl.helm < 0 ? 'BB' : 'BE'} ${Math.abs(pl.helm)}`;
       pb.innerHTML = `Ordens do prático<br>leme <span class="big ${helmOk ? '' : 'neg'}">${hd}</span><br>máquina <span class="${telOk ? '' : 'neg'}"><b>${TELEGRAPH_LABELS[pl.tel]}</b></span>`;
     }
+    // faixa com as ordens do prático sobre a vista
+    const hud = $('pilothud');
+    if (pl.state === 'aboard' && g.status === 'running') {
+      const helmOk = Math.round(s.rudderOrder / D2R) === pl.helm, telOk = s.telegraph === pl.tel;
+      const hd = pl.helm === 0 ? 'LEME A MEIO' : `${pl.helm < 0 ? 'BOMBORDO' : 'BORESTE'} ${Math.abs(pl.helm)}`;
+      hud.hidden = false;
+      hud.innerHTML = `<small>${pl.name}</small><span class="${helmOk ? 'ok' : 'todo'}">${hd}</span><span class="${telOk ? 'ok' : 'todo'}">${TELEGRAPH_LABELS[pl.tel]}</span>`;
+    } else hud.hidden = true;
 
-    $('tugbox').style.display = entry ? '' : 'none';
     document.querySelectorAll<HTMLElement>('.tug').forEach(el => {
       const t = g.tugs[+el.dataset.tug!];
-      el.querySelector<HTMLElement>('[data-tcall]')!.style.display = t.state === 'none' ? '' : 'none';
+      el.querySelector<HTMLButtonElement>('[data-tcall]')!.style.display = t.state === 'none' ? '' : 'none';
+      el.querySelector<HTMLButtonElement>('[data-tcall]')!.disabled = !entry;
       el.querySelectorAll<HTMLButtonElement>('[data-tmode]').forEach(b => {
         b.style.display = t.state === 'none' ? 'none' : '';
         b.disabled = t.state !== 'fast'; b.classList.toggle('on', t.state === 'fast' && t.mode === b.dataset.tmode);
@@ -210,19 +282,22 @@ export class Panel {
     $('anchor').innerHTML = a.state === 'stowed' ? 'Ferro a bordo, pronto a largar'
       : a.state === 'lost' ? '<span class="neg">FERRO PERDIDO</span>'
       : `${a.state === 'heaving' ? 'Virando' : a.paid < a.target - 0.5 ? 'Arriando' : 'Fundeado'}: ${(a.paid / SHACKLE).toFixed(1)} quartéis<br>tensão ${(a.tension / 1000).toFixed(0)} kN ${a.dragging ? '<span class="neg">GARRANDO</span>' : ''}${g.scenario === 'fundeio' && g.holdTime > 0 ? `<br>confirmando: ${Math.max(0, 45 - g.holdTime).toFixed(0)} s` : ''}`;
+    const bb = $('berthbox');
+    if (!entry) bb.innerHTML = 'não se aplica';
+    else if (g.mooring > 0) bb.innerHTML = 'Passando espias…';
+    else {
+      const b = g.berth(), near = Math.abs(b.along) < 400 && Math.min(b.bow, b.stern) < 150;
+      bb.classList.toggle('off', !near);
+      bb.innerHTML = near ? `berço: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'passado' : 'a vante'}<br>precisa: proa ≤ 8 m, popa ≤ 35 m, parado` : 'longe do berço';
+    }
 
-    this.chart(this.cChart, 150, 245, false);
     this.big.hidden = !this.bigChart;
     if (this.bigChart) { const c = this.big.getContext('2d')!; this.chart(c, 600, 980, true); }
 
-    if (g.msgs.length !== this.logCount || (g.msgs.length === 60)) {
-      const last = g.msgs[g.msgs.length - 1];
-      const key = g.msgs.length + (last ? last.t : 0);
-      if (key !== this.logCount) {
-        this.logCount = key;
-        const log = $('log');
-        log.innerHTML = g.msgs.slice(-6).map(m => `<div class="${m.level}"><span class="t">${fmtTime(m.t)}</span> <b>${m.who}:</b> ${m.text}</div>`).join('');
-      }
+    const last = g.msgs[g.msgs.length - 1], key = g.msgs.length + (last ? last.t : 0);
+    if (key !== this.logCount) {
+      this.logCount = key;
+      $('log').innerHTML = g.msgs.slice(-6).map(m => `<div class="${m.level}"><span class="t">${fmtTime(m.t)}</span> <b>${m.who}:</b> ${m.text}</div>`).join('');
     }
   }
 
@@ -232,7 +307,7 @@ export class Panel {
   }
 
   private compass(c: CanvasRenderingContext2D, hdg: number) {
-    const S = 118, cx = S / 2, cy = S / 2, r = 54;
+    const S = 112, cx = S / 2, cy = S / 2, r = 51;
     c.clearRect(0, 0, S, S); this.dial(c, cx, cy, r);
     c.save(); c.translate(cx, cy); c.rotate(-hdg);
     c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '9px ui-monospace, monospace';
@@ -250,7 +325,7 @@ export class Panel {
   }
 
   private wind(c: CanvasRenderingContext2D, dir: number, spd: number) {
-    const S = 118, cx = S / 2, cy = S / 2, r = 54;
+    const S = 112, cx = S / 2, cy = S / 2, r = 51;
     c.clearRect(0, 0, S, S); this.dial(c, cx, cy, r);
     c.fillStyle = '#3a4854'; c.beginPath(); c.moveTo(cx, cy - 24); c.lineTo(cx + 7, cy - 10); c.lineTo(cx + 7, cy + 22); c.lineTo(cx - 7, cy + 22); c.lineTo(cx - 7, cy - 10); c.closePath(); c.fill();
     c.save(); c.translate(cx, cy); c.rotate(dir);
@@ -262,7 +337,7 @@ export class Panel {
   }
 
   private rudder(c: CanvasRenderingContext2D, actual: number, order: number, pending: boolean) {
-    const Wd = 220, H = 96, cx = Wd / 2, cy = 8, r = 76, k = 1.6 * D2R;
+    const Wd = 210, H = 92, cx = Wd / 2, cy = 8, r = 72, k = 1.6 * D2R;
     c.clearRect(0, 0, Wd, H);
     c.fillStyle = '#05080b'; c.fillRect(0, 0, Wd, H);
     const pt = (deg: number, rr: number): [number, number] => [cx + rr * Math.sin(deg * k), cy + rr * Math.cos(deg * k)];
@@ -284,7 +359,7 @@ export class Panel {
   }
 
   private rpm(c: CanvasRenderingContext2D, rpm: number, order: number, max: number) {
-    const Wd = 150, H = 92, cx = Wd / 2, cy = 74, r = 60;
+    const Wd = 124, H = 78, cx = Wd / 2, cy = 62, r = 50;
     c.clearRect(0, 0, Wd, H); c.fillStyle = '#05080b'; c.fillRect(0, 0, Wd, H);
     const ang = (v: number) => -Math.PI / 2 + (v / max) * (Math.PI / 2 - 0.15);
     c.lineWidth = 5;
@@ -302,7 +377,7 @@ export class Panel {
   }
 
   private echoDraw(c: CanvasRenderingContext2D, ukc: number) {
-    const Wd = 216, H = 92, max = 15;
+    const Wd = 150, H = 78, max = 15;
     c.clearRect(0, 0, Wd, H); c.fillStyle = '#04101c'; c.fillRect(0, 0, Wd, H);
     c.strokeStyle = '#12304a'; c.lineWidth = 1; c.fillStyle = '#3f6a8a'; c.font = '8px ui-monospace, monospace'; c.textAlign = 'left';
     for (const m of [5, 10]) { const y = 6 + (m / max) * (H - 10); c.beginPath(); c.moveTo(0, y); c.lineTo(Wd, y); c.stroke(); c.fillText(m + ' m', 2, y - 2); }
@@ -345,7 +420,7 @@ export class Panel {
       c.fillStyle = '#3a2a1a'; c.font = '10px ui-monospace, monospace'; c.textAlign = 'left';
       c.fillText('Carta estilizada: NÃO USAR PARA NAVEGAÇÃO. Sondagens em metros.', 8, h - 8);
     }
-    if (g.equip.gps) {
+    if (g.equip.gps || g.equip.ecdis) {
       const s = g.s;
       c.save(); c.translate(X(s.x), Y(s.y));
       if (g.sog > 0.2) { const cg = g.cog, len = g.sog * 180 * sx; c.strokeStyle = '#000'; c.beginPath(); c.moveTo(0, 0); c.lineTo(len * Math.sin(cg), -len * Math.cos(cg)); c.stroke(); }

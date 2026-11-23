@@ -12,7 +12,7 @@ html, body { margin: 0; height: 100%; background: #0b1016; color: #d8e2ea; font:
 #keys { position: absolute; top: 64px; left: 12px; background: #0b101699; padding: 2px 8px; color: #9fb0bd; font-size: 11px; }
 #bigchart { position: absolute; z-index: 3; top: 50%; left: 50%; transform: translate(-50%, -50%); height: 94%; image-rendering: pixelated; border: 6px solid #e9dfc4; box-shadow: 0 8px 40px #000a; background: #e9dfc4; }
 
-#bridge { width: 440px; flex: none; background: #1a2026; border-left: 4px solid #0b0e12; padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+#bridge { width: 500px; flex: none; background: #1a2026; border-left: 4px solid #0b0e12; padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .row { display: flex; gap: 8px; }
 .inst { background: #10151a; border: 2px solid #2c363f; border-radius: 4px; padding: 6px; flex: 1; min-width: 0; box-shadow: inset 0 0 0 1px #05080b; }
 .inst h4 { margin: 0 0 4px; font-size: 10px; letter-spacing: 1px; color: #7f93a3; font-weight: 600; text-transform: uppercase; }
@@ -57,10 +57,6 @@ button.pending { animation: blink 0.4s steps(2) infinite; border-color: #ffd76a;
 @keyframes blink { 50% { background: #6b5410; } }
 #air { font-size: 14px; letter-spacing: 2px; }
 
-#trustbar { position: relative; height: 10px; background: #05080b; border: 1px solid #2c363f; border-radius: 2px; }
-#trustbar i { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: #d8e2ea; z-index: 1; }
-#trustbar b { position: absolute; top: 0; bottom: 0; transition: all 0.4s; }
-#trustnote { float: right; letter-spacing: 0; text-transform: none; font-size: 11px; }
 
 /* comunicações sobre a água, embaixo da tela do jogo */
 #log { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
@@ -75,8 +71,41 @@ button.pending { animation: blink 0.4s steps(2) infinite; border-color: #ffd76a;
 button:disabled { opacity: 0.55; cursor: default; }
 #pilotbox .big { font-size: 20px; } #pilotbox .neg { color: #ff7a6a; }
 
-.tug { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; margin: 3px 0; }
-.tug button, .tug select { padding: 2px 5px; font-size: 11px; }
-.tugname { width: 78px; } .tugname b { color: #ffd76a; }
-.tugst { color: #7dffb0; font-size: 11px; flex-basis: 100%; padding-left: 81px; }
-#tugbox h4 { letter-spacing: 0; }
+
+/* --- painel v0.2: barra de topo, tela multifunção e abas */
+#bridge { overflow: hidden; transform-origin: top right; }
+#topbar { flex: none; }
+#clock { flex: none; width: 108px; }
+#trustbox { flex: 1; margin-left: 6px; font-size: 10px; color: #7f93a3; text-transform: uppercase; letter-spacing: 1px; }
+#trustbox > span { display: flex; justify-content: space-between; }
+#trustnote { letter-spacing: 0; text-transform: none; font-size: 11px; }
+#trustbar { position: relative; height: 8px; background: #05080b; border: 1px solid #2c363f; border-radius: 2px; }
+#trustbar i, #thrbar i { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: #d8e2ea; z-index: 1; }
+#trustbar b, #thrbar b { position: absolute; top: 0; bottom: 0; transition: all 0.3s; }
+#thrbar { position: relative; height: 14px; background: #05080b; border: 1px solid #2c363f; border-radius: 2px; margin: 6px 0; }
+#thrbar b { background: #7dd3ff; transition: none; }
+#thrrow { display: flex; gap: 2px; } #thrrow button { flex: 1; padding: 4px 0; }
+.offbox { opacity: 0.55; }
+.tabs { display: flex; gap: 2px; margin-bottom: 6px; align-items: center; }
+.tabs button { padding: 3px 7px; font-size: 11px; border-radius: 3px 3px 0 0; }
+.tabs .sp { flex: 1; }
+#mfd { flex: none; } #mfd canvas { border: 1px solid #2c363f; }
+#ops { min-width: 0; } #ops .tab { font-size: 11px; }
+#vhf { flex-direction: column; } #vhf button { text-align: left; }
+.btnrow { display: flex; gap: 4px; flex-wrap: wrap; }
+.tug { display: flex; gap: 3px; flex-wrap: wrap; margin: 8px 0 4px; }
+.tug button, .tug select { padding: 3px 5px; font-size: 11px; }
+.tugname { flex-basis: 100%; } .tugname b { color: #ffd76a; } .tugst { color: #7dffb0; float: right; }
+#helmrow button { flex: 1; padding: 2px 0; font-size: 11px; }
+#telegraph button { white-space: nowrap; overflow: hidden; }
+label.sw { margin: 5px 0; }
+#berthbox { font-size: 11px; }
+/* ordens do prático sobre a vista */
+#pilothud { position: absolute; top: 96px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; background: #0b1016e6; border: 2px solid #7dffb0; padding: 6px 14px; font-size: 20px; font-weight: 700; white-space: nowrap; }
+#pilothud[hidden] { display: none; }
+#pilothud small { font-size: 11px; font-weight: 400; color: #9fb0bd; text-transform: uppercase; letter-spacing: 1px; }
+#pilothud .ok { color: #7dffb0; } #pilothud .todo { color: #10151a; background: #ffcf6a; padding: 0 8px; animation: blink 0.5s steps(2) infinite; }
+
+#vhf button { white-space: normal; flex: none; }
+#ops .tabs button { padding: 3px 5px; }
+.inst h4 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -31,7 +31,7 @@ export class Game {
   time = 0; warp = 1; paused = false;
   status: 'menu' | 'running' | 'done' = 'menu';
   scenario: Scenario = 'entrada';
-  equip = { gps: false, rot: false };
+  equip = { gps: false, rot: false, radar: false, ecdis: false, doppler: false, thruster: false };
   shackles = 4;
   msgs: Msg[] = [];
   result: Result | null = null;
@@ -135,6 +135,7 @@ export class Game {
       if (i <= 1 && this.s.u > 2) this.trustEvent(-4, 'máquina a ré de emergência', 'crash', 120);
     }
   }
+  setThruster(v: number) { if (this.equip.thruster && this.status === 'running') this.s.thrusterOrder = Math.max(-1, Math.min(1, v)); }
   setRudderDeg(d: number) {
     const s = this.s, o = Math.max(-35, Math.min(35, d)) * D2R;
     if (o === s.rudderOrder) return;
@@ -209,6 +210,7 @@ export class Game {
     env.windFrom = this.windFromBase + 8 * D2R * Math.sin(this.time / 53);
 
     const cf = this.crewFactor;
+    if (!this.equip.thruster) s.thrusterOrder = 0;
     p.ackDelay = this.baseAck * cf; p.helmDelay = this.baseHelm * cf;
 
     if (this.vts === 'asked' && (this.vtsTimer -= DT) <= 0) {

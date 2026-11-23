@@ -135,6 +135,16 @@ describe('costeiro de 90 m', () => {
     expect(s.n).toBeGreaterThan(0);
   });
 
+  it('impelidor de proa gira o navio parado e quase não rende a 5 nós', () => {
+    const s = makeState(0, 0, 0, 0, 4);
+    s.thrusterOrder = 1; run(s, sea(), 60);
+    expect(s.r).toBeGreaterThan(0.1 * D2R);
+    const f = makeState(0, 0, 0, 5, 6); run(f, sea(), 200);
+    f.thrusterOrder = 1; run(f, sea(), 60);
+    console.log('impelidor: parado', (s.r / D2R * 60).toFixed(0), '°/min; a', (f.u / KN).toFixed(1), 'nós', (f.r / D2R * 60).toFixed(1), '°/min');
+    expect(Math.abs(f.r)).toBeLessThan(s.r * 0.1);
+  });
+
   it('a corrente carrega o navio parado', () => {
     const env: Env = { depth: () => 200, current: () => [0.5, 0], windFrom: 0, windSpeed: 0 };
     const s = makeState(0, 0, 0, 0, 4);

@@ -20,6 +20,8 @@ const SEG = CENTER.slice(0, -1).map((a, i) => {
   return { ax: a[0], ay: a[1], tx: (b[0] - a[0]) / len, ty: (b[1] - a[1]) / len, len, s0: 0 };
 });
 SEG.reduce((acc, sg) => { sg.s0 = acc; return acc + sg.len; }, 0);
+/** Curvas do canal: posição ao longo do eixo e o novo rumo (graus) depois de cada uma. */
+export const TURNS = SEG.slice(1).map(g => ({ s: g.s0, course: (Math.atan2(g.tx, g.ty) * 180 / Math.PI + 360) % 360 }));
 export const CHANNEL_LENGTH = SEG[SEG.length - 1].s0 + SEG[SEG.length - 1].len;
 export const S_MOUTH = SEG[2].s0;       // daqui para dentro é estuário
 export const DREDGED_HALF = 110;        // meia largura dragada

@@ -58,7 +58,7 @@ Três graus de liberdade (avanço, deriva, guinada), passo fixo de 0,05 s, deter
 | Defensas do cais | Mola e atrito; multa pela velocidade do toque | Feito |
 | Margem e interação entre navios | Sucção de popa junto à margem e a outro navio | A fazer |
 | Rebocadores | Forças externas na proa e na popa, com atraso | Feito |
-| Thruster | Força lateral na proa | A fazer |
+| Impelidor de proa | Força lateral na proa, com atraso e perda de rendimento com o seguimento | Feito |
 | Carga e lastro | Calado e área vélica mudam com a carga (`makeCoaster(load)`) | Parâmetro existe, sem uso no jogo |
 
 Números do costeiro de 90 m carregado, medidos nos testes:
@@ -106,10 +106,10 @@ Uma medida só, de −100 a +100, que começa em 0 e persiste entre viagens. O c
 | Comunicações | Mensagens sobre a água, embaixo da tela do jogo; VHF com VTS e praticagem | Início | Feito |
 | GPS | Velocidade e rumo no fundo; posição na carta | Upgrade | Feito (chave de teste) |
 | Indicador de taxa de guinada | Antecipar o fim da curva | Upgrade | Feito (chave de teste) |
-| Radar / AIS | Tráfego, nevoeiro | Upgrade | A fazer |
-| ECDIS | Vetor de previsão, alarme de rota | Upgrade | A fazer |
-| Doppler de atracação | Velocidade lateral de proa e popa | Upgrade | A fazer |
-| Bow thruster | Controle lateral da proa | Upgrade | A fazer |
+| Radar | Proa para cima, varredura com sombra de terra, boias e rebocadores, 0,25 a 2 milhas | Upgrade | Feito (chave de teste); falta AIS e alvos de tráfego |
+| ECDIS | Navio em escala, norte ou proa para cima, contorno de segurança, previsão de 3 min, distância ao eixo e próxima curva | Upgrade | Feito (chave de teste) |
+| Doppler de atracação | Velocidade lateral de proa e popa e avanço, no fundo | Upgrade | Feito (chave de teste) |
+| Impelidor de proa | 35 kN na proa; perde rendimento com o seguimento e não rende acima de 4,5 nós | Upgrade | Feito (chave de teste) |
 
 Sem doppler, quem informa a distância ao cais é a proa, pelo rádio ("Proa a 12 m, popa a 30 m do cais").
 

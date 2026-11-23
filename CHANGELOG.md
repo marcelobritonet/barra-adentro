@@ -2,6 +2,17 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.2.0 — Instrumentos
+
+- Impelidor de proa: 35 kN, sobe aos poucos e perde rendimento com o seguimento (nada acima de 4,5 nós). Teclas J, K, L.
+- Doppler de atracação: velocidade lateral da proa e da popa e avanço, no fundo.
+- Radar de proa para cima, com varredura, sombra de terra, boias e rebocadores; alcances de 0,25 a 2 milhas.
+- ECDIS: navio em escala, norte ou proa para cima, contorno de segurança, previsão de 3 minutos, distância ao eixo do canal e aviso da próxima curva.
+- Tela multifunção (carta, ECDIS, radar) e abas de operação (rádio, rebocadores, convés, equipamentos).
+- O painel inteiro cabe na tela e encolhe em janelas baixas, sem rolagem.
+- Ordens do prático em faixa sobre a vista do jogo.
+- Todos os equipamentos novos são chaves de teste na aba Equip.; nascem desligados.
+
 ## v0.1.0 — Protótipo jogável
 
 - Física do navio em 3 graus de liberdade: inércia, atraso de máquina e leme, efeito do hélice, vento, corrente, águas rasas e afundamento.

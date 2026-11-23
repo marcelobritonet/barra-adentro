@@ -33,6 +33,7 @@ export interface ShipParams {
   airRefill: number; // partidas repostas por segundo pelos compressores
   propWalk: number;
   AF: number; AL: number; xWind: number;
+  thrusterMax: number; // empuxo do impelidor lateral de proa, N
 }
 
 export interface ShipState {
@@ -49,6 +50,9 @@ export interface ShipState {
   starts: number;       // partidas dadas
   wearEngine: number;   // soma das variações de rotação (0→1 = 1)
   wearRudder: number;   // graus percorridos pelo leme
+  thrusterOrder: number; // impelidor de proa, -1 (bombordo) a +1 (boreste)
+  thruster: number;      // empuxo real, -1..1
+  thrusterEff: number;   // quanto rende agora, 0..1 (cai com o seguimento)
   revTimer: number;
   rudder: number;       // ângulo real, rad
   rudderOrder: number;  // ordem, rad
@@ -86,6 +90,7 @@ export function makeCoaster(load = 1): ShipParams {
     nUpHigh: 0.005, ackDelay: 6, helmDelay: 2, airStarts: 5, airRefill: 1 / 90,
     propWalk: 0.07,
     AF: B * (8 - T) + 110, AL: L * (8 - T) + 160, xWind: -0.06 * L,
+    thrusterMax: 35e3,
   };
 }
 
@@ -94,6 +99,7 @@ export function makeState(x: number, y: number, psiDeg: number, speedKn = 0, tel
     x, y, psi: psiDeg * D2R, u: speedKn * KN, v: 0, r: 0,
     n: TELEGRAPH[telegraph], telegraph, revTimer: 0, rudder: 0, rudderOrder: 0,
     telAck: telegraph, ackTimer: 0, helmAck: 0, helmTimer: 0, air: 5, noAir: false, starts: 0, wearEngine: 0, wearRudder: 0,
+    thrusterOrder: 0, thruster: 0, thrusterEff: 1,
     stw: speedKn * KN, sway: 0, depth: 99, squat: 0, ukc: 99,
     relWindDir: 0, relWindSpeed: 0, curE: 0, curN: 0,
   };
@@ -177,6 +183,11 @@ export function stepShip(s: ShipState, p: ShipParams, env: Env, dt: number, ext:
   const Yr = -1.3 * FN * cd;
   const Nr = 0.635 * L * FN * cd;
 
+  // --- impelidor lateral de proa: só rende com o navio quase parado
+  s.thruster = toward(s.thruster, clamp(s.thrusterOrder, -1, 1), 0.2 * dt);
+  s.thrusterEff = clamp(1 - Math.abs(ur) / (4.5 * KN), 0, 1) ** 2;
+  const Ft = p.thrusterMax * s.thruster * s.thrusterEff;
+
   // --- vento sobre a obra morta
   const ax = -env.windSpeed * Math.sin(env.windFrom), ay = -env.windSpeed * Math.cos(env.windFrom);
   const gx = s.u * sin + s.v * cos, gy = s.u * cos - s.v * sin;
@@ -188,8 +199,8 @@ export function stepShip(s: ShipState, p: ShipParams, env: Env, dt: number, ext:
   const Nw = Yw * p.xWind;
 
   const X = Xh + thrust + Xr + Xw + ext.X;
-  const Y = Yh + Ywalk + Yr + Yw + ext.Y;
-  const N = Nh + Nwalk + Nr + Nw + ext.N;
+  const Y = Yh + Ywalk + Yr + Yw + Ft + ext.Y;
+  const N = Nh + Nwalk + Nr + Nw + 0.42 * L * Ft + ext.N;
 
   const mxx = p.mass + p.mx, myy = p.mass + p.my * (1 + 2 * k);
   const du = (X + (p.mass + 0.25 * p.my) * s.v * r) / mxx; // parte da massa adicional é cancelada pelo casco (X_vr)

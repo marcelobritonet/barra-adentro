@@ -12,7 +12,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 4 | Idioma | Português, termos náuticos reais | Usado no protótipo; falta confirmar |
 | 5 | Controles | Teclado + mouse; toque depois | Usado no protótipo; falta confirmar |
 | 6 | Câmera | Isométrica com giro de 90°; superior só na carta | Decidido; tecla T existe para comparar jogando |
-| 7 | Equipamento inicial | Sem GPS e sem indicador de guinada | Chaves de teste no painel; decidir depois de jogar |
+| 7 | Equipamento inicial | Tudo desligado: GPS, guinada, radar, ECDIS, doppler, impelidor | Chaves de teste na aba Equip.; decidir depois de jogar |
 | 8 | Quanto custa mexer demais | 5 partidas de ar, R$ 350 por variação de rotação, R$ 0,60 por grau de leme | Implementado; calibrar jogando |
 | 10 | Peso do navio | Máquina 6 s + 47 s até meia força; leme 2 s + 1,8°/s | Segunda rodada de lentidão aplicada; confirmar se ainda parece arcade e em quê |
 | 11 | Valores da confiança | Tabela no GDD | Implementado; calibrar jogando |
@@ -32,7 +32,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 6 | Efeito de margem | |
 | 7 | Resto do canal de Santos | O mapa já tem as curvas; faltam berços e missões |
 | 8 | Oficina, tripulação e contratos | Parâmetros do navio já estão isolados em `makeCoaster` |
-| 9 | Radar, ECDIS, doppler, thruster | |
+| 9 | AIS e alvos de tráfego no radar | Depende do tráfego |
 | 10 | Maré (enchente/vazante) e noite/nevoeiro | A corrente já aceita o sentido da maré |
 | 11 | Som | |
 
@@ -53,3 +53,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | Amarração com a popa trazida pelos cabos |
 | Mensagens sobre a água, embaixo da tela do jogo |
 | Rebocadores de proa e popa por rádio, com 6 testes |
+| v0.2.0: impelidor de proa, doppler, radar, ECDIS, tela multifunção e painel sem rolagem |
