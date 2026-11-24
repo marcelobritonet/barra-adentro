@@ -288,3 +288,19 @@ body.mobile #telegraph button { padding: 5px 10px; }
 .sheet[data-name="nav"] .inst:nth-child(2) { order: 3; flex: 1 1 100% !important; display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 2px 6px; grid-auto-flow: column; grid-template-rows: auto auto; }
 .sheet[data-name="nav"] .inst:nth-child(2) h4 { margin: 0; }
 body.mobile #plan, body.mobile #help { background: #060a0efa; }
+
+/* ---------- arrumações do painel na tela de mesa */
+.row:not(:has(.inst)) { display: none; }
+#dock { position: absolute; right: 8px; bottom: 8px; z-index: 3; }
+#dock:empty, #strip:empty { display: none; }
+#dock .inst { background: #10151af2; box-shadow: 0 4px 24px #000a; }
+#dock .tabs button, body.desk-console #mfd .tabs button { padding: 5px 10px !important; font-size: 12px !important; }
+body.desk-flutuante:not(.mobile) #log { right: min(500px, 54%); }
+body.desk-flutuante:not(.mobile) #ops .tab { font-size: 12px; }
+body.desk-console:not(.mobile) #app { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto; }
+body.desk-console:not(.mobile) #world { grid-area: 1 / 1; }
+body.desk-console:not(.mobile) #bridge { grid-area: 1 / 2 / 3 / 3; }
+#strip { grid-area: 2 / 1; display: flex; gap: 8px; padding: 8px; background: #1a2026; border-top: 4px solid #0b0e12; width: max-content; min-width: 100%; box-sizing: border-box; }
+#strip .inst { flex: 0 0 auto !important; margin: 0; }
+#strip .inst:has(#cRudder) { width: 222px; } #strip .inst:has(#stw) { width: 150px; } #strip .inst:has(#telegraph) { width: 128px; }
+body.mobile #strip, body.mobile #dock, body.mobile [data-cam="desk"] { display: none; }

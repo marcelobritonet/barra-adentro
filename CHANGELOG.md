@@ -2,6 +2,17 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.24.0 — ECDIS 2× maior e três arrumações do painel
+
+Pedido do teste: "primeiro de tudo é o ECDIS ficar maior, talvez 2× maior" e "quero testar as possibilidades de os consoles terem outras posições na tela".
+
+- Botão "Painel" na vista troca entre três arrumações e guarda a escolha (`?painel=console`, `flutuante` ou `lado` no endereço fazem o mesmo). Prints em `docs/telas/mesa-*.jpg`.
+- Console (padrão em janela de 1300 px ou mais): agulha, velocidades, leme, telégrafo, tacômetro e ecobatímetro numa faixa embaixo da vista; à direita, a tela multifunção com 472 px (era 236), anemômetro, doppler, impelidor e rádio.
+- Flutuante (padrão em janela menor): a tela multifunção sai do painel e fica sobre a vista, no canto de baixo, sem chegar ao navio. Em 1440×900 fica com 370 px; chega a 472 px em janela maior.
+- Lado: a arrumação antiga, com a tela de 236 px.
+- Carta, ECDIS, radar e tela de atracação são ampliados juntos, com o mesmo alcance e texto nítido.
+- Correção de texto: o vento padrão é sueste de 14 nós (7 m/s). As notas da v0.22.0 diziam 7 nós.
+
 ## v0.23.0 — Tela de celular
 
 Pedido do teste: "tela principal mostra o navio; controles ao redor, semitransparentes; ao clicar, levanta aquele equipamento (pode ser mais de um); embaixo, como um menu, os valores que temos de acompanhar o tempo inteiro". Primeira das entregas de organização da tela.
@@ -20,9 +31,9 @@ Pedido do teste: "tela principal mostra o navio; controles ao redor, semitranspa
 
 Pergunta do teste: "ainda não consigo perceber a influência do vento e da corrente. Ela acontece?"
 
-Acontece, mas a viagem padrão escondia: o sueste de 7 nós entra pela popa e a vazante vem pela proa, os dois alinhados com a derrota. Medido no costeiro carregado: na baía a corrente de través tira o navio 79 a 88 m do rumo a cada 800 m; no canal ela só reduz a velocidade no fundo de 3,8 para 2,9 nós; parado a 60 m do cais, o vento abre a popa 34 m e gira o navio 16 a 20° em 5 minutos.
+Acontece, mas a viagem padrão escondia: o sueste de 14 nós entra pela popa e a vazante vem pela proa, os dois alinhados com a derrota. Medido no costeiro carregado: na baía a corrente de través tira o navio 79 a 88 m do rumo a cada 800 m; no canal ela só reduz a velocidade no fundo de 3,8 para 2,9 nós; parado a 60 m do cais, o vento abre a popa 34 m e gira o navio 16 a 20° em 5 minutos.
 
-- Vento por contrato: sueste 7 nós (padrão), leste 18, nordeste 16, sudoeste 22 e calmaria. Contratos de 2 estrelas ou mais podem vir com vento de través e pagam mais por isso. No modo livre há um seletor de vento.
+- Vento por contrato: sueste 14 nós (padrão), leste 18, nordeste 16, sudoeste 22 e calmaria. Contratos de 2 estrelas ou mais podem vir com vento de través e pagam mais por isso. No modo livre há um seletor de vento.
 - Com vento acima de 20 nós a praticagem suspende o serviço; a barra segue aberta e a manobra é sua.
 - O GPS mostra o abatimento: "abatendo N° para BE/BB".
 - O plano de viagem ganhou a coluna "Governar": o rumo a levar na agulha para fazer o rumo da pernada, já com corrente e vento. Com leste de 18 nós no primeiro trecho do canal: governar 006 para fazer 003.

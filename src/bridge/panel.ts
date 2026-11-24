@@ -180,6 +180,12 @@ export class Panel {
     }));
   }
 
+  /** Muda o tamanho da tela multifunção na página. O desenho continua nas mesmas 236 unidades, ampliado e nítido. */
+  setMfdSize(px: number) {
+    const c = $<HTMLCanvasElement>('cMfd'); if (c.width === px * 2) return;
+    c.width = c.height = px * 2; c.style.width = c.style.height = px + 'px';
+    this.cMfd.setTransform(2 * px / MFD, 0, 0, 2 * px / MFD, 0, 0);
+  }
   zoomMfd(d: number) {
     if (this.mfd === 'radar') this.radar.rangeI = Math.max(0, Math.min(RADAR_RANGES.length - 1, this.radar.rangeI - d));
     if (this.mfd === 'ecdis') this.ecdis.scaleI = Math.max(0, Math.min(ECDIS_SCALES.length - 1, this.ecdis.scaleI - d));

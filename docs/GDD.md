@@ -65,7 +65,7 @@ Três graus de liberdade (avanço, deriva, guinada), passo fixo de 0,05 s, deter
 | Leme | Gira a 1,8°/s (navio velho, uma bomba só); a força vem da água que passa por ele (seguimento + jato do hélice) | Feito |
 | Toque de máquina | Parado, leme carregado + máquina adiante gira o navio quase sem avançar | Feito |
 | Efeito do hélice | Em ré, a popa cai para bombordo (passo direito) | Feito |
-| Vento | Força na obra morta, com rajadas. Cinco condições (sueste 7 nós, leste 18, nordeste 16, sudoeste 22, calmaria), sorteadas por contrato; acima de 20 nós não há prático | Feito |
+| Vento | Força na obra morta, com rajadas. Cinco condições (sueste 14 nós, leste 18, nordeste 16, sudoeste 22, calmaria), sorteadas por contrato; acima de 20 nós não há prático | Feito |
 | Corrente | Forças usam a velocidade na água; o odômetro não vê a corrente; muda e inverte com a maré | Feito |
 | Maré | Soma água à profundidade da carta | Feito |
 | Águas rasas | Mais resistência, curva mais larga, afundamento (squat) com a velocidade | Feito |

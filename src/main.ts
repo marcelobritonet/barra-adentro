@@ -1,4 +1,5 @@
 import { Mobile } from './bridge/mobile';
+import { Desk, DESKS } from './bridge/desk';
 import { Sound } from './audio/sound';
 import { Panel } from './bridge/panel';
 import { BERTH, berthSpeedKn, Game, Scenario } from './game/game';
@@ -203,6 +204,7 @@ document.getElementById('camctl')!.addEventListener('click', e => {
   if (c === 'plan' && game.status === 'running') { if (planEl.hidden) showPlan(false); else planEl.hidden = true; }
   if (c === 'sound') { sound.toggle(); syncSound(); } if (c === 'horn') game.sound();
   if (c === 'layout') mobile.flip();
+  if (c === 'desk') { desk.next(); fit(); game.say('Painel', DESKS[desk.variant] + '.', 'info'); }
   b.blur();
 });
 const money = (v: number) => `<span class="${v >= 0 ? 'pos' : 'neg'}">${v < 0 ? '−' : ''}R$ ${Math.abs(v).toLocaleString('pt-BR')}</span>`;
@@ -385,11 +387,13 @@ const bridge = document.getElementById('bridge')!;
 function fit() {
   bridge.style.transform = ''; bridge.style.height = 'auto'; bridge.style.marginLeft = '';
   if (document.body.classList.contains('mobile')) { bridge.style.height = ''; return; }
+  desk.size();
   const k = Math.min(1, innerHeight / bridge.scrollHeight);
   bridge.style.transform = k < 1 ? `scale(${k})` : '';
   bridge.style.height = `${100 / k}%`;
   bridge.style.marginLeft = k < 1 ? `${-500 * (1 - k)}px` : '';
 }
+const desk = new Desk(panel);
 addEventListener('resize', fit); fit(); setTimeout(fit, 300);
 const mobile = new Mobile(game, panel, fit);
 
@@ -425,4 +429,4 @@ menu(); syncSound();
 requestAnimationFrame(frame);
 
 // acesso para depuração e testes no navegador
-Object.assign(window, { game, view, panel, W, mobile });
+Object.assign(window, { game, view, panel, W, mobile, desk });
