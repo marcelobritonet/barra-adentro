@@ -2,6 +2,16 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.17.1 — Onde fazer cada chamado de rádio
+
+Pedido em teste: "tem que dizer em que momento devo pedir autorização de entrada; hoje a posição está vaga".
+
+- Ponto de chamada: a 1.200 m da barra, é onde se pede a entrada ao VTS. Linha de espera: a 300 m da barra, de onde não se passa sem a autorização. As duas aparecem na carta e no ECDIS, atravessadas no canal.
+- O plano de bordo ganhou a tabela "Rádio: onde chamar", com o lugar de cada chamado (amarrado a uma boia), o quê pedir e por quê ali: VTS, prático, navio do berço, rebocadores e draga. Os tempos são calculados para o seu navio: em quantos minutos você chega à linha de espera e ao berço.
+- O imediato avisa ao chegar ao ponto de chamada sem autorização, dizendo quantos metros faltam para a linha de espera.
+- O quadro do plano mostra o chamado pendente, com destaque quando é hora de fazê-lo.
+- 1 teste novo.
+
 ## v0.17.0 — Plano de viagem e vista que se arrasta
 
 Pedido em teste: "está difícil fazer as coisas no olho; fica tudo tentativa e erro".

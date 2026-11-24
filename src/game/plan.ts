@@ -21,7 +21,8 @@ export interface PlanStep {
   action: string;     // o que fazer ao chegar ao fim desta perna
   turn?: PlanTurn;
 }
-export interface Plan { title: string; steps: PlanStep[]; track: [number, number][]; notes: string[]; stopAt: number; asternAt: number }
+export interface PlanCall { where: string; what: string; why: string }
+export interface Plan { title: string; steps: PlanStep[]; track: [number, number][]; notes: string[]; stopAt: number; asternAt: number; calls: PlanCall[] }
 
 const DT = 0.1, Z = { X: 0, Y: 0, N: 0 };
 const wrapDeg = (a: number) => ((a + 540) % 360) - 180;
@@ -125,8 +126,18 @@ export function makePlan(g: Game): Plan {
     `As velocidades no fundo já descontam a corrente de agora (${g.tide.flow > 0.1 ? 'vazante, pela proa' : g.tide.flow < -0.1 ? 'enchente, pela popa' : 'quase parada'}); ela muda com a maré.`,
     'Os pontos de guinada valem para o leme e a máquina do plano. Mais rápido ou com menos leme, comece antes.',
   ];
+  // chamados de rádio: onde fazer cada um, e por quê ali
+  const minsTo = (target: number) => { let m = 0; for (const st of steps) { const a = st.s, b = st.s + (st.dist ?? 0); if (target <= a) break; m += (st.min ?? 0) * Math.min(1, (target - a) / Math.max(1, b - a)); } return m; };
+  const toHold = minsTo(W.HOLD_LINE_S), toBerth = minsTo(end), callRef = reference(W.CALL_POINT_S), holdRef = reference(W.HOLD_LINE_S);
+  const calls: PlanCall[] = [
+    { where: `No ponto de chamada: ${callRef.ref}, a ${round10(W.S_MOUTH - W.CALL_POINT_S)} m da barra`, what: 'Pedir entrada ao Santos VTS', why: `A resposta leva 20 s. Sem ela não se passa da linha de espera (${holdRef.ref}), que fica a ${Math.round(toHold)} min daqui.` },
+    { where: 'Junto com o pedido de entrada', what: 'Pedir o prático, se quiser', why: `O padrão embarca em 5,5 min e o sênior em 3. Você chega à linha de espera em ${Math.round(toHold)} min: ${toHold < 5.5 ? 'com o padrão, reduza ou ele só embarca depois da barra' : 'dá tempo para qualquer um'}. Ele só embarca com o navio a até 7 nós.` },
+    { where: 'Logo depois da autorização', what: 'Pedir ao navio do berço que largue', why: `Ele larga 6 min depois do pedido e leva 4 para abrir do cais; sem pedido, só aos 30 min. Você chega ao berço em ${Math.round(toBerth)} min. Quanto antes pedir, mais para fora do canal é o cruzamento.` },
+    { where: 'Ao cruzar a barra', what: 'Chamar os rebocadores, se for usar', why: 'Chegam em 4 min, só da barra para dentro, e só passam o cabo com o navio a até 5 nós.' },
+    { where: 'Com a draga a uns 800 m pela proa', what: 'Pedir passagem à draga', why: 'Ela leva uns 2 min para sair do canal dragado e fica fora por 8 min.' },
+  ];
   if (g.sky !== 'dia') notes.push(g.sky === 'nevoeiro' ? 'Nevoeiro: limite de 6 nós. Conte as boias; cada guinada do plano está amarrada a uma.' : 'Noite: as boias de referência piscam na cor delas.');
-  return { title: `Plano de viagem: ${Q.name}${g.headOut ? ', aproado ao mar' : ''}`, steps, track, notes, stopAt: stop.coast + stop.astern + 40, asternAt: stop.astern + 30 };
+  return { title: `Plano de viagem: ${Q.name}${g.headOut ? ', aproado ao mar' : ''}`, steps, track, notes, stopAt: stop.coast + stop.astern + 40, asternAt: stop.astern + 30, calls };
 }
 
 /** Fundeio e contrabordo: sem canal, o plano é a aproximação e a parada. */
@@ -148,6 +159,6 @@ function sidePlan(g: Game): Plan {
   return {
     title: g.sts ? `Plano: a contrabordo do ${g.sts.name}` : 'Plano de fundeio', steps, track: [[s.x, s.y], [tx, ty]],
     notes: [`Navio: ${p.L} m, calado ${p.T.toFixed(1).replace('.', ',')} m. Vento de ${fmtCourse(wind)}.`, g.sts ? 'Ele gira devagar com o vento: confira o rumo dele antes de fechar.' : 'Com 4 quartéis em 17 m de fundo, o navio varre uns 200 m em volta do ferro.'],
-    stopAt: stop.coast, asternAt: stop.astern,
+    stopAt: stop.coast, asternAt: stop.astern, calls: [],
   };
 }

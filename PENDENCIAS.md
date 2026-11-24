@@ -76,3 +76,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.15.0: sucção entre cascos e draga à frente, com pedido de passagem |
 | v0.16.0: giro na bacia de evolução e atracação aproado ao mar |
 | v0.17.0: plano de viagem com pontos de guinada simulados; arrastar a vista (pedidos em teste) |
+| v0.17.1: ponto de chamada, linha de espera e onde fazer cada chamado de rádio (pedido em teste) |

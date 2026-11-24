@@ -30,6 +30,10 @@ export const DREDGED_HALF = 110;        // meia largura dragada
 export const DREDGED_DEPTH = 14;
 const EST_HALF = 330;                   // meia largura do estuário, margem a margem
 export const SPEED_LIMIT_KN = 8;
+/** Ponto de chamada: onde se pede a entrada ao VTS. */
+export const CALL_POINT_S = S_MOUTH - 1200;
+/** Linha de espera: daqui para dentro só com a autorização. */
+export const HOLD_LINE_S = S_MOUTH - 300;
 
 export interface Near { d: number; s: number; tx: number; ty: number; side: number }
 /** Ponto mais próximo do eixo do canal. side > 0 = bombordo de quem entra. */

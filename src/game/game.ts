@@ -491,7 +491,11 @@ export class Game {
 
     // --- regras
     const near = W.nearest(s.x, s.y);
-    if (near.s > W.S_MOUTH - 300 && this.vts !== 'ok' && !this.ledger.vts) {
+    // ponto de chamada e linha de espera: o imediato lembra na hora certa
+    if (this.scenario === 'entrada' && this.vts === 'none' && near.s >= W.CALL_POINT_S && near.s < W.HOLD_LINE_S) {
+      this.say('Imediato', `Estamos no ponto de chamada, a ${Math.round((W.S_MOUTH - near.s) / 10) * 10} m da barra. Peça a entrada ao VTS (aba Rádio); sem ela paramos na linha de espera, a ${Math.round((W.HOLD_LINE_S - near.s) / 10) * 10} m.`, 'warn', 'callpoint', 60);
+    }
+    if (near.s > W.HOLD_LINE_S && this.vts !== 'ok' && !this.ledger.vts) {
       this.ledger.vts = 8000; this.trustEvent(-6, 'entrou sem autorização');
       this.say('Santos VTS', 'Maré Mansa, o senhor cruzou a barra sem autorização. Será autuado.', 'bad');
     }

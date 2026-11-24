@@ -109,6 +109,13 @@ export class Ecdis {
 
     c.strokeStyle = '#ffffffb0'; c.lineWidth = px; c.setLineDash([6 * px, 5 * px]); c.beginPath();
     W.CENTER.forEach(([x, y], i) => (i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y)))); c.stroke();
+    // ponto de chamada e linha de espera
+    c.setLineDash([]); c.lineWidth = 1.5 * px;
+    for (const [ss, col] of [[W.CALL_POINT_S, '#e04fc0'], [W.HOLD_LINE_S, '#ff3b2f']] as [number, string][]) {
+      const [ax, ay] = W.pointAt(ss, -200), [bx, by] = W.pointAt(ss, 200);
+      c.strokeStyle = col; c.beginPath(); c.moveTo(X(ax), Y(ay)); c.lineTo(X(bx), Y(by)); c.stroke();
+    }
+    c.setLineDash([6 * px, 5 * px]); c.lineWidth = px;
     // derrota do plano e pontos de guinada
     if (g.hasPlan) {
       c.setLineDash([]); c.strokeStyle = '#ff9a2e'; c.lineWidth = 1.5 * px; c.beginPath();

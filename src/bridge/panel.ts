@@ -470,6 +470,14 @@ export class Panel {
       c.fillStyle = '#3a2a1a'; c.font = '10px ui-monospace, monospace'; c.textAlign = 'left';
       c.fillText('Carta estilizada: NÃO USAR PARA NAVEGAÇÃO. Sondagens em metros.', 8, h - 8);
     }
+    // ponto de chamada e linha de espera, atravessados no canal
+    if (g.scenario === 'entrada' && g.status !== 'menu') {
+      for (const [ss, col, label] of [[W.CALL_POINT_S, '#7a1f7a', 'PONTO DE CHAMADA'], [W.HOLD_LINE_S, '#b3261e', 'LINHA DE ESPERA']] as [number, string, string][]) {
+        const [ax, ay] = W.pointAt(ss, -260), [bx, by] = W.pointAt(ss, 260);
+        c.strokeStyle = col; c.lineWidth = big ? 2 : 1; c.setLineDash([4, 3]); c.beginPath(); c.moveTo(X(ax), Y(ay)); c.lineTo(X(bx), Y(by)); c.stroke(); c.setLineDash([]);
+        if (big) { c.fillStyle = col; c.font = 'bold 10px ui-monospace, monospace'; c.textAlign = 'left'; c.fillText(label, X(bx) + 6, Y(by) + 3); }
+      }
+    }
     // a derrota do plano, a lápis, com os pontos de guinada
     if (g.hasPlan && g.status !== 'menu') {
       const pl = g.plan;

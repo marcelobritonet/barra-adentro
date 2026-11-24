@@ -50,4 +50,23 @@ describe('plano de viagem', () => {
     g.freeBerth = 'cais'; g.freeHeadOut = true; g.start('entrada');
     const giro = makePlan(g); expect(giro.title).toContain('aproado ao mar'); expect(giro.steps[giro.steps.length - 1].action).toContain('bacia de evolução');
   });
+
+  it('o plano diz onde fazer cada chamado de rádio, e o imediato lembra no ponto de chamada', () => {
+    const g = new Game(); g.start('entrada');
+    const plan = makePlan(g);
+    expect(plan.calls.length).toBe(5);
+    expect(plan.calls[0].where).toMatch(/ponto de chamada: .*boia \d+.* a 1200 m da barra/);
+    expect(plan.calls[0].why).toMatch(/linha de espera/);
+    expect(W.CALL_POINT_S).toBeGreaterThan(W.nearest(g.s.x, g.s.y).s);   // a viagem começa antes dele
+    expect(W.HOLD_LINE_S).toBeGreaterThan(W.CALL_POINT_S);
+    g.setTelegraph(6); g.warp = 8;
+    for (let i = 0; i < 600 && !g.msgs.some(m => m.text.includes('ponto de chamada')); i++) {
+      const s = g.s, n = W.nearest(s.x, s.y), [x, y] = W.pointAt(n.s + 300); let e = Math.atan2(x - s.x, y - s.y) - s.psi; while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI;
+      g.setRudderDeg(Math.round(Math.max(-20, Math.min(20, e / D2R * 1.5 - s.r / D2R * 50)) / 5) * 5); g.update(0.1);
+    }
+    expect(g.msgs.some(m => m.who === 'Imediato' && m.text.includes('ponto de chamada'))).toBe(true);
+    expect(W.nearest(g.s.x, g.s.y).s).toBeLessThan(W.HOLD_LINE_S);
+    expect(makePlan(Object.assign(new Game(), {})).calls.length).toBe(5);
+    const f = new Game(); f.start('fundeio'); expect(makePlan(f).calls.length).toBe(0);
+  });
 });

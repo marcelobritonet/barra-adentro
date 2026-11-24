@@ -126,6 +126,8 @@ Nasceu do teste: sem plano, manobra antecipada vira tentativa e erro. Código em
 | Ponto de guinada | Simula-se o navio desta viagem fazendo a curva com o leme do plano (10°, 15° ou 20° conforme o ângulo); daí sai quantos metros antes do vértice começar e a quantos graus quebrar |
 | Referência | Cada ponto é dito em relação à boia mais próxima: "com a boia 12 pelo través", "170 m antes da boia 17" |
 | Parada | Simulada: distância para cair a 1 nó só parando a máquina, mais a distância com devagar ré |
+| Rádio | Tabela com onde fazer cada chamado: VTS no ponto de chamada (1.200 m da barra), prático junto, navio do berço logo depois, rebocadores ao cruzar a barra, draga a 800 m |
+| Linha de espera | A 300 m da barra; sem autorização do VTS não se passa dela |
 | Sem GPS | O plano vale pelas boias; a proa avisa a de referência |
 | Com GPS ou ECDIS | O quadro mostra metros e minutos até a próxima ação |
 

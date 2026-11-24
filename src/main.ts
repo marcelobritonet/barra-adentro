@@ -39,7 +39,7 @@ function steps(): [string, boolean][] {
   if (game.scenario === 'entrada') {
     const n = W.nearest(s.x, s.y), b = game.berth(), done = game.result?.ok === true;
     return [
-      ['Pedir entrada ao VTS (aba Rádio)', game.vts === 'ok'],
+      [`Pedir entrada ao VTS no ponto de chamada, a ${Math.round((W.S_MOUTH - W.CALL_POINT_S) / 100) * 100} m da barra (aba Rádio)`, game.vts === 'ok'],
       ['Berço livre: aguardar ou pedir pelo rádio que o navio largue', !berthBusy(game)],
       ['Cruzar a barra; dali em diante, máximo de 8 nós', n.s > W.S_MOUTH],
       ['Primeira curva a bombordo; cruzar com o navio que sai, bombordo com bombordo', n.s > W.TURNS[3].s + 150],
@@ -125,6 +125,7 @@ function showPlan(briefing: boolean) {
     <h2>${pl.title}</h2>
     <table><tr><th>Nº</th><th>Perna</th><th>Rumo</th><th>Dist.</th><th>Máquina</th><th>No fundo</th><th>Tempo</th><th>Ao fim da perna</th></tr>${rows}</table>
     ${total ? `<p>Tempo previsto até o berço: <b>${Math.round(total)} min</b>, sem contar a atracação. Na carta: a derrota a lápis e, em vermelho, onde começa cada guinada.</p>` : ''}
+    ${pl.calls.length ? `<table><tr><th>Rádio: onde chamar</th><th>O quê</th><th>Por quê ali</th></tr>${pl.calls.map(c => `<tr><td>${c.where}</td><td class="act">${c.what}</td><td>${c.why}</td></tr>`).join('')}</table>` : ''}
     <ul>${pl.notes.map(n => `<li>${n}</li>`).join('')}</ul>
     <div class="btns">${briefing ? '<button data-plan="go" class="on">⚓ Zarpar</button><button data-plan="back">Voltar ao porto</button>' : '<button data-plan="close" class="on">Fechar (O)</button>'}</div>
   </div>`;
@@ -158,6 +159,8 @@ function drawPlanBox() {
       const d = (t && !turning ? t.s : endS) - n.s;
       if (d > 0) html += `<div class="gps">GPS: faltam ${Math.round(d / 10) * 10} m${game.sog > 0.3 ? ` (${dec(d / game.sog / 60)} min)` : ''} para ${t && !turning ? 'começar a guinada' : 'o fim da perna'}</div>`;
     } else html += `<div class="dim">Sem GPS: vá pelas boias; a proa avisa a de referência.</div>`;
+    if (game.vts === 'none') html += n.s >= W.CALL_POINT_S ? `<div><span class="now">RÁDIO: pedir entrada ao VTS agora</span></div>` : `<div class="next">Rádio: pedir entrada ao VTS no ponto de chamada${hasPos ? `, em ${Math.round((W.CALL_POINT_S - n.s) / 10) * 10} m` : ', marcado na carta'}</div>`;
+    else if (game.vts === 'asked') html += `<div class="next">Rádio: aguardando o VTS. Não passar da linha de espera.</div>`;
     const toBerth = (W.QUAY.base ?? W.QUAY).s - n.s;
     if (!game.headOut && toBerth > 0 && toBerth < pl.stopAt + 250) html += `<div class="next">Parada: máquina parada a ${Math.round(pl.stopAt / 10) * 10} m do berço${hasPos ? ` (faltam ${Math.round(toBerth / 10) * 10} m)` : ''}</div>`;
   }
