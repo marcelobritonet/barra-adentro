@@ -37,6 +37,9 @@ export class Panel {
   mfd: MfdMode = 'carta'; tab = 'radio';
   private wasBerthing = false; private before: { mfd: MfdMode; tab: string } = { mfd: 'carta', tab: 'radio' };
   bigChart = false;
+  /** Histórico de mensagens aberto sobre a vista. */
+  logAll = false;
+  private seen = new WeakMap<object, number>();
   /** Cliques nos comandos. Na tela de celular os instrumentos saem do painel, e quem os recebe escuta com esta mesma função. */
   onClick: (e: Event) => void = () => {};
 
@@ -362,10 +365,14 @@ export class Panel {
     this.big.hidden = !this.bigChart;
     if (this.bigChart) { const c = this.big.getContext('2d')!; this.chart(c, 600, 980, true); }
 
-    const last = g.msgs[g.msgs.length - 1], key = g.msgs.length + (last ? last.t : 0);
+    // as mensagens somem sozinhas da vista (tempo de relógio, não de jogo); o botão Msgs mostra o histórico
+    const nowMs = performance.now();
+    for (const m of g.msgs) if (!this.seen.has(m)) this.seen.set(m, nowMs);
+    const shown = this.logAll ? g.msgs.slice(-12) : g.msgs.filter(m => nowMs - this.seen.get(m)! < (m.level === 'info' ? 14000 : 24000)).slice(-3);
+    const last = shown[shown.length - 1], key = (this.logAll ? 1e6 : 0) + g.msgs.length * 100 + shown.length + (last ? last.t : 0);
     if (key !== this.logCount) {
       this.logCount = key;
-      $('log').innerHTML = g.msgs.slice(-6).map(m => `<div class="${m.level}"><span class="t">${fmtTime(m.t)}</span> <b>${m.who}:</b> ${m.text}</div>`).join('');
+      $('log').innerHTML = shown.map(m => `<div class="${m.level}"><span class="t">${fmtTime(m.t)}</span> <b>${m.who}:</b> ${m.text}</div>`).join('');
     }
   }
 

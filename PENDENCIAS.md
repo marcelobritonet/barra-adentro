@@ -97,6 +97,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.20.0: atracação que perdoa (defensas, tolerâncias, plano de atracação) e rebocadores para vante, ré e segurar |
 | v0.21.0: cabos correm o navio até o ponto; tela de atracação e painel que muda sozinho |
 | v0.21.1: modo livre começa equipado e guarda a própria escolha (defeito achado em teste) |
+| v0.24.3: vista desobstruída: mensagens que somem e passos recolhidos (teste da arrumação console) |
 | v0.24.2: celular sem a carta grande, que não fechava; versão na tela do porto (teste no aparelho) |
 | v0.24.1: no celular, Carta e Tela não travam mais (defeito achado em teste no aparelho) |
 | v0.24.0: ECDIS 2× maior e três arrumações do painel de mesa (pedidos do teste) |

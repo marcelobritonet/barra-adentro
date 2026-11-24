@@ -2,6 +2,14 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.24.3 — Vista desobstruída
+
+Retorno do teste, com print da arrumação "console": "não consigo mais ver nada". A lista de passos, o plano e seis mensagens cobriam o navio, e a vista ficou mais baixa com o console embaixo.
+
+- Mensagens: no máximo três sobre a vista, e cada uma some sozinha (14 s as comuns, 24 s os avisos). O botão "Msgs" mostra e esconde as doze últimas.
+- Passos da missão: fica só o passo atual, com "passo N de M". Um clique abre a lista inteira; outro fecha.
+- Mensagens mais estreitas e com letra menor.
+
 ## v0.24.2 — Celular sem a carta grande; versão na tela do porto
 
 Retorno do teste no aparelho, com print: a carta grande abria por cima dos botões e não fechava.

@@ -84,13 +84,16 @@ function steps(): [string, boolean][] {
   ];
 }
 let missionHtml = '';
+// a lista de passos fica recolhida no passo atual; um clique abre e fecha
+const placePilotHud = () => { document.getElementById('pilothud')!.style.top = `${mission.offsetTop + mission.offsetHeight + 10}px`; };
+mission.addEventListener('click', () => { mission.classList.toggle('open'); placePilotHud(); });
 function drawMission() {
   const st = steps(), cur = st.findIndex(x => !x[1]);
-  const html = `<b>${game.scenario === 'entrada' ? 'Entrada e atracação' : game.scenario === 'contrabordo' ? 'A contrabordo' : 'Fundeio'}</b>` + st.map(([t, d], i) => `<div class="${d ? 'done' : i === cur ? 'now' : ''}">${d ? '✓' : i === cur ? '▶' : '·'} ${t}</div>`).join('');
+  const html = `<b>${game.scenario === 'entrada' ? 'Entrada e atracação' : game.scenario === 'contrabordo' ? 'A contrabordo' : 'Fundeio'} · passo ${Math.max(1, cur + 1)} de ${st.length}</b>` + st.map(([t, d], i) => `<div class="${d ? 'done' : i === cur ? 'now' : ''}">${d ? '✓' : i === cur ? '▶' : '·'} ${t}</div>`).join('');
   if (html !== missionHtml) {
     mission.innerHTML = missionHtml = html;
     // a faixa do prático fica logo abaixo da lista, seja ela curta ou longa
-    document.getElementById('pilothud')!.style.top = `${mission.offsetTop + mission.offsetHeight + 10}px`;
+    placePilotHud();
   }
 }
 help.innerHTML = `<h2>AJUDA</h2><p>Clique ou aperte <kbd>H</kbd> para fechar.</p><div class="cols">
@@ -209,6 +212,7 @@ document.getElementById('camctl')!.addEventListener('click', e => {
   if (c === 'plan' && game.status === 'running') { if (planEl.hidden) showPlan(false); else planEl.hidden = true; }
   if (c === 'sound') { sound.toggle(); syncSound(); } if (c === 'horn') game.sound();
   if (c === 'layout') mobile.flip();
+  if (c === 'msgs') { panel.logAll = !panel.logAll; b.classList.toggle('on', panel.logAll); }
   if (c === 'desk') { desk.next(); fit(); game.say('Painel', DESKS[desk.variant] + '.', 'info'); }
   b.blur();
 });

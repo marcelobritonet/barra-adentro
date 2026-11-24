@@ -307,3 +307,12 @@ body.mobile #strip, body.mobile #dock, body.mobile [data-cam="desk"] { display: 
 #bigchart { cursor: pointer; }
 body.mobile #camctl [data-cam="chart"] { display: none; }
 .card h1 .ver { font-size: 11px; letter-spacing: 0; color: #5d6d7a; font-weight: 400; }
+
+/* ---------- vista desobstruída: passos recolhidos e poucas mensagens */
+#mission { pointer-events: auto; cursor: pointer; }
+#mission:not(.open) div:not(.now) { display: none; }
+#mission:not(.open)::after { content: 'clique para ver todos os passos'; display: block; font-size: 10px; color: #5d6d7a; }
+#log { font-size: 13px; }
+#log div { max-width: min(100%, 620px); opacity: 0.8; }
+#log div:last-child { font-size: 14px; }
+body.mobile #mission::after { display: none; }
