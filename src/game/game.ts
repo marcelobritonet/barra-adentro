@@ -8,6 +8,7 @@ import { Pilot, PilotGrade, PILOTS } from './pilot';
 import { makeTugs, TugMode } from './tugs';
 import { bearingText, berthBusy, berthShip, DEPART_ON_REQUEST, hullDistance, makeTraffic, Other, swingRadius, updateTraffic } from './traffic';
 import { Tide, tideAt, TidePreset, tideText } from '../world/tide';
+import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, salaries, saveCareer, wearFactor } from './career';
 
 export type Scenario = 'entrada' | 'fundeio';
 export interface Msg { t: number; text: string; level: 'info' | 'warn' | 'bad' | 'pilot'; who: string }
@@ -33,6 +34,10 @@ export class Game {
   time = 0; warp = 1; paused = false;
   status: 'menu' | 'running' | 'done' = 'menu';
   scenario: Scenario = 'entrada';
+  /** Carreira: dinheiro, peças e tripulação. No modo livre nada disso vale e os equipamentos são chaves de teste. */
+  career: Career = newCareer();
+  free = false;
+  contract: Contract | null = null;
   tidePreset: TidePreset = 'vazante';
   tide: Tide = tideAt(0, 'vazante');
   equip = { gps: false, rot: false, radar: false, ecdis: false, doppler: false, thruster: false };
@@ -75,7 +80,11 @@ export class Game {
 
   start(sc: Scenario) {
     this.scenario = sc;
-    this.p = makeCoaster(1);
+    const ct = this.contract && this.contract.scenario === sc ? this.contract : null;
+    this.contract = ct;
+    this.p = makeCoaster(ct ? ct.load : 1);
+    if (ct) this.tidePreset = ct.tide;
+    if (!this.free) { applyCareer(this.p, this.career); this.equip = equipOf(this.career); }
     if (sc === 'entrada') {
       const [x, y] = W.pointAt(W.S_MOUTH - 1500);
       const [x2, y2] = W.pointAt(W.S_MOUTH - 1400);
@@ -93,12 +102,13 @@ export class Game {
     this.pilot = new Pilot(); this.vts = sc === 'entrada' ? 'none' : 'ok'; this.vtsTimer = 0;
     this.mooring = 0; this.holdTime = 0; this.anchorPhase = 'stowed'; this.berthSig = ''; this.berthAt = -99; this.said.clear(); this.lastContact = -99;
     this.status = 'running';
+    this.s.air = this.p.airStarts;
     this.trustStart = this.trust; this.trustNote = ''; this.trustNoteAt = -99; this.telTimes = [];
     this.baseAck = this.p.ackDelay; this.baseHelm = this.p.helmDelay;
     if (sc === 'entrada') {
       this.say('Imediato', `Vento sueste. Maré: ${tideText(this.tide)}.`, 'info');
       this.say('Imediato', 'Precisamos da autorização do VTS antes da barra. Prático é opcional: chame pelo rádio se quiser.', 'info');
-      this.say('Imediato', 'Berço no cais de bombordo, depois da segunda curva. Calado 5,2 m. Temos ar para 5 partidas de máquina.', 'info');
+      this.say('Imediato', `Berço no cais de bombordo, depois da segunda curva. Calado ${this.p.T.toFixed(1).replace('.', ',')} m. Temos ar para ${this.p.airStarts} partidas de máquina.`, 'info');
     } else {
       this.say('Capitania', 'Berço ocupado. Fundeie no fundeadouro a noroeste e aguarde.', 'info');
       this.say('Imediato', 'Há três navios fundeados. Precisamos de uns 280 m de folga do ferro de cada um.', 'info');
@@ -227,7 +237,7 @@ export class Game {
     // a proa precisa estar encostada; a popa pode vir depois, virada pelos cabos
     if (b.bow > 8 || b.stern > 35) return this.say('Imediato', `Longe demais para passar espias: proa ${Math.max(0, b.bow).toFixed(0)} m (máx. 8), popa ${Math.max(0, b.stern).toFixed(0)} m (máx. 35).`, 'warn');
     if (this.sog > 0.25) return this.say('Imediato', 'Ainda com seguimento. Pare o navio antes de amarrar.', 'warn');
-    this.mooring = 40 * this.crewFactor;
+    this.mooring = 40 * this.crewFactor * (!this.free && this.career.crew.mate >= 2 ? 0.5 : 1);
     this.setTelegraph(4);
     this.say('Imediato', b.stern > 8 ? 'Lançante de proa em terra. Virando a popa nos cabos.' : 'Passando espias. Lançante e espringue em terra.', 'info');
   }
@@ -393,9 +403,10 @@ export class Game {
     }
     this.ledger.fuel += Math.abs(s.n) ** 3 * 3 * DT;
     // imediato confiante avisa cedo; desconfiado só fala em cima da hora
-    if (ukcMin < 1.5 + this.trust / 100) this.say('Imediato', `Pouca água: ${Math.max(0, ukcMin).toFixed(1)} m sob o casco!`, 'warn', 'ukc', 12);
+    const lead = this.free ? 0 : mateLead(this.career);
+    if (ukcMin < 1.5 + lead + this.trust / 100) this.say('Imediato', `Pouca água: ${Math.max(0, ukcMin).toFixed(1)} m sob o casco!`, 'warn', 'ukc', 12);
     if (ukcMin < 1) this.trustEvent(-3, 'pouca água sob a quilha', 'ukc', 45);
-    if (this.trust > 20 && near.s > W.S_MOUTH - 600 && this.sog > (W.SPEED_LIMIT_KN - 0.7) * KN && this.sog <= W.SPEED_LIMIT_KN * KN) {
+    if ((this.trust > 20 || lead > 0) && near.s > W.S_MOUTH - 600 && this.sog > (W.SPEED_LIMIT_KN - 0.7) * KN && this.sog <= W.SPEED_LIMIT_KN * KN) {
       this.say('Imediato', `Comandante, ${(this.sog / KN).toFixed(1)} nós. O limite é ${W.SPEED_LIMIT_KN}.`, 'warn', 'prespeed', 60);
     }
 
@@ -444,13 +455,15 @@ export class Game {
 
   private finish(ok: boolean, title: string, detail: string, penalty = 0) {
     const L = this.ledger, lines: [string, number][] = [];
-    if (ok) lines.push(this.scenario === 'entrada' ? ['Frete: 2.900 t de fertilizante', 28000] : ['Fundeio dentro do prazo', 3500]);
+    const ct = this.contract;
+    if (ok) lines.push(ct ? [`Frete: ${ct.cargo}`, ct.freight] : this.scenario === 'entrada' ? ['Frete: 2.900 t de fertilizante', 28000] : ['Fundeio dentro do prazo', 3500]);
     if (penalty) lines.push([title, -penalty]);
     lines.push(['Óleo combustível', -Math.round(L.fuel)]);
     if (L.pilot) lines.push([`Praticagem (${this.pilot.name.toLowerCase()})`, -L.pilot]);
     if (L.vts) lines.push(['Multa: entrada sem autorização do VTS', -L.vts]);
     if (L.tugs) lines.push([`Rebocadores (${this.tugs.filter(t => t.state !== 'none').length})`, -Math.round(L.tugs)]);
-    const wear = Math.round((this.s.wearEngine * 350 + this.s.starts * 120) / 10) * 10;
+    const wf = this.free ? 1 : wearFactor(this.career);
+    const wear = Math.round((this.s.wearEngine * 350 + this.s.starts * 120) * wf / 10) * 10;
     if (wear) lines.push([`Desgaste da máquina (${this.s.starts} partidas)`, -wear]);
     const helm = Math.round(this.s.wearRudder * 0.6 / 10) * 10;
     if (helm) lines.push([`Desgaste da máquina do leme (${Math.round(this.s.wearRudder)}° de curso)`, -helm]);
@@ -458,7 +471,9 @@ export class Game {
     if (L.buoys) lines.push(['Boias abalroadas', -L.buoys]);
     if (L.contact) lines.push(['Avaria no cais e nas defensas', -L.contact]);
     if (L.anchor) lines.push(['Ferro e amarra perdidos', -L.anchor]);
-    const late = this.time / 60 - PAR_MIN[this.scenario];
+    const pay = this.free ? 0 : salaries(this.career);
+    if (pay) lines.push(['Soldadas da tripulação contratada', -pay]);
+    const late = this.time / 60 - (ct ? ct.parMin : PAR_MIN[this.scenario]);
     if (late > 0) lines.push([`Demora (${late.toFixed(0)} min)`, -Math.round(late * 300)]);
     if (!ok) this.trustEvent(-30, title.toLowerCase());
     else {
@@ -468,10 +483,15 @@ export class Game {
     }
     // tripulação que não confia no comandante vai embora
     const left = this.trust <= -60;
-    if (left) lines.push(['Timoneiro pediu desembarque: substituto e passagens', -6000]);
+    // quem vai embora é o melhor tripulante contratado; sem ninguém contratado, vai o timoneiro de bordo
+    const gone = left && !this.free ? bestHired(this.career) : null;
+    if (left) lines.push([gone ? `${CREW[gone].levels[this.career.crew[gone]].name} pediu desembarque: passagens e substituto` : 'Timoneiro pediu desembarque: substituto e passagens', -6000]);
+    if (gone) this.career.crew[gone] = 0;
     const trustAfter = this.trust;
     if (left) this.trust = -30;
     saveTrust(this.trust);
+    const total = lines.reduce((a, l) => a + l[1], 0);
+    if (!this.free) { this.career.money += total; this.career.voyages++; saveCareer(this.career); }
     this.result = { ok, title, detail, lines, total: lines.reduce((a, l) => a + l[1], 0), trustBefore: this.trustStart, trustAfter, left };
     this.status = 'done';
   }

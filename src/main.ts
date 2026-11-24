@@ -7,6 +7,7 @@ import * as W from './world/santos';
 import { buildGrid } from './world/santos';
 import { TIDE_PRESETS, TidePreset } from './world/tide';
 import { berthBusy } from './game/traffic';
+import { buy, CONTRACTS, CREW, CrewId, Level, loadCareer, newCareer, PARTS, PartId, salaries, saveCareer } from './game/career';
 
 const game = new Game();
 const grid = buildGrid();
@@ -87,31 +88,59 @@ const money = (v: number) => `<span class="${v >= 0 ? 'pos' : 'neg'}">${v < 0 ? 
 
 const sign = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
 
+// modo de jogo e carreira ficam guardados entre partidas
+const FREE_KEY = 'barra-adentro.livre';
+game.career = loadCareer();
+try { game.free = localStorage.getItem(FREE_KEY) === '1'; } catch { /* sem armazenamento */ }
+let portTab: 'contratos' | 'oficina' | 'tripulacao' = 'contratos', portMsg = '', confirmNew = false;
+const brl = (v: number) => `R$ ${Math.round(v).toLocaleString('pt-BR')}`;
+
+function shopRows(kind: 'part' | 'crew') {
+  const c = game.career;
+  const row = (id: string, label: string, levels: Level[], have: number) => {
+    const cur = levels[have], next = levels[have + 1];
+    return `<tr><td><b>${label}</b><br><span class="have">${cur.name}</span><br><small>${cur.effect}${cur.salary ? ` · soldada ${brl(cur.salary)} por viagem` : ''}</small></td>
+      <td>${next ? `<b>${next.name}</b><br><small>${next.effect}${next.salary ? ` · soldada ${brl(next.salary)} por viagem` : ''}</small>` : '<span class="pos">Melhor nível</span>'}</td>
+      <td>${next ? `<button data-buy="${kind}:${id}" ${c.money < next.price ? 'disabled' : ''}>${kind === 'part' ? 'Comprar' : 'Contratar'}<br>${brl(next.price)}</button>` : ''}</td></tr>`;
+  };
+  if (kind === 'crew') return `<table class="shop">${(Object.keys(CREW) as CrewId[]).map(k => row(k, CREW[k].label, CREW[k].levels, c.crew[k])).join('')}</table>
+    <p class="dim">Tripulante contratado recebe soldada a cada viagem. Se a confiança da tripulação terminar uma viagem em −60 ou menos, o melhor contratado desembarca.</p>`;
+  const groups = ['Máquina e governo', 'Instrumentos'] as const;
+  return groups.map(gr => `<h3>${gr}</h3><table class="shop">${(Object.keys(PARTS) as PartId[]).filter(k => PARTS[k].group === gr).map(k => row(k, PARTS[k].label, PARTS[k].levels, c.parts[k])).join('')}</table>`).join('');
+}
+
 function menu() {
   overlay.hidden = false;
-  overlay.innerHTML = `<div class="card">
-    <h1>BARRA ADENTRO</h1>
-    <p>Protótipo de manobra de navios. Você comanda o <b>N/M Maré Mansa</b>, um costeiro de 90 m e 4.800 t carregado, chegando à barra de Santos.
-    O navio demora a obedecer: dê a ordem antes de precisar dela.</p>
-    <div class="choices">
-      <button data-sc="entrada">▶ Entrada e atracação<small>Autorização do VTS, prático opcional, barra, berço ocupado por um navio que precisa sair, cruzamento no canal, duas curvas e atracação por bombordo. Frete R$ 28.000.</small></button>
-      <button data-sc="fundeio">▶ Fundeio<small>Berço ocupado: fundear no fundeadouro externo e aguardar. Mais curto, bom para aprender.</small></button>
-    </div>
-    <table>
-      <tr><td><kbd>A</kbd> <kbd>D</kbd> ou <kbd>←</kbd> <kbd>→</kbd></td><td>Leme 5° a bombordo / boreste</td></tr>
-      <tr><td><kbd>Espaço</kbd></td><td>Leme a meio</td></tr>
-      <tr><td><kbd>W</kbd> <kbd>S</kbd> ou <kbd>↑</kbd> <kbd>↓</kbd></td><td>Telégrafo: mais adiante / mais a ré</td></tr>
-      <tr><td><kbd>F</kbd> <kbd>G</kbd> <kbd>M</kbd></td><td>Largar ferro / virar ferro / passar espias</td></tr>
-      <tr><td><kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd></td><td>Impelidor de proa: bombordo / zero / boreste (se instalado)</td></tr>
-      <tr><td><kbd>1</kbd>–<kbd>4</kbd> <kbd>P</kbd></td><td>Acelerar o tempo (1×, 2×, 4×, 8×) / pausa</td></tr>
-      <tr><td><kbd>Q</kbd> <kbd>E</kbd> <kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd></td><td>Girar a vista / zoom / carta</td></tr>
-    </table>
-    <p>Confiança da tripulação: <b>${sign(game.trust)}</b> (de −100 a +100). Ela muda a rapidez com que as ordens são cumpridas e o quanto a tripulação avisa. <button data-reset="1">Zerar</button></p>
-    <div class="preset">Maré: ${(Object.keys(TIDE_PRESETS) as TidePreset[]).map(k => `<button data-tide="${k}" class="${game.tidePreset === k ? 'on' : ''}">${TIDE_PRESETS[k].label}</button>`).join('')}</div>
-    <p class="dim" style="margin-top:0">${TIDE_PRESETS[game.tidePreset].hint} A maré corre 2× mais rápido que a real.</p>
-    <div class="preset">Equipamentos de teste: <button data-eq="off" class="${Object.values(game.equip).some(Boolean) ? '' : 'on'}">Navio básico</button><button data-eq="on" class="${Object.values(game.equip).every(Boolean) ? 'on' : ''}">Tudo ligado</button><span class="dim">(radar, ECDIS, doppler, impelidor, GPS)</span></div>
-    <p class="dim">Ajuda durante o jogo: tecla <kbd>H</kbd>. A carta é estilizada e não serve para navegação.</p>
-  </div>`;
+  const c = game.career;
+  const head = `<h1>BARRA ADENTRO</h1>
+    <div class="modes"><button data-mode="career" class="${game.free ? '' : 'on'}">Carreira</button><button data-mode="free" class="${game.free ? 'on' : ''}">Modo livre</button>
+      <span class="dim">${game.free ? 'Sem dinheiro: escolha cenário, maré e equipamentos à vontade.' : 'Entregue cargas, pague as contas e equipe o navio.'}</span></div>`;
+  const foot = `<p class="dim">Confiança da tripulação: <b>${sign(game.trust)}</b> (−100 a +100) <button data-reset="1">Zerar</button> · Ajuda no jogo: <kbd>H</kbd> · A carta é estilizada e não serve para navegação.</p>`;
+  if (game.free) {
+    overlay.innerHTML = `<div class="card">${head}
+      <p>Você comanda o <b>N/M Maré Mansa</b>, um costeiro de 90 m chegando à barra de Santos. O navio demora a obedecer: dê a ordem antes de precisar dela.</p>
+      <div class="choices">
+        <button data-sc="entrada">▶ Entrada e atracação<small>VTS, prático opcional, berço ocupado por um navio que precisa sair, cruzamento no canal, duas curvas e atracação por bombordo.</small></button>
+        <button data-sc="fundeio">▶ Fundeio<small>Fundear entre os navios do fundeadouro externo. Mais curto, bom para aprender.</small></button>
+      </div>
+      <div class="preset">Maré: ${(Object.keys(TIDE_PRESETS) as TidePreset[]).map(k => `<button data-tide="${k}" class="${game.tidePreset === k ? 'on' : ''}">${TIDE_PRESETS[k].label}</button>`).join('')}</div>
+      <p class="dim" style="margin-top:0">${TIDE_PRESETS[game.tidePreset].hint} A maré corre 2× mais rápido que a real.</p>
+      <div class="preset">Equipamentos: <button data-eq="off" class="${Object.values(game.equip).some(Boolean) ? '' : 'on'}">Navio básico</button><button data-eq="on" class="${Object.values(game.equip).every(Boolean) ? 'on' : ''}">Tudo ligado</button><span class="dim">(ou um a um, na aba Equip. do painel)</span></div>
+      ${foot}</div>`;
+    return;
+  }
+  const tabs = ([['contratos', 'Contratos'], ['oficina', 'Oficina'], ['tripulacao', 'Tripulação']] as const).map(([k, l]) => `<button data-port="${k}" class="${portTab === k ? 'on' : ''}">${l}</button>`).join('');
+  const body = portTab === 'contratos'
+    ? `<div class="contracts">${CONTRACTS.map(ct => `<button data-contract="${ct.id}">
+        <span class="stars">${'★'.repeat(ct.stars)}${'☆'.repeat(5 - ct.stars)}</span><b>${ct.title}</b><span class="pay">${brl(ct.freight)}</span>
+        <small>${ct.cargo} · calado ${(3.6 + 1.6 * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min<br>${ct.note}</small></button>`).join('')}</div>`
+    : shopRows(portTab === 'oficina' ? 'part' : 'crew');
+  overlay.innerHTML = `<div class="card wide">${head}
+    <div class="purse"><span>N/M Maré Mansa · ${c.voyages} viage${c.voyages === 1 ? 'm' : 'ns'}</span><span>Caixa <b class="${c.money >= 0 ? 'pos' : 'neg'}">${brl(c.money)}</b>${salaries(c) ? ` · soldadas ${brl(salaries(c))} por viagem` : ''}</span></div>
+    <div class="tabs">${tabs}<span class="sp"></span><button data-newcareer="1" class="${confirmNew ? 'danger' : ''}">${confirmNew ? 'Confirmar: apagar a carreira' : 'Recomeçar'}</button></div>
+    ${portMsg ? `<p class="neg">${portMsg}</p>` : ''}
+    ${body}
+    ${foot}</div>`;
 }
 function showResult() {
   const r = game.result!;
@@ -121,21 +150,32 @@ function showResult() {
     <p>${r.detail}</p>
     <table>${r.lines.map(([l, v]) => `<tr><td>${l}</td><td>${money(v)}</td></tr>`).join('')}
       <tr class="total"><td>Resultado da viagem</td><td>${money(r.total)}</td></tr>
+      ${game.free ? '' : `<tr><td>Caixa</td><td>${money(game.career.money)}</td></tr>`}
       <tr><td>Confiança da tripulação</td><td>${sign(r.trustBefore)} → <span class="${r.trustAfter >= r.trustBefore ? 'pos' : 'neg'}">${sign(r.trustAfter)}</span></td></tr></table>
-    ${r.left ? '<p class="neg">A tripulação perdeu a confiança em você e o timoneiro desembarcou. O substituto chega desconfiado.</p>' : ''}
-    <div class="choices"><button data-sc="${game.scenario}">↻ Tentar de novo</button><button data-menu="1">☰ Menu</button></div>
+    ${r.left ? '<p class="neg">A tripulação perdeu a confiança em você e alguém desembarcou. O substituto chega desconfiado.</p>' : ''}
+    <div class="choices"><button data-again="1">↻ ${game.free ? 'Tentar de novo' : 'Repetir o contrato'}</button><button data-menu="1">${game.free ? '☰ Menu' : '⚓ Voltar ao porto'}</button></div>
   </div>`;
+}
+function launch(sc: Scenario) {
+  game.start(sc);
+  panel.reset(); overlay.hidden = true; shown = false; help.hidden = true;
 }
 overlay.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button'); if (!b) return;
-  if (b.dataset.menu) return menu();
-  if (b.dataset.reset) { game.resetTrust(); return menu(); }
-  if (b.dataset.eq) { setAllEquip(b.dataset.eq === 'on'); return menu(); }
-  if (b.dataset.tide) { game.tidePreset = b.dataset.tide as TidePreset; return menu(); }
-  if (b.dataset.sc) {
-    game.start(b.dataset.sc as Scenario);
-    panel.reset(); overlay.hidden = true; shown = false; help.hidden = true;
-  }
+  const d = b.dataset;
+  if (!d.newcareer) confirmNew = false;
+  portMsg = '';
+  if (d.menu) return menu();
+  if (d.reset) { game.resetTrust(); return menu(); }
+  if (d.eq) { setAllEquip(d.eq === 'on'); return menu(); }
+  if (d.tide) { game.tidePreset = d.tide as TidePreset; return menu(); }
+  if (d.mode) { game.free = d.mode === 'free'; try { localStorage.setItem(FREE_KEY, game.free ? '1' : '0'); } catch { /* sem armazenamento */ } return menu(); }
+  if (d.port) { portTab = d.port as typeof portTab; return menu(); }
+  if (d.buy) { const [kind, id] = d.buy.split(':'); portMsg = buy(game.career, kind as 'part' | 'crew', id) ?? ''; saveCareer(game.career); return menu(); }
+  if (d.newcareer) { if (!confirmNew) { confirmNew = true; return menu(); } confirmNew = false; game.career = newCareer(); saveCareer(game.career); game.resetTrust(); return menu(); }
+  if (d.contract) { const ct = CONTRACTS.find(x => x.id === d.contract)!; game.contract = ct; return launch(ct.scenario); }
+  if (d.again) return launch(game.scenario);
+  if (d.sc) { game.contract = null; return launch(d.sc as Scenario); }
 });
 
 addEventListener('keydown', e => {

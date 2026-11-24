@@ -116,7 +116,7 @@ export class Panel {
             <button id="moor">Passar espias (M)</button>
           </div>
           <div class="tab" data-pane="equip" style="display:none">
-            <div class="unit">Chaves de teste: ligam equipamentos que serão upgrades.</div>
+            <div class="unit" id="equipnote"></div>
             ${EQUIP.map(([k, l]) => `<label class="sw"><input type="checkbox" data-eq="${k}"> ${l}</label>`).join('')}
           </div>
         </div>
@@ -256,7 +256,8 @@ export class Panel {
     };
     document.querySelectorAll<HTMLElement>('[data-tab]').forEach(b => { b.classList.toggle('on', b.dataset.tab === this.tab); b.classList.toggle('alert', alert[b.dataset.tab!] && b.dataset.tab !== this.tab); });
     document.querySelectorAll<HTMLElement>('[data-pane]').forEach(el => { el.style.display = el.dataset.pane === this.tab ? '' : 'none'; });
-    document.querySelectorAll<HTMLInputElement>('[data-eq]').forEach(cb => { cb.checked = g.equip[cb.dataset.eq as keyof Game['equip']]; });
+    document.querySelectorAll<HTMLInputElement>('[data-eq]').forEach(cb => { cb.checked = g.equip[cb.dataset.eq as keyof Game['equip']]; cb.disabled = !g.free; });
+    $('equipnote').textContent = g.free ? 'Modo livre: ligue e desligue à vontade.' : 'Carreira: o que está ligado foi comprado na oficina do porto.';
 
     const entry = g.scenario === 'entrada', pl = g.pilot;
     const vts = $<HTMLButtonElement>('vts');

@@ -128,3 +128,20 @@ label.sw { margin: 5px 0; }
 #tidebox { flex: none; padding: 3px 8px; font-size: 11px; color: #9fd0e8; white-space: nowrap; overflow: hidden; }
 #tidebox b { color: #7f93a3; font-size: 10px; letter-spacing: 1px; margin-right: 4px; }
 .card .preset small { color: #9fb0bd; }
+
+/* --- porto: contratos, oficina e tripulação */
+.card.wide { width: min(860px, 94vw); }
+.modes { display: flex; gap: 6px; align-items: center; margin: 6px 0 12px; }
+.purse { display: flex; justify-content: space-between; background: #10151a; border: 1px solid #2c363f; padding: 8px 12px; margin-bottom: 10px; font-size: 14px; }
+.purse b { font-size: 18px; }
+.card .tabs { margin-bottom: 10px; } .card .tabs button { padding: 6px 14px; font-size: 13px; }
+.contracts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.contracts button { text-align: left; padding: 10px 12px; position: relative; font-size: 13px; }
+.contracts .stars { color: #ffd76a; display: block; font-size: 11px; letter-spacing: 2px; }
+.contracts .pay { position: absolute; right: 12px; top: 10px; color: #7dffb0; font-weight: 700; font-size: 15px; }
+.contracts small { display: block; color: #9fb0bd; margin-top: 5px; font-size: 11px; line-height: 1.4; }
+.card h3 { margin: 12px 0 2px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #8fb8d8; }
+table.shop td { vertical-align: top; font-size: 12px; width: 42%; text-align: left !important; white-space: normal !important; }
+table.shop td:last-child { width: 16%; text-align: right !important; }
+table.shop small { color: #9fb0bd; } table.shop .have { color: #ffd76a; }
+table.shop button { padding: 5px 8px; font-size: 12px; }

@@ -216,7 +216,36 @@ Ideias ainda não feitas:
 | Praticagem | R$ 2.500 ou R$ 5.500 | Por porte do navio |
 | Rebocadores | R$ 1.800 de saída + R$ 60/min com cabo, cada | Por hora e por potência |
 
-## Progressão (a fazer)
+## Progressão
+
+Estado na v0.9.0: há carreira com caixa, contratos, oficina e tripulação, e um modo livre sem dinheiro. Catálogo em `src/game/career.ts`.
+
+| Contrato | Estrelas | Carga e calado | Maré | Frete | Prazo |
+|---|---|---|---|---|---|
+| Aguardar berço (fundeio) | 1 | Lastro, 3,8 m | Vazante | R$ 3.500 | 40 min |
+| Fertilizante, meia carga | 2 | 1.600 t, 4,5 m | Vazante | R$ 16.000 | 75 min |
+| Fertilizante, carga completa | 3 | 2.900 t, 5,2 m | Vazante | R$ 28.000 | 75 min |
+| Açúcar na preamar | 4 | 2.900 t, 5,2 m | Preamar | R$ 34.000 | 80 min |
+| Trigo na baixa-mar | 5 | 2.900 t, 5,2 m | Baixa-mar | R$ 40.000 | 90 min |
+| Carga urgente na enchente | 5 | 2.900 t, 5,2 m | Enchente | R$ 48.000 | 70 min |
+
+| Peça | Níveis e preço | Efeito |
+|---|---|---|
+| Máquina principal | R$ 12.000, depois R$ 35.000 | Sobe de rotação 40% e 80% mais rápido; inverte em 11 s e 8 s; +25% de empuxo no último |
+| Máquina do leme | R$ 8.000, depois R$ 22.000 | Leme a 2,6°/s e 3,0°/s; +35% de força no último |
+| Ar de partida | R$ 5.000 | 8 partidas, repõe a cada 55 s |
+| Impelidor de proa | R$ 30.000, depois R$ 25.000 | 35 kN e 60 kN |
+| GPS, guinada, doppler, radar, ECDIS | R$ 4.000, 3.000, 9.000, 15.000, 20.000 | Ligam o instrumento |
+
+| Tripulante | Níveis: contratação e soldada por viagem | Efeito |
+|---|---|---|
+| Timoneiro | R$ 6.000 e R$ 800; R$ 15.000 e R$ 1.500 | Cumpre o leme em 1,2 s e 0,6 s (de fábrica, 2 s) |
+| Chefe de máquinas | R$ 7.000 e R$ 900; R$ 18.000 e R$ 1.800 | Atende o telégrafo em 4 s e 2,5 s (de fábrica, 6 s); 30% e 60% menos desgaste |
+| Imediato | R$ 6.000 e R$ 800; R$ 14.000 e R$ 1.400 | Avisa pouca água com 2,5 m e 3,5 m; no último, amarra na metade do tempo |
+
+A fazer: navios maiores, contratos que se renovam e destravam com a reputação, tripulantes com nome e tolerância própria, manutenção.
+
+Ideias originais:
 
 | Eixo | Exemplos |
 |---|---|

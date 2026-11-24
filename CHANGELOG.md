@@ -2,6 +2,16 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.9.0 — Carreira: contratos, oficina e tripulação
+
+- A tela inicial virou o porto, com caixa (começa em R$ 8.000), contratos, oficina e tripulação. O resultado de cada viagem entra no caixa.
+- Seis contratos, de uma a cinco estrelas. Cada um define carga, calado (3,8 a 5,2 m), maré, frete (R$ 3.500 a R$ 48.000) e prazo. Navio mais carregado é mais pesado, cala mais e vale mais.
+- Oficina, peça a peça: máquina principal (2 níveis), máquina do leme (2), ar de partida, impelidor de proa (2), GPS, indicador de guinada, doppler, radar e ECDIS. Cada compra muda a física ou a informação disponível.
+- Tripulação: timoneiro, chefe de máquinas e imediato, com dois níveis cada. Reduzem o atraso das ordens, o desgaste e antecipam os avisos; recebem soldada a cada viagem.
+- Se a confiança da tripulação terminar uma viagem em −60 ou menos, quem desembarca é o melhor tripulante contratado.
+- Modo livre: sem dinheiro, com cenário, maré e equipamentos à escolha, como era antes.
+- 6 testes novos da carreira.
+
 ## v0.8.0 — Prático comanda os rebocadores
 
 - Com os dois rebocadores de cabo passado, é o prático que fala com eles, como na vida real: você continua executando só leme e máquina.
