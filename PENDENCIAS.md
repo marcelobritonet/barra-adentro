@@ -18,6 +18,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 11 | Valores da confiança | Tabela no GDD | Implementado; calibrar jogando |
 | 9 | Canal mais estreito ou corrente mais forte | Só se as curvas ainda parecerem fáceis | Em aberto |
 | 12 | Validar a interface jogando | Passada feita na v0.3.0; falta a sua revisão: o que está pequeno, escondido ou confuso | Em aberto |
+| 15 | ECDIS forte demais? | Dividir em dois níveis (carta e posição; depois preditor, próxima curva e AIS), ruído no preditor abaixo de 2 nós, horizonte ajustável | Decidido em 2026-11-23: fica como está por enquanto. "Meio arcade, mas gostei" |
 | 13 | Onde publicar as releases | github.com/marcelobritonet/barra-adentro (público) | Decidido; v0.1.0 a v0.5.0 publicadas |
 | 14 | Publicar o jogo em produção | GitHub Pages a partir do build, a cada release | Em aberto |
 
