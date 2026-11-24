@@ -71,7 +71,7 @@ Três graus de liberdade (avanço, deriva, guinada), passo fixo de 0,05 s, deter
 | Ferro | Amarra em quartéis; unha conforme o filame; garra se o esforço passa do limite | Feito (simples) |
 | Defensas do cais | Mola e atrito; multa pela velocidade do toque | Feito |
 | Efeito de margem | Sucção da popa para a margem e proa empurrada para fora; cresce com o quadrado da velocidade e com a pouca água; sondado a até 62 m de cada bordo | Feito |
-| Interação entre navios | Sucção ao passar perto de outro navio | A fazer |
+| Interação entre navios | Sucção de través e momento que inverte da proa para a popa do outro navio | Feito |
 | Rebocadores | Forças externas na proa e na popa, com atraso | Feito |
 | Impelidor de proa | Força lateral na proa, com atraso e perda de rendimento com o seguimento | Feito |
 | Carga e lastro | Calado e área vélica mudam com a carga (`makeCoaster(load)`) | Parâmetro existe, sem uso no jogo |
@@ -187,7 +187,8 @@ Sem doppler, quem informa a distância ao cais é a proa, pelo rádio ("Proa a 1
 | Amarração: basta a proa encostada (até 8 m) e a popa a até 35 m; os cabos trazem a popa | Feito |
 | Rebocadores de proa e de popa, chamados e comandados pelo rádio | Feito |
 | Pedir ao navio do berço que adiante a largada | Feito |
-| Pedir a um navio que aguarde; navio que recusa ou cobra | A fazer |
+| Pedir passagem ao navio lento à frente | Feito |
+| Navio que recusa ou cobra | A fazer |
 
 | Prático | Custo | Embarque | Diferença |
 |---|---|---|---|
@@ -236,7 +237,9 @@ Ideias ainda não feitas:
 | Abalroamento | Fim da viagem, R$ 120.000 |
 | Passar raspando | Menos de 35 m de navio em movimento ou 25 m de fundeado: −6 de confiança e protesto pelo rádio |
 | Como ver | Na vista; eco no radar; alvo AIS no ECDIS com vetor, distância e velocidade |
-| A fazer | Interação hidrodinâmica entre navios, navio que recusa ou negocia o pedido, mais de um navio em movimento, atracar a contrabordo |
+| Navio à frente | A draga Itaoca, de 70 m, sobe o canal a 2 nós pelo boreste. Pedindo passagem pelo rádio ela sai do canal dragado por 8 min e só volta com o caminho livre |
+| Sucção entre cascos | De través os navios se puxam; pela proa do outro a nossa proa é jogada para fora, pela popa é puxada. 25 kN a 6 nós e 40 m |
+| A fazer | Navio que recusa ou negocia o pedido, navio entrando atrás de você, contrabordo de navio atracado |
 
 ## Economia
 

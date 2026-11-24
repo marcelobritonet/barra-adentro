@@ -2,6 +2,15 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.15.0 — Navio à frente e sucção entre cascos
+
+- Sucção entre navios: ao passar perto de outro casco, os dois se puxam quando estão de través; com o outro pela proa a sua proa é jogada para fora, e com ele pela popa, puxada para dentro. Cresce com o quadrado da velocidade e some com distância. A 6 nós e 40 m, são 25 kN.
+- O imediato avisa quando a sucção passa de 10 kN.
+- Navio à frente: a draga Itaoca sobe o canal a 2 nós pelo lado de boreste. Você pode seguir atrás, ultrapassar pelo bombordo dela (o lado de quem sai) ou pedir passagem pelo rádio.
+- Pedindo passagem, ela sai do canal dragado para a margem e fica quase parada por 8 minutos, e só volta quando você já se afastou.
+- Com prático a bordo é ele quem pede a passagem; enquanto a draga não abre, ele segue atrás com dois minutos de folga.
+- 2 testes novos, e as viagens com prático seguem atracando com a draga e o navio que sai no caminho.
+
 ## v0.14.0 — Atracar a contrabordo
 
 - Terceiro tipo de manobra: atracar no costado de um navio fundeado (o Serra Azul), para um transbordo. Não há cais, VTS, prático nem rebocador.

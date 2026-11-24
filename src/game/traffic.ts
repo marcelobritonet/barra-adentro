@@ -5,7 +5,7 @@ import * as W from '../world/santos';
 import type { Game } from './game';
 
 export interface Other {
-  name: string; kind: 'anchored' | 'outbound';
+  name: string; kind: 'anchored' | 'outbound' | 'inbound';
   L: number; B: number; color: number;
   x: number; y: number; psi: number; u: number;   // u = velocidade no fundo, m/s
   active: boolean;
@@ -13,6 +13,7 @@ export interface Other {
   s: number; spawnAt: number;                     // em movimento: posição ao longo do canal
   warned: boolean; near: boolean;
   rate: number;                                   // guinada, rad/s (fundeados girando)
+  offset: number; yieldUntil: number;             // navio lento à frente: posição lateral e até quando dá passagem
   /** Navio do berço: atracado, largando (4 min) ou já a caminho. */
   phase: 'berthed' | 'unberthing' | 'underway' | 'gone';
   departAt: number; asked: boolean;
@@ -21,11 +22,13 @@ const wrap = (a: number) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -
 const OUT_OFFSET = -55;   // o navio que sai mantém o boreste dele, que é o bombordo de quem entra
 
 function anchored(name: string, ax: number, ay: number, L: number, B: number, scope: number, color: number): Other {
-  return { name, kind: 'anchored', L, B, color, x: ax, y: ay, psi: 0, u: 0, active: true, ax, ay, scope, s: 0, spawnAt: 0, warned: false, near: false, rate: 0, phase: 'gone', departAt: 0, asked: false };
+  return { name, kind: 'anchored', L, B, color, x: ax, y: ay, psi: 0, u: 0, active: true, ax, ay, scope, s: 0, spawnAt: 0, warned: false, near: false, rate: 0, offset: 0, yieldUntil: 0, phase: 'gone', departAt: 0, asked: false };
 }
 export const UNBERTH_TIME = 240;          // segundos para largar e abrir do cais
 export const DEPART_DEFAULT = 30 * 60;    // sem ninguém pedir, o navio do berço só larga aos 30 min
-export const DEPART_ON_REQUEST = 6 * 60;  // pedindo pelo rádio, larga em 6 min
+export const DEPART_ON_REQUEST = 6 * 60;
+export const DREDGE_KN = 2;               // a draga sobe o canal a 2 nós
+export const YIELD_TIME = 8 * 60;         // pedindo passagem, ela sai do canal dragado e quase para por 8 min  // pedindo pelo rádio, larga em 6 min
 
 export function makeTraffic(leaves = true): Other[] {
   return [
@@ -34,8 +37,12 @@ export function makeTraffic(leaves = true): Other[] {
     anchored('Rio Itapanhaú', -2120, -3900, 135, 21, 90, 0x2f5a3a),
     // ocupa o nosso berço, aproado para o mar
     { name: 'Cabo Frio', kind: 'outbound', L: 180, B: 28, color: 0x1f1f1f, x: 0, y: 0, psi: 0, u: 0, active: true,
-      ax: 0, ay: 0, scope: 0, s: W.QUAY_S, spawnAt: 0, warned: false, near: false, rate: 0,
+      ax: 0, ay: 0, scope: 0, s: W.QUAY_S, spawnAt: 0, warned: false, near: false, rate: 0, offset: 0, yieldUntil: 0,
       phase: 'berthed', departAt: leaves ? DEPART_DEFAULT : Infinity, asked: false },
+    // draga lenta subindo o canal à nossa frente, pelo lado de boreste
+    ...(leaves ? [{ name: 'Itaoca', kind: 'inbound' as const, L: 70, B: 14, color: 0x7a5a1e, x: 0, y: 0, psi: 0, u: DREDGE_KN * KN, active: true,
+      ax: 0, ay: 0, scope: 0, s: W.S_MOUTH + 200, spawnAt: 0, warned: false, near: false, rate: 0, offset: 45, yieldUntil: 0,
+      phase: 'underway' as const, departAt: 0, asked: false }] : []),
   ];
 }
 /** Raio que um fundeado varre em volta do ferro. */
@@ -59,6 +66,21 @@ export function updateTraffic(g: Game, dt: number) {
       continue;
     }
     if (o.phase === 'gone') continue;
+    if (o.kind === 'inbound') {
+      // cala pouco: dando passagem ela sai do canal dragado, para a margem de boreste
+      // e só volta para o canal quando o navio que passava já está longe
+      const ahead = W.nearest(g.s.x, g.s.y).s - o.s;
+      if (g.time < o.yieldUntil + 1 && ahead > -500 && ahead < 350) o.yieldUntil = Math.max(o.yieldUntil, g.time + 5);
+      const yielding = g.time < o.yieldUntil, wantOff = yielding ? 135 : 45;
+      o.u = (yielding ? 0.3 : DREDGE_KN) * KN;
+      o.offset += Math.max(-0.6 * dt, Math.min(0.6 * dt, wantOff - o.offset));
+      o.s += o.u * dt;
+      if (o.s > W.CHANNEL_LENGTH - 250) { o.active = false; o.phase = 'gone'; continue; }
+      [o.x, o.y] = W.pointAt(o.s, o.offset);
+      const [ax, ay] = W.pointAt(o.s + 120, o.offset), wantH = Math.atan2(ax - o.x, ay - o.y);
+      o.psi = o.psi === 0 ? wantH : o.psi + Math.max(-0.01 * dt, Math.min(0.01 * dt, wrap(wantH - o.psi)));
+      continue;
+    }
     // na manobra a contrabordo o "cais" de destino é um navio; o navio do berço continua no Cais de Santos
     const Q = g.sts ? W.QUAYS[0] : W.QUAY, lane = 200 + OUT_OFFSET * Q.side, home = Q.fender + o.B / 2;
     if (o.phase === 'berthed' || o.phase === 'unberthing') {
@@ -101,3 +123,24 @@ export const bearingText = (g: Game, o: Other) => {
 /** O navio que ocupa o berço, se ainda não saiu do caminho. */
 export const berthShip = (g: Game) => g.traffic.find(o => o.kind === 'outbound');
 export const berthBusy = (g: Game) => { const o = berthShip(g); return !!o && (o.phase === 'berthed' || o.phase === 'unberthing'); };
+
+/** Navio lento à frente, no mesmo sentido. */
+export const slowAhead = (g: Game) => g.traffic.find(o => o.kind === 'inbound' && o.active);
+
+/**
+ * Interação hidrodinâmica ao passar perto de outro navio. De través os cascos se sugam;
+ * com o outro pela proa a nossa proa é empurrada para fora, e com ele pela popa, puxada para dentro.
+ * Devolve força lateral (N, + boreste) e momento (N·m, + proa a boreste).
+ */
+export function interaction(p: { L: number; B: number; T: number }, s: { x: number; y: number; psi: number; stw: number }, o: Other, shallow = 0): { Y: number; N: number } {
+  const dx = o.x - s.x, dy = o.y - s.y, sin = Math.sin(s.psi), cos = Math.cos(s.psi);
+  const ahead = dx * sin + dy * cos, side = dx * cos - dy * sin;          // posição do outro no nosso referencial
+  const gap = Math.abs(side) - (p.B + o.B) / 2, Lm = (p.L + o.L) / 2, xi = ahead / Lm;
+  if (gap > 4 * p.B || Math.abs(xi) > 1.4) return { Y: 0, N: 0 };
+  let rel = Math.abs(wrap(o.psi - s.psi)); const opposite = rel > Math.PI / 2;
+  const U = Math.abs(s.stw) + (opposite ? o.u : -Math.min(o.u, Math.abs(s.stw)) * 0.5); // cruzando soma; ultrapassando, quase só a nossa
+  const q = 0.5 * 1025 * p.L * p.T * U * U * Math.exp(-Math.max(gap, 0) / (1.2 * p.B)) * (1 + 2 * shallow);
+  const env = Math.exp(-1.5 * xi * xi), sg = Math.sign(side) || 1;
+  void rel;
+  return { Y: sg * 0.04 * q * Math.cos(Math.PI * xi) * env, N: -sg * 0.012 * q * p.L * Math.sin(Math.PI * xi) * env };
+}

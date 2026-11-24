@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { D2R } from '../sim/ship';
 import * as W from '../world/santos';
 import { Game } from './game';
-import { swingRadius } from './traffic';
+import { interaction, swingRadius } from './traffic';
 
 const stopped = (g: Game, x: number, y: number, psiDeg = 0) => { const s = g.s; s.x = x; s.y = y; s.psi = psiDeg * D2R; s.u = 0; s.stw = 0; s.telegraph = s.telAck = 4; s.n = 0; };
 const run = (g: Game, sec: number) => { g.warp = 8; for (let t = 0; t < sec && g.status === 'running'; t += 0.8) g.update(0.1); };
@@ -60,5 +60,36 @@ describe('tráfego', () => {
     const ok = new Game(); ok.trust = 0; ok.start('fundeio');
     stopped(ok, W.ANCHORAGE.x, W.ANCHORAGE.y + 420, 160); ok.letGoAnchor(); run(ok, 400);
     expect(ok.result?.ok).toBe(true);
+  });
+
+  it('sucção entre cascos: puxa para o outro navio de través, e o momento inverte da proa para a popa', () => {
+    const p = { L: 90, B: 14, T: 5.2 };
+    const o = { ...new Game().traffic[0], x: 40, y: 0, psi: 0, u: 0, L: 150, B: 23 };   // parado, 40 m a boreste
+    const at = (y: number, kn = 6) => interaction(p, { x: 0, y, psi: 0, stw: kn * 0.5144 }, o);
+    const abeam = at(0), before = at(-90), after = at(90), far = at(-400);
+    console.log('sucção de través a 6 nós:', (abeam.Y / 1000).toFixed(0), 'kN; momento antes', (before.N / 1e3).toFixed(0), 'e depois', (after.N / 1e3).toFixed(0), 'kN·m');
+    expect(abeam.Y).toBeGreaterThan(5e3);          // para boreste, onde está o outro
+    expect(before.N).toBeLessThan(0);              // ele pela proa: nossa proa é jogada para fora (bombordo)
+    expect(after.N).toBeGreaterThan(0);            // ele pela popa: a proa é puxada para ele
+    expect(far.Y).toBe(0);
+    expect(at(0, 3).Y).toBeLessThan(abeam.Y / 3);  // cresce com o quadrado da velocidade
+    const wide = interaction(p, { x: -80, y: 0, psi: 0, stw: 3 }, o);
+    expect(Math.abs(wide.Y)).toBeLessThan(abeam.Y / 20);
+  });
+  it('a draga sobe o canal a 2 nós; pedindo passagem, sai do canal dragado e só volta quando o navio se afasta', () => {
+    const g = new Game(); g.start('entrada'); g.vts = 'ok';
+    const d = g.traffic.find(o => o.kind === 'inbound')!;
+    stopped(g, -3000, -5000); const s0 = d.s; run(g, 120);
+    expect((d.s - s0) / 120).toBeCloseTo(2 * 0.5144, 1);
+    expect(W.nearest(d.x, d.y).d).toBeLessThan(60);
+    g.callDredge(); run(g, 200);
+    expect(d.offset).toBeGreaterThan(125);
+    expect(W.depth(d.x, d.y)).toBeGreaterThan(5);            // fora do canal, mas com água para ela
+    const [x, y] = W.pointAt(d.s - 100, 0); stopped(g, x, y, 0);   // um navio parado ao lado dela, no canal
+    for (let i = 0; i < 900; i++) { g.warp = 8; g.update(0.1); stopped(g, ...W.pointAt(d.s - 100, 0), 0); if (g.status !== 'running') break; }
+    expect(g.status).toBe('running');
+    expect(d.offset).toBeGreaterThan(125);                   // esperou, não voltou em cima
+    expect(new Game().traffic.find(o => o.kind === 'inbound')).toBeDefined();
+    const f = new Game(); f.start('fundeio'); expect(f.traffic.find(o => o.kind === 'inbound')).toBeUndefined();
   });
 });

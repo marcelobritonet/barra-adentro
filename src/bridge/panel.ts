@@ -2,7 +2,7 @@
 import { Game } from '../game/game';
 import { PILOTS, PilotGrade } from '../game/pilot';
 import { TUG_FEE, TUG_PER_MIN, TugMode } from '../game/tugs';
-import { berthShip } from '../game/traffic';
+import { berthShip, slowAhead } from '../game/traffic';
 import { SHACKLE } from '../sim/anchor';
 import { D2R, KN, TELEGRAPH, TELEGRAPH_LABELS, TELEGRAPH_STOP } from '../sim/ship';
 import * as W from '../world/santos';
@@ -89,6 +89,7 @@ export class Panel {
             <div id="vhf">
               <button id="vts">Santos VTS: pedir entrada</button>
               <button id="callship"></button>
+              <button id="calldredge"></button>
               <button data-pilot="padrao">Prático · R$ ${PILOTS.padrao.fee.toLocaleString('pt-BR')} · ${Math.round(PILOTS.padrao.eta / 60)} min</button>
               <button data-pilot="senior">Prático sênior · R$ ${PILOTS.senior.fee.toLocaleString('pt-BR')} · ${Math.round(PILOTS.senior.eta / 60)} min</button>
             </div>
@@ -145,6 +146,7 @@ export class Panel {
       if (t.id === 'moor') g.moor();
       if (t.id === 'vts') g.callVTS();
       if (t.id === 'callship') g.callShip();
+      if (t.id === 'calldredge') g.callDredge();
       if (t.dataset.pilot) g.callPilot(t.dataset.pilot as PilotGrade);
       const tugEl = t.closest<HTMLElement>('.tug');
       if (tugEl) {
@@ -274,6 +276,13 @@ export class Panel {
       const left = Math.max(0, bs.departAt - g.time);
       cs.textContent = bs.phase === 'berthed' ? (bs.asked ? `${bs.name}: larga em ${fmtTime(left).slice(3)}` : `${bs.name} no berço (larga em ${Math.ceil(left / 60)} min): pedir que largue`)
         : bs.phase === 'unberthing' ? `${bs.name}: largando do cais` : bs.phase === 'underway' ? `${bs.name}: saindo pelo canal, berço livre` : 'Berço livre';
+    }
+    const dg = slowAhead(g), cd = $<HTMLButtonElement>('calldredge');
+    cd.style.display = entry && dg ? '' : 'none';
+    if (entry && dg) {
+      const left = dg.yieldUntil - g.time;
+      cd.disabled = left > 0; cd.classList.toggle('on', left > 0);
+      cd.textContent = left > 0 ? `Draga ${dg.name}: fora do canal por ${fmtTime(left).slice(3)}` : `Draga ${dg.name} à frente, a 2 nós: pedir passagem`;
     }
     document.querySelectorAll<HTMLButtonElement>('[data-pilot]').forEach(b => { b.disabled = pl.state !== 'none' || !entry; b.classList.toggle('on', pl.state !== 'none' && b.dataset.pilot === pl.grade); });
     const pb = $('pilotbox');

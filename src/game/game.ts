@@ -6,7 +6,7 @@ import {
 import * as W from '../world/santos';
 import { Pilot, PilotGrade, PILOTS } from './pilot';
 import { makeTugs, TugMode } from './tugs';
-import { bearingText, berthBusy, berthShip, DEPART_ON_REQUEST, hullDistance, makeTraffic, Other, swingRadius, updateTraffic } from './traffic';
+import { bearingText, berthBusy, berthShip, DEPART_ON_REQUEST, DREDGE_KN, hullDistance, interaction, makeTraffic, Other, slowAhead, swingRadius, updateTraffic, YIELD_TIME } from './traffic';
 import { Tide, tideAt, TidePreset, tideText } from '../world/tide';
 import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, reputation, salaries, saveCareer, Sky, wearFactor } from './career';
 
@@ -230,6 +230,14 @@ export class Game {
     if (at < o.departAt) { o.departAt = at; this.say(`N/M ${o.name}`, `Maré Mansa, ${o.name}. Afirmativo, largo em ${Math.round(DEPART_ON_REQUEST / 60)} minutos e saio pelo meu boreste.`, 'info'); }
     else this.say(`N/M ${o.name}`, `Maré Mansa, ${o.name}. Já estou largando, aguarde.`, 'info');
   }
+  /** Pede passagem ao navio lento que sobe o canal à frente. */
+  callDredge(by = 'Maré Mansa') {
+    const o = slowAhead(this);
+    if (this.status !== 'running' || !o || this.time < o.yieldUntil) return;
+    o.yieldUntil = this.time + YIELD_TIME;
+    this.say(by, `Draga ${o.name}, Maré Mansa pela sua popa. Solicito passagem pelo seu bombordo.`, 'info');
+    this.say(`Draga ${o.name}`, `Afirmativo. Saio do canal para a margem de boreste e fico quase parada por ${YIELD_TIME / 60} minutos. O canal é seu.`, 'info');
+  }
   callTug(i: number) {
     if (this.status !== 'running' || this.scenario !== 'entrada' || this.tugs[i].state !== 'none') return;
     this.say('Maré Mansa', `Rebocadores, Maré Mansa. Solicito um rebocador na ${this.tugs[i].where}.`, 'info');
@@ -344,6 +352,10 @@ export class Game {
     for (const o of this.traffic) {
       if (!o.active) continue;
       if (Math.hypot(o.x - s.x, o.y - s.y) > o.L / 2 + 160) { o.near = false; continue; }
+      // sucção entre os cascos
+      const it = interaction(p, s, o, Math.min(0.9, (p.T / Math.max(s.depth, 1)) ** 3));
+      ext.Y += it.Y; ext.N += it.N;
+      if (Math.abs(it.Y) > 10e3) this.say('Imediato', `Os cascos estão se sugando com o ${o.name}! Abra distância ou reduza.`, 'warn', 'suck' + o.name, 30);
       if (o.phase === 'berthed' && this.mooring <= 0 && Math.hypot(o.x - s.x, o.y - s.y) > o.L / 2 + 60) continue;
       let dmin = 1e9;
       for (const [xf, ys] of HULL) {
@@ -361,6 +373,11 @@ export class Game {
       if (o.kind === 'outbound' && !o.warned && dmin < 700 && W.nearest(s.x, s.y).side > 0 && W.nearest(s.x, s.y).d > 5) {
         o.warned = true; this.emit('horn5'); this.say(`N/M ${o.name}`, 'Maré Mansa, o senhor está no meu lado do canal. Guine para boreste! (cinco apitos curtos)', 'bad');
       }
+    }
+    const dr = slowAhead(this);
+    if (dr) {
+      const near2 = W.nearest(s.x, s.y), gapS = dr.s - near2.s;
+      if (gapS > 0 && gapS < 900 && this.time >= dr.yieldUntil && this.sog > dr.u + 0.3) this.say('Imediato', `Draga ${dr.name} à frente, a ${gapS.toFixed(0)} m, a ${DREDGE_KN} nós. Peça passagem pelo rádio ou siga atrás dela.`, 'warn', 'dredge', 120);
     }
     for (const o of this.traffic) {
       if (o.kind !== 'outbound' || o.phase !== 'underway') continue;

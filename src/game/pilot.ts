@@ -3,7 +3,7 @@ import { D2R, KN, pointVelocity } from '../sim/ship';
 import type { TugMode } from './tugs';
 import * as W from '../world/santos';
 import type { Game } from './game';
-import { berthBusy, berthShip, UNBERTH_TIME } from './traffic';
+import { berthBusy, berthShip, slowAhead, UNBERTH_TIME } from './traffic';
 
 export type PilotGrade = 'padrao' | 'senior';
 export const PILOTS = {
@@ -29,7 +29,7 @@ export class Pilot {
   private final = false; private kick = 0; private retry = false;
   /** Recusou atracar com corrente a favor; volta a orientar quando a maré virar. */
   declined = false;
-  private meetSaid = false; private waitSaid = false; private paceSaid = false;
+  private meetSaid = false; private waitSaid = false; private paceSaid = false; private dredgeSaid = false;
   private tugThink = 0; private tugSaid = false;
   /** O prático fala com os rebocadores ele mesmo, como na vida real. */
   private tug(g: Game, i: number, mode: TugMode, power = 0.25) {
@@ -218,7 +218,16 @@ export class Pilot {
     // navio saindo pela frente: fica a boreste do eixo para cruzar bombordo com bombordo
     const meeting = g.traffic.some(o => o.kind === 'outbound' && o.phase !== 'gone' && o.s > n.s - 150 && o.s - n.s < 3200);
     if (meeting && !this.meetSaid) { this.meetSaid = true; g.say(this.name, 'Navio saindo. Vamos pelo boreste do canal e cruzar bombordo com bombordo.', 'info'); }
-    const [tx, ty] = W.pointAt(n.s + P.look, meeting ? 50 : 0);
+    // navio lento à frente: o prático pede passagem pelo rádio; ultrapassa por bombordo dela se o canal estiver livre, senão segue atrás
+    const dr = slowAhead(g), gapS = dr ? dr.s - n.s : 1e9;
+    let lane = meeting ? 50 : 0, follow = 0;
+    if (dr && gapS > -90 && gapS < 1200) {
+      if (g.time >= dr.yieldUntil - 60 && gapS > 60) g.callDredge(this.name);
+      if (!this.dredgeSaid) { this.dredgeSaid = true; g.say(this.name, `Draga ${dr.name} à frente. Já pedi que saia do canal; passamos quando ela abrir.`, 'info'); }
+      // enquanto ela não saiu do canal, fica atrás, com dois minutos de folga
+      if (dr.offset < 118 && gapS > 30) { lane = 45; const want = 220 + g.sog * 120; follow = gapS < want * 0.6 ? 0.01 : gapS < want ? dr.u : 0; }
+    }
+    const [tx, ty] = W.pointAt(n.s + P.look, lane);
     let tel = n.s < W.S_MOUTH - 500 ? 7 : 6;
     if (n.s >= W.S_MOUTH - 500 && g.sog > 6 * KN) tel = 5;       // folga do limite de 8 nós, mesmo com a corrente a favor
     const slow = 1.6 / big;
@@ -232,6 +241,7 @@ export class Pilot {
         if (!this.paceSaid && cap < 2) { this.paceSaid = true; g.say(this.name, `O berço só fica livre em ${Math.round(free / 60)} min. Vamos devagar para chegar na hora${other.asked ? '' : '; ou peça ao ' + other.name + ' que largue antes'}.`, 'info'); }
       }
     }
+    if (follow) tel = g.sog > follow + 0.5 ? Math.min(tel, 2) : g.sog > follow + 0.15 ? Math.min(tel, 4) : g.sog > follow - 0.1 ? Math.min(tel, 5) : tel;
     return [steer(tx, ty, 25), tel];
   }
 
