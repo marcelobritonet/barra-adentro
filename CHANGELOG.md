@@ -2,6 +2,16 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.10.0 — Navio maior, reputação e ofertas que mudam
+
+- Segundo navio: graneleiro de 130 m, 15.000 t carregado e 7,4 m de calado. Leva 214 s para ir de parado a 3 nós (o costeiro, 136 s) e 1.290 m para parar com toda força ré (o costeiro, 630 m). Custa R$ 150.000 e exige reputação 25.
+- Estaleiro no porto: o navio antigo entra na troca por 60% do preço. Máquina, leme, ar e impelidor ficam com ele; instrumentos e tripulação vão junto.
+- Reputação de 0 a 100: sobe com entregas (três pontos por estrela, mais dois se a viagem for limpa) e cai seis em cada fracasso. Começa liberando contratos de até duas estrelas e libera uma estrela a cada dez pontos.
+- As ofertas mudam a cada viagem: tipo de carga e frete (de −10% a +15%). No graneleiro os fretes são 2,6× maiores e o prazo, 15 min mais longo.
+- No modo livre dá para escolher o navio.
+- As medidas do navio deixaram de ser fixas em 90 m: casco, pontos de amarração, rebocadores, defensas, ferro e instrumentos acompanham o navio.
+- O prático adapta a antecipação e a velocidade ao porte do navio. Com o graneleiro e dois rebocadores ele atraca, mas abre demais na segunda curva e chega torto.
+
 ## v0.9.0 — Carreira: contratos, oficina e tripulação
 
 - A tela inicial virou o porto, com caixa (começa em R$ 8.000), contratos, oficina e tripulação. O resultado de cada viagem entra no caixa.

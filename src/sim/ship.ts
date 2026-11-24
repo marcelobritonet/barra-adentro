@@ -73,26 +73,60 @@ export interface Env {
 
 export interface BodyForce { X: number; Y: number; N: number }
 
-/** Costeiro de carga geral, 90 m. load: 0 = em lastro, 1 = carregado. */
-export function makeCoaster(load = 1): ShipParams {
-  const L = 90, B = 14, Cb = 0.72;
-  const T = 3.6 + 1.6 * load;
+export type ShipClass = 'coaster' | 'handy';
+/** Classes de navio. O costeiro é o de partida; o graneleiro é mais valioso, mais pesado e cala mais. */
+export const SHIPS: Record<ShipClass, {
+  label: string; L: number; B: number; D: number; Tmin: number; Tmax: number; Cb: number;
+  Tb: number; U0: number; kx: number; nUp: number; nDown: number; nUpHigh: number; revDelay: number; rudderRate: number;
+  capacity: number; price: number; blurb: string;
+}> = {
+  coaster: { label: 'Costeiro de 90 m', L: 90, B: 14, D: 8, Tmin: 3.6, Tmax: 5.2, Cb: 0.72, Tb: 180e3, U0: 11 * KN, kx: 4470,
+    nUp: 0.015, nDown: 0.03, nUpHigh: 0.005, revDelay: 15, rudderRate: 1.8, capacity: 2900, price: 0,
+    blurb: '4.800 t carregado. Leve, raso e barato: o navio de quem está começando.' },
+  handy: { label: 'Graneleiro de 130 m', L: 130, B: 20, D: 11, Tmin: 4.6, Tmax: 7.4, Cb: 0.76, Tb: 330e3, U0: 12 * KN, kx: 6050,
+    nUp: 0.011, nDown: 0.022, nUpHigh: 0.004, revDelay: 18, rudderRate: 1.7, capacity: 11000, price: 150000,
+    blurb: '15.000 t carregado e 7,4 m de calado. Frete 2,6× maior; o triplo da massa para parar e girar.' },
+};
+
+/** Parâmetros de um navio. load: 0 = em lastro, 1 = carregado. */
+export function makeShipParams(cls: ShipClass = 'coaster', load = 1): ShipParams {
+  const c = SHIPS[cls], { L, B, Cb } = c;
+  const T = c.Tmin + (c.Tmax - c.Tmin) * load;
   const mass = L * B * T * Cb * RHO;
   return {
     name: 'N/M Maré Mansa',
     L, B, T, Cb, mass,
     mx: 0.05 * mass, my: 0.85 * mass,
     Iz: mass * (0.25 * L) ** 2 * 2.6,
-    kx: 4470 * (T / 5.2) ** 0.7,
-    Tb: 180e3, U0: 11 * KN,
+    kx: c.kx * (T / c.Tmax) ** 0.7,
+    Tb: c.Tb, U0: c.U0,
     Yv: -0.33, Yr: 0.087, Yvv: -0.9, Nv: -0.111, Nr: -0.058, Nrr: -0.028,
-    AR: (L * T) / 60, rudderCL: 1.5, rudderMax: 35 * D2R, rudderRate: 1.8 * D2R, // navio velho: uma bomba só na máquina do leme
+    AR: (L * T) / 60, rudderCL: 1.5, rudderMax: 35 * D2R, rudderRate: c.rudderRate * D2R, // navio velho: uma bomba só na máquina do leme
     wash: 6.0,
-    nUp: 0.015, nDown: 0.03, revDelay: 15, rpmMax: 180,
-    nUpHigh: 0.005, ackDelay: 6, helmDelay: 2, airStarts: 5, airRefill: 1 / 90,
+    nUp: c.nUp, nDown: c.nDown, revDelay: c.revDelay, rpmMax: 180,
+    nUpHigh: c.nUpHigh, ackDelay: 6, helmDelay: 2, airStarts: 5, airRefill: 1 / 90,
     propWalk: 0.07,
-    AF: B * (8 - T) + 110, AL: L * (8 - T) + 160, xWind: -0.06 * L,
-    thrusterMax: 35e3,
+    AF: B * (c.D - T) + 110 * (B / 14), AL: L * (c.D - T) + 160 * (L / 90), xWind: -0.06 * L,
+    thrusterMax: 35e3 * (L / 90) ** 1.5,
+  };
+}
+/** Costeiro de carga geral, 90 m. */
+export const makeCoaster = (load = 1) => makeShipParams('coaster', load);
+
+/** Pontos do casco usados nas regras, todos proporcionais ao navio (xf à vante, ys a boreste). */
+export interface ShipGeo {
+  hull: [number, number][];       // contorno para encalhe, cais e abalroamento
+  bow: number;                    // escovém, de onde sai a amarra
+  berthBow: [number, number];     // bochecha e alheta de bombordo, que encostam no cais
+  berthStern: [number, number];
+  tug: number;                    // onde os rebocadores passam o cabo
+}
+export function shipGeo(p: ShipParams): ShipGeo {
+  const L = p.L, B = p.B, h = B / 2;
+  const a = 0.4 * L, b = (20 / 90) * L, c = (25 / 90) * L, d = (42 / 90) * L, s1 = (5 / 14) * B, s2 = (6 / 14) * B;
+  return {
+    hull: [[L / 2, 0], [a, s1], [a, -s1], [b, h], [b, -h], [0, h], [0, -h], [-c, h], [-c, -h], [-d, s2], [-d, -s2], [-L / 2, 0]],
+    bow: d, berthBow: [a, -s1], berthStern: [-d, -s2], tug: a,
   };
 }
 

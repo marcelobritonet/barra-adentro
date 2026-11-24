@@ -243,7 +243,19 @@ Estado na v0.9.0: há carreira com caixa, contratos, oficina e tripulação, e u
 | Chefe de máquinas | R$ 7.000 e R$ 900; R$ 18.000 e R$ 1.800 | Atende o telégrafo em 4 s e 2,5 s (de fábrica, 6 s); 30% e 60% menos desgaste |
 | Imediato | R$ 6.000 e R$ 800; R$ 14.000 e R$ 1.400 | Avisa pouca água com 2,5 m e 3,5 m; no último, amarra na metade do tempo |
 
-A fazer: navios maiores, contratos que se renovam e destravam com a reputação, tripulantes com nome e tolerância própria, manutenção.
+| Navio | Medidas | Massa carregado | Calado | Preço | Reputação | Frete |
+|---|---|---|---|---|---|---|
+| Costeiro | 90 × 14 m | 4.800 t | 3,6 a 5,2 m | de partida | 0 | tabela |
+| Graneleiro | 130 × 20 m | 15.000 t | 4,6 a 7,4 m | R$ 150.000 | 25 | 2,6× |
+
+| Reputação | Regra |
+|---|---|
+| Ganho | 3 por estrela do contrato entregue, +2 se não houve multa |
+| Perda | 6 por viagem fracassada |
+| Efeito | Libera contratos: até 2 estrelas no começo, mais uma a cada 10 pontos; libera o graneleiro com 25 |
+| Ofertas | Mudam a cada viagem: carga e frete de −10% a +15% |
+
+A fazer: um terceiro navio, tripulantes com nome e tolerância própria, manutenção, contratos com prazo de validade.
 
 Ideias originais:
 

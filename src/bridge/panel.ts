@@ -35,7 +35,7 @@ export class Panel {
   mfd: MfdMode = 'carta'; tab = 'radio';
   bigChart = false;
 
-  constructor(private g: Game, grid: Float32Array, private chartBase: HTMLCanvasElement) {
+  constructor(private g: Game, private grid: Float32Array, private chartBase: HTMLCanvasElement) {
     this.ecdis = new Ecdis(grid, g.p.T + 1.5);
     $('bridge').innerHTML = `
       <div id="topbar" class="inst">
@@ -172,7 +172,11 @@ export class Panel {
     if (this.mfd === 'radar') this.radar.rangeI = Math.max(0, Math.min(RADAR_RANGES.length - 1, this.radar.rangeI - d));
     if (this.mfd === 'ecdis') this.ecdis.scaleI = Math.max(0, Math.min(ECDIS_SCALES.length - 1, this.ecdis.scaleI - d));
   }
-  reset() { this.echo = []; this.logCount = -1; this.hdgShown = this.g.s.psi; this.radar.reset(); }
+  reset() {
+    this.echo = []; this.logCount = -1; this.hdgShown = this.g.s.psi; this.radar.reset();
+    // o contorno de segurança depende do calado do navio e da carga desta viagem
+    const old = this.ecdis; this.ecdis = new Ecdis(this.grid, this.g.p.T + 1.5); this.ecdis.scaleI = old.scaleI; this.ecdis.headUp = old.headUp;
+  }
 
   update(dt: number) {
     const g = this.g, s = g.s, p = g.p;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { D2R, Env, KN, makeCoaster, makeState, ShipState, stepShip, TELEGRAPH } from './ship';
+import { D2R, Env, KN, makeCoaster, makeShipParams, makeState, ShipState, stepShip, TELEGRAPH } from './ship';
 
 const DT = 0.05;
 const sea = (depth = 200, windSpeed = 0, windFromDeg = 0): Env => ({
@@ -174,5 +174,23 @@ describe('costeiro de 90 m', () => {
     for (let t = 0; t < 900; t += DT) stepShip(s, p, env, DT, { X: 0, Y: 0, N: 0 });
     expect(s.x).toBeGreaterThan(300);
     expect(Math.abs(s.stw)).toBeLessThan(0.05);
+  });
+
+  it('graneleiro de 130 m: mais lento para tudo que o costeiro', () => {
+    const big = makeShipParams('handy', 1), env = sea();
+    const go = (pp: typeof big, kn: number) => { const s = makeState(0, 0, 0, kn, 8); for (let t = 0; t < 600; t += DT) stepShip(s, pp, env, DT, { X: 0, Y: 0, N: 0 }); return s; };
+    const s = go(big, 10);
+    const y0 = s.y; s.telegraph = 0; let t = 0;
+    while (s.u > 0 && t < 1500) { stepShip(s, big, env, DT, { X: 0, Y: 0, N: 0 }); t += DT; }
+    const stopM = s.y - y0;
+    const c = go(p, 9.5), cy = c.y; c.telegraph = 0; let tc = 0;
+    while (c.u > 0 && tc < 1500) { stepShip(c, p, env, DT, { X: 0, Y: 0, N: 0 }); tc += DT; }
+    const k = makeState(0, 0, 0, 0, 4); k.telegraph = 7; let tk = 0;
+    while (k.u < 3 * KN && tk < 900) { stepShip(k, big, env, DT, { X: 0, Y: 0, N: 0 }); tk += DT; }
+    console.log('graneleiro: massa', (big.mass / 1e6).toFixed(1), 'mil t; máx', (go(big, 10).u / KN).toFixed(1), 'nós; parada', stopM.toFixed(0), 'm em', t.toFixed(0), 's (costeiro', (c.y - cy).toFixed(0), 'm); 0 a 3 nós em', tk.toFixed(0), 's');
+    expect(big.mass).toBeGreaterThan(p.mass * 2.5);
+    expect(go(big, 10).u / KN).toBeGreaterThan(9.5);
+    expect(stopM).toBeGreaterThan((c.y - cy) * 1.4);
+    expect(tk).toBeGreaterThan(170);
   });
 });

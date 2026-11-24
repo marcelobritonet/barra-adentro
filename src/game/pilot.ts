@@ -64,7 +64,9 @@ export class Pilot {
   }
 
   private decide(g: Game): [number, number] {
-    const P = PILOTS[this.grade], s = g.s, Q = W.QUAY;
+    const P0 = PILOTS[this.grade], s = g.s, Q = W.QUAY;
+    // navio maior guarda mais a guinada: o prático quebra mais cedo e anda mais devagar
+    const big = g.p.L / 90, P = { ...P0, kd: P0.kd * big ** 2 };
     const n = W.nearest(s.x, s.y), ds = W.QUAY_S - n.s, b = g.berth();
     const steer = (tx: number, ty: number, max: number) => {
       const e = wrap(Math.atan2(tx - s.x, ty - s.y) - s.psi) / D2R;
@@ -120,9 +122,11 @@ export class Pilot {
       // com os dois rebocadores de cabo passado, para paralelo a 20 m e eles encostam o navio
       const tugs = g.tugs.every(t => t.state === 'fast');
       if (tugs && !this.tugSaid) { this.tugSaid = true; g.say(this.name, 'Rebocadores de cabo passado. Eu falo com eles: paro o navio paralelo ao cais e eles encostam.', 'info'); }
-      const end = Q.fender + 7.5 + (tugs ? 20 : 0);
+      const end = Q.fender + g.p.B / 2 + 0.5 + (tugs ? 20 : 0);
       // fica afastado da margem rasa até a bacia do berço: perto dela a proa é empurrada para fora
-      const path: [number, number][] = [[-800, 200], [-240, 78], [-15, end]];
+      // navio de mais calado fica ainda mais longe do talude antes da bacia
+      const knee = 78 + Math.max(0, g.p.T - 5.2) * 8;
+      const path: [number, number][] = [[-800, 200], [-240, knee], [-15, end]];
       const seg = (a: number) => (a < -240 ? 0 : 1);
       const pathB = (a: number) => {
         if (a >= -15) return end;
@@ -133,13 +137,14 @@ export class Pilot {
       const a = b.along, [, bc] = W.quayLocal(s.x, s.y);
       const qh = Math.atan2(Q.tx, Q.ty);
       const Lk = 160;
-      const lead = a + (this.grade === 'senior' ? 110 : 80);  // o bom prático já prepara a próxima pernada
+      const lead = a + (this.grade === 'senior' ? 110 : 80) * (g.p.L / 90) ** 1.5;  // o bom prático já prepara a próxima pernada
       // rumo desejado em relação ao cais (+ = abrindo); nunca aponta de frente para o cais
       const want = Math.max(-24 * D2R, Math.min(18 * D2R, Math.atan(slope(lead)) - Math.atan((bc - pathB(a)) / Lk)));
       const dh = wrap(s.psi - qh);
       const track = (max: number) => Math.max(-max, Math.min(max, (wrap(want - dh) / D2R) * P.kp * 1.6 - (s.r / D2R) * P.kd));
       const u = s.u, rem = -a;                                 // quanto falta até o meio do berço
-      const stopDist = u > 0 ? u * 30 + u * u / 0.012 : 0;     // o navio é pesado: começa a parar cedo
+      const brakeK = (g.p.Tb / g.p.mass) / (180e3 / 4.83e6);   // navio maior tem menos máquina por tonelada
+      const stopDist = u > 0 ? u * 30 + u * u / (0.012 * Math.min(1, brakeK)) : 0; // o navio é pesado: começa a parar cedo
       const bowIn = b.bow <= 7, sternIn = b.stern <= 30, inPos = Math.abs(a) <= Q.berthHalf - 8;
       this.tugThink -= 1;
 
@@ -170,7 +175,7 @@ export class Pilot {
         // cada rebocador fecha a sua ponta devagar: mais rápido longe, quase parado ao tocar
         if (this.tugThink <= 0) {
           this.tugThink = 6;
-          ([[0, 36, -5, b.bow], [1, -42, -6, b.stern]] as const).forEach(([i, xf, ys, gap]) => {
+          ([[0, ...g.geo.berthBow, b.bow], [1, ...g.geo.berthStern, b.stern]] as [number, number, number, number][]).forEach(([i, xf, ys, gap]) => {
             const [vx, vy] = pointVelocity(s, xf, ys), closing = -(vx * Q.nx + vy * Q.ny);
             const wantV = gap > 12 ? 0.14 : gap > 4 ? 0.08 : 0.03;
             if (closing < wantV - 0.03) this.tug(g, i, 'push', gap > 25 ? 0.5 : gap > 6 ? 0.25 : 0.1);
@@ -215,7 +220,8 @@ export class Pilot {
     const [tx, ty] = W.pointAt(n.s + P.look, meeting ? 50 : 0);
     let tel = n.s < W.S_MOUTH - 500 ? 7 : 6;
     if (n.s >= W.S_MOUTH - 500 && g.sog > 6 * KN) tel = 5;       // folga do limite de 8 nós, mesmo com a corrente a favor
-    if (ds < 1900 && g.sog > 1.6) tel = g.sog > 2.4 ? 2 : g.sog > 1.9 ? 4 : 5; // já vai tirando seguimento para o berço
+    const slow = 1.6 / big;
+    if (ds < 1900 && g.sog > slow) tel = g.sog > slow + 0.8 ? 2 : g.sog > slow + 0.3 ? 4 : 5; // já vai tirando seguimento para o berço
     // berço ocupado: regula a chegada à reta para a hora em que ele estiver livre, em vez de correr e ficar parado
     if (busy && other && Number.isFinite(other.departAt)) {
       const free = other.departAt + UNBERTH_TIME + 60 - g.time, dist = W.S_MOUTH + 1500 - n.s;

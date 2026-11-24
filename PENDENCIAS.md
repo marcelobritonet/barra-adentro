@@ -32,7 +32,8 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 15 | Calibrar rebocadores jogando | Empurrar a 25% por 45 s já encosta a 0,3 nó; ver se as potências fazem sentido |
 | 5 | Mais tráfego | Atracar a contrabordo, sucção entre navios, mais de um navio em movimento |
 | 7 | Resto do canal de Santos | O mapa já tem as curvas; faltam berços e missões |
-| 8 | Mais progressão | Navios maiores, contratos que se renovam e destravam, tripulantes com nome, manutenção |
+| 8 | Mais progressão | Terceiro navio, tripulantes com nome, manutenção, contratos com validade |
+| 19 | Prático com o graneleiro | Atraca com dois rebocadores, mas abre demais na segunda curva e chega torto; sem rebocadores não foi testado |
 | 18 | Calibrar a economia jogando | Caixa inicial de R$ 8.000, preços e fretes são primeiro chute |
 | 10 | Noite e nevoeiro | O radar já existe para isso |
 | 16 | Prático sem rebocadores na corrente parada e a favor | Com os dois rebocadores atraca em qualquer maré. Sem eles, na preamar atraca quase sem lucro e na enchente recusa |
@@ -64,3 +65,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.7.0: berço ocupado, pedido de largada pelo rádio, prático regula a chegada; porta estável para testar |
 | v0.8.0: prático comanda os rebocadores e atraca nas quatro marés |
 | v0.9.0: carreira com contratos, oficina, tripulação e modo livre |
+| v0.10.0: graneleiro de 130 m, estaleiro, reputação e ofertas que mudam |

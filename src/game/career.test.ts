@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeCoaster } from '../sim/ship';
-import { applyCareer, buy, CONTRACTS, equipOf, newCareer, PARTS, salaries } from './career';
+import { applyCareer, buy, buyShip, CONTRACTS, equipOf, maxStars, newCareer, offers, PARTS, reputation, salaries } from './career';
 import { Game } from './game';
 
 describe('carreira', () => {
@@ -58,5 +58,30 @@ describe('carreira', () => {
     g.s.x = -1000; g.s.y = -1500; g.warp = 8; for (let i = 0; i < 200 && g.status === 'running'; i++) g.update(0.1);
     expect(g.status).toBe('done');
     expect(g.career.money).toBe(m);
+  });
+
+  it('reputação libera estrelas; ofertas mudam a cada viagem e crescem com o navio', () => {
+    const c = newCareer();
+    expect(maxStars(c)).toBe(2);
+    const a = offers(c); c.voyages = 1; const b = offers(c);
+    expect(a.map(x => x.freight)).not.toEqual(b.map(x => x.freight));
+    expect(a.find(x => x.id === 'cheia')!.freight).toBeGreaterThan(28000 * 0.89);
+    reputation(c, a.find(x => x.id === 'meia')!, true, true);
+    expect(c.rep).toBe(8);
+    c.rep = 30; expect(maxStars(c)).toBe(5);
+    reputation(c, a[0], false, false); expect(c.rep).toBe(24);
+    c.ship = 'handy';
+    const big = offers(c).find(x => x.id === 'cheia')!;
+    expect(big.freight).toBeGreaterThan(28000 * 2.3); expect(big.cargo).toContain('11.000 t');
+  });
+  it('comprar o graneleiro exige reputação e dinheiro, e zera máquina e governo', () => {
+    const c = newCareer(); c.money = 200000; c.parts.engine = 2; c.parts.radar = 1; c.crew.helm = 1;
+    expect(buyShip(c, 'handy')).toMatch(/reputação/);
+    c.rep = 25;
+    expect(buyShip(c, 'handy')).toBeNull();
+    expect(c.ship).toBe('handy'); expect(c.money).toBe(50000);
+    expect(c.parts.engine).toBe(0); expect(c.parts.radar).toBe(1); expect(c.crew.helm).toBe(1);
+    const g = new Game(); g.career = c; g.start('entrada');
+    expect(g.p.L).toBe(130); expect(g.geo.hull[0][0]).toBe(65); expect(g.tugs[0].xf).toBe(52);
   });
 });

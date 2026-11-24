@@ -86,10 +86,10 @@ export class Tug {
     if (Math.abs(s.u) > 0.03) ext.X -= this.brake * eff * Math.sign(s.u);
 
     // --- posição para o desenho
-    const d = this.state === 'fast' ? this.doing : 'stop';
+    const d = this.state === 'fast' ? this.doing : 'stop', hb = g.p.B / 2;
     const [gx, gy, gh] = this.state !== 'fast' ? [this.xf, 45, 0]
-      : d === 'push' ? [this.xf, 17, -Math.PI / 2] : d === 'pull' ? [this.xf, 48, Math.PI / 2]
-      : d === 'brake' ? [this.xf - 45, 3, 0] : [this.xf, 20, 0];
+      : d === 'push' ? [this.xf, hb + 10, -Math.PI / 2] : d === 'pull' ? [this.xf, hb + 41, Math.PI / 2]
+      : d === 'brake' ? [this.xf - 45, 3, 0] : [this.xf, hb + 13, 0];
     const k = Math.min(1, dt * 0.25);
     this.bx += (gx - this.bx) * k; this.by += (gy - this.by) * k; this.bh += (gh - this.bh) * k;
     [this.x, this.y] = toWorld(this.bx, this.by); this.psi = s.psi + this.bh;
@@ -104,5 +104,5 @@ export class Tug {
     return this.doing === 'stop' ? 'cabo passado, parado' : `${MODE_TEXT[this.doing]} ${Math.round(Math.abs(this.doing === 'brake' ? this.brake / BRAKE_MAX : this.force / FMAX) * 100)}%`;
   }
 }
-export const makeTugs = () => [new Tug('Tupi', 'proa', 36), new Tug('Guará', 'popa', -36)];
+export const makeTugs = (xf = 36) => [new Tug('Tupi', 'proa', xf), new Tug('Guará', 'popa', -xf)];
 export type { ShipState };

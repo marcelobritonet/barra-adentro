@@ -1,5 +1,5 @@
 // Carreira: dinheiro, contratos, oficina (peças) e tripulação. Estilo "Top Gear": cada compra muda o navio.
-import { ShipParams } from '../sim/ship';
+import { ShipClass, ShipParams, SHIPS } from '../sim/ship';
 import { TidePreset } from '../world/tide';
 
 export type PartId = 'engine' | 'rudder' | 'air' | 'thruster' | 'gps' | 'rot' | 'doppler' | 'radar' | 'ecdis';
@@ -80,10 +80,10 @@ export const CONTRACTS: Contract[] = [
   { id: 'urgente', title: 'Carga urgente na enchente', cargo: '2.900 t de peças', scenario: 'entrada', load: 1, tide: 'enchente', freight: 48000, parMin: 70, stars: 5, note: 'Corrente a favor no berço. Sem rebocadores, é para poucos.' },
 ];
 
-export interface Career { money: number; voyages: number; parts: Record<PartId, number>; crew: Record<CrewId, number> }
+export interface Career { money: number; voyages: number; ship: ShipClass; rep: number; parts: Record<PartId, number>; crew: Record<CrewId, number> }
 const KEY = 'barra-adentro.carreira';
 export const newCareer = (): Career => ({
-  money: 8000, voyages: 0,
+  money: 8000, voyages: 0, ship: 'coaster', rep: 0,
   parts: { engine: 0, rudder: 0, air: 0, thruster: 0, gps: 0, rot: 0, doppler: 0, radar: 0, ecdis: 0 },
   crew: { helm: 0, engineer: 0, mate: 0 },
 });
@@ -91,7 +91,7 @@ export function loadCareer(): Career {
   const c = newCareer();
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null');
-    if (raw) { c.money = +raw.money || 0; c.voyages = +raw.voyages || 0; Object.assign(c.parts, raw.parts); Object.assign(c.crew, raw.crew); }
+    if (raw) { c.money = +raw.money || 0; c.voyages = +raw.voyages || 0; c.rep = +raw.rep || 0; if (raw.ship in SHIPS) c.ship = raw.ship; Object.assign(c.parts, raw.parts); Object.assign(c.crew, raw.crew); }
   } catch { /* sem armazenamento */ }
   return c;
 }
@@ -116,7 +116,7 @@ export function applyCareer(p: ShipParams, c: Career) {
   p.nUp *= [1, 1.4, 1.8][e]; p.nDown *= [1, 1.3, 1.6][e]; p.nUpHigh *= [1, 1.4, 1.8][e]; p.revDelay = [15, 11, 8][e]; p.Tb *= [1, 1, 1.25][e];
   p.rudderRate *= [1, 2.6 / 1.8, 3.0 / 1.8][r]; p.rudderCL *= [1, 1, 1.35][r];
   if (c.parts.air) { p.airStarts = 8; p.airRefill = 1 / 55; }
-  p.thrusterMax = [0, 35e3, 60e3][c.parts.thruster];
+  p.thrusterMax = [0, 35e3, 60e3][c.parts.thruster] * (p.L / 90) ** 1.5;
   p.helmDelay = [2, 1.2, 0.6][c.crew.helm];
   p.ackDelay = [6, 4, 2.5][c.crew.engineer];
 }
@@ -130,4 +130,53 @@ export function bestHired(c: Career): CrewId | null {
   let best: CrewId | null = null;
   for (const k of Object.keys(CREW) as CrewId[]) if (c.crew[k] > 0 && (!best || CREW[k].levels[c.crew[k]].price > CREW[best].levels[c.crew[best]].price)) best = k;
   return best;
+}
+
+// ------------------------------------------------------------------ navios, reputação e ofertas
+
+/** Quanto o frete cresce com o navio. */
+export const FREIGHT_FACTOR: Record<ShipClass, number> = { coaster: 1, handy: 2.6 };
+/** Reputação mínima para o armador confiar um navio maior. */
+export const SHIP_REP: Record<ShipClass, number> = { coaster: 0, handy: 25 };
+const RESALE = 0.6;
+
+/** Estrelas que o mercado confia a este comandante: começa em 2 e sobe uma a cada 10 de reputação. */
+export const maxStars = (c: Career) => Math.min(5, 2 + Math.floor(c.rep / 10));
+export const repFor = (stars: number) => Math.max(0, (stars - 2) * 10);
+
+const CARGOES = ['fertilizante', 'açúcar', 'trigo', 'sal', 'soja', 'bobinas de aço', 'celulose'];
+/** Contratos oferecidos neste porto: mudam de carga e de frete a cada viagem, e dependem do navio. */
+export function offers(c: Career): Contract[] {
+  let seed = (c.voyages + 1) * 9973 + (c.ship === 'handy' ? 17 : 3);
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const ship = SHIPS[c.ship];
+  return CONTRACTS.map(t => {
+    const swing = 0.9 + rnd() * 0.25, name = CARGOES[Math.floor(rnd() * CARGOES.length)];
+    if (t.scenario === 'fundeio') return { ...t, freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing / 100) * 100 };
+    const tons = Math.round(t.load * ship.capacity / 100) * 100;
+    return {
+      ...t, cargo: `${tons.toLocaleString('pt-BR')} t de ${name}`,
+      title: t.title.replace(/^(Fertilizante|Açúcar|Trigo)/, name[0].toUpperCase() + name.slice(1)),
+      freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing / 100) * 100,
+      parMin: t.parMin + (c.ship === 'handy' ? 15 : 0),
+    };
+  });
+}
+
+/** Troca de navio: o antigo entra como parte do pagamento; máquina e governo ficam com ele, instrumentos e tripulação vão junto. */
+export function shipCost(c: Career, cls: ShipClass) { return SHIPS[cls].price - Math.round(SHIPS[c.ship].price * RESALE); }
+export function buyShip(c: Career, cls: ShipClass): string | null {
+  if (cls === c.ship) return 'Este já é o seu navio.';
+  if (c.rep < SHIP_REP[cls]) return `O armador pede reputação ${SHIP_REP[cls]}; a sua é ${Math.round(c.rep)}.`;
+  const cost = shipCost(c, cls);
+  if (c.money < cost) return `Faltam R$ ${(cost - c.money).toLocaleString('pt-BR')}.`;
+  c.money -= cost; c.ship = cls;
+  c.parts.engine = c.parts.rudder = c.parts.air = c.parts.thruster = 0;
+  return null;
+}
+/** Reputação depois de uma viagem contratada. */
+export function reputation(c: Career, ct: Contract, ok: boolean, clean: boolean) {
+  const d = ok ? ct.stars * 3 + (clean ? 2 : 0) : -6;
+  c.rep = Math.max(0, Math.min(100, c.rep + d));
+  return d;
 }

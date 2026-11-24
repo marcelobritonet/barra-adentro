@@ -132,7 +132,7 @@ export class Ecdis {
     // navio em escala, e a previsão de onde ele vai estar se nada mudar
     const hull = (x: number, y: number, psi: number) => {
       const sn = Math.sin(psi), cs = Math.cos(psi);
-      const pts: [number, number][] = [[45, 0], [30, 7], [-45, 7], [-45, -7], [30, -7]];
+      const hl = g.p.L / 2, hb = g.p.B / 2, pts: [number, number][] = [[hl, 0], [hl * 0.67, hb], [-hl, hb], [-hl, -hb], [hl * 0.67, -hb]];
       c.beginPath();
       pts.forEach(([f, r], i) => { const wx = x + f * sn + r * cs, wy = y + f * cs - r * sn; i ? c.lineTo(X(wx), Y(wy)) : c.moveTo(X(wx), Y(wy)); });
       c.closePath();
@@ -146,7 +146,7 @@ export class Ecdis {
       if (t % 60 === 0) { hull(x, y, psi); c.stroke(); }
     }
     c.setLineDash([3 * px, 3 * px]); c.beginPath(); track.forEach(([tx, ty], i) => (i ? c.lineTo(X(tx), Y(ty)) : c.moveTo(X(tx), Y(ty)))); c.stroke(); c.setLineDash([]);
-    const [hx, hy] = bodyToWorld(s, 45 + 40 * mpp, 0), [bx, by] = bodyToWorld(s, 45, 0);
+    const [hx, hy] = bodyToWorld(s, g.p.L / 2 + 40 * mpp, 0), [bx, by] = bodyToWorld(s, g.p.L / 2, 0);
     c.strokeStyle = '#000'; c.beginPath(); c.moveTo(X(bx), Y(by)); c.lineTo(X(hx), Y(hy)); c.stroke();
     hull(s.x, s.y, s.psi); c.fillStyle = '#ff3b2f'; c.fill(); c.stroke();
     if (mpp > 5) { c.fillStyle = '#ff3b2f'; c.beginPath(); c.arc(0, 0, 3 * px, 0, TAU); c.fill(); }
@@ -173,7 +173,7 @@ export function drawDoppler(c: CanvasRenderingContext2D, Wd: number, H: number, 
   const s = g.s;
   c.clearRect(0, 0, Wd, H); c.fillStyle = '#05080b'; c.fillRect(0, 0, Wd, H);
   if (!g.equip.doppler) { c.fillStyle = '#2f4a3c'; c.font = `11px ${FONT}`; c.textAlign = 'center'; c.fillText('não instalado', Wd / 2, H / 2 + 4); return; }
-  const cx = Wd / 2, bow = (s.v + s.r * 40) / KN, stern = (s.v - s.r * 40) / KN, fwd = s.u / KN;
+  const cx = Wd / 2, arm = g.p.L * 0.44, bow = (s.v + s.r * arm) / KN, stern = (s.v - s.r * arm) / KN, fwd = s.u / KN;
   c.fillStyle = '#3a4854'; c.beginPath(); c.moveTo(cx, 6); c.lineTo(cx + 9, 22); c.lineTo(cx + 9, H - 8); c.lineTo(cx - 9, H - 8); c.lineTo(cx - 9, 22); c.closePath(); c.fill();
   const side = (v: number, y: number) => {
     const col = Math.abs(v) > 0.3 ? '#ff7a6a' : Math.abs(v) > 0.15 ? '#ffcf6a' : '#7dffb0';

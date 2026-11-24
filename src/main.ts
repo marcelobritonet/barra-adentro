@@ -7,7 +7,8 @@ import * as W from './world/santos';
 import { buildGrid } from './world/santos';
 import { TIDE_PRESETS, TidePreset } from './world/tide';
 import { berthBusy } from './game/traffic';
-import { buy, CONTRACTS, CREW, CrewId, Level, loadCareer, newCareer, PARTS, PartId, salaries, saveCareer } from './game/career';
+import { buy, buyShip, CREW, CrewId, Level, loadCareer, maxStars, newCareer, offers, PARTS, PartId, repFor, salaries, saveCareer, shipCost, SHIP_REP } from './game/career';
+import { ShipClass, SHIPS } from './sim/ship';
 
 const game = new Game();
 const grid = buildGrid();
@@ -92,7 +93,7 @@ const sign = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
 const FREE_KEY = 'barra-adentro.livre';
 game.career = loadCareer();
 try { game.free = localStorage.getItem(FREE_KEY) === '1'; } catch { /* sem armazenamento */ }
-let portTab: 'contratos' | 'oficina' | 'tripulacao' = 'contratos', portMsg = '', confirmNew = false;
+let portTab: 'contratos' | 'oficina' | 'tripulacao' | 'estaleiro' = 'contratos', portMsg = '', confirmNew = false;
 const brl = (v: number) => `R$ ${Math.round(v).toLocaleString('pt-BR')}`;
 
 function shopRows(kind: 'part' | 'crew') {
@@ -123,20 +124,29 @@ function menu() {
         <button data-sc="entrada">▶ Entrada e atracação<small>VTS, prático opcional, berço ocupado por um navio que precisa sair, cruzamento no canal, duas curvas e atracação por bombordo.</small></button>
         <button data-sc="fundeio">▶ Fundeio<small>Fundear entre os navios do fundeadouro externo. Mais curto, bom para aprender.</small></button>
       </div>
+      <div class="preset">Navio: ${(Object.keys(SHIPS) as ShipClass[]).map(k => `<button data-freeship="${k}" class="${game.freeShip === k ? 'on' : ''}">${SHIPS[k].label}</button>`).join('')}</div>
       <div class="preset">Maré: ${(Object.keys(TIDE_PRESETS) as TidePreset[]).map(k => `<button data-tide="${k}" class="${game.tidePreset === k ? 'on' : ''}">${TIDE_PRESETS[k].label}</button>`).join('')}</div>
       <p class="dim" style="margin-top:0">${TIDE_PRESETS[game.tidePreset].hint} A maré corre 2× mais rápido que a real.</p>
       <div class="preset">Equipamentos: <button data-eq="off" class="${Object.values(game.equip).some(Boolean) ? '' : 'on'}">Navio básico</button><button data-eq="on" class="${Object.values(game.equip).every(Boolean) ? 'on' : ''}">Tudo ligado</button><span class="dim">(ou um a um, na aba Equip. do painel)</span></div>
       ${foot}</div>`;
     return;
   }
-  const tabs = ([['contratos', 'Contratos'], ['oficina', 'Oficina'], ['tripulacao', 'Tripulação']] as const).map(([k, l]) => `<button data-port="${k}" class="${portTab === k ? 'on' : ''}">${l}</button>`).join('');
+  const tabs = ([['contratos', 'Contratos'], ['oficina', 'Oficina'], ['tripulacao', 'Tripulação'], ['estaleiro', 'Estaleiro']] as const).map(([k, l]) => `<button data-port="${k}" class="${portTab === k ? 'on' : ''}">${l}</button>`).join('');
+  const stars = maxStars(c), list = offers(c);
+  const yard = `<table class="shop">${(Object.keys(SHIPS) as ShipClass[]).map(k => {
+    const sh = SHIPS[k], mine = c.ship === k, cost = shipCost(c, k);
+    return `<tr><td><b>${sh.label}</b>${mine ? ' <span class="have">· seu navio</span>' : ''}<br><small>${sh.blurb}</small></td>
+      <td><small>${sh.L} × ${sh.B} m · calado ${String(sh.Tmin).replace('.', ',')} a ${String(sh.Tmax).replace('.', ',')} m · carga ${sh.capacity.toLocaleString('pt-BR')} t<br>${k === 'coaster' ? 'Fretes de tabela' : 'Fretes 2,6× maiores; prazo 15 min mais longo'}${SHIP_REP[k] ? ` · exige reputação ${SHIP_REP[k]}` : ''}</small></td>
+      <td>${mine ? '' : `<button data-ship="${k}" ${c.money < cost || c.rep < SHIP_REP[k] ? 'disabled' : ''}>${cost >= 0 ? 'Comprar' : 'Trocar'}<br>${cost >= 0 ? brl(cost) : '+' + brl(-cost)}</button>`}</td></tr>`;
+  }).join('')}</table><p class="dim">O navio antigo entra na troca por 60% do preço. Máquina, leme, ar e impelidor ficam com ele; instrumentos e tripulação vão com você.</p>`;
   const body = portTab === 'contratos'
-    ? `<div class="contracts">${CONTRACTS.map(ct => `<button data-contract="${ct.id}">
-        <span class="stars">${'★'.repeat(ct.stars)}${'☆'.repeat(5 - ct.stars)}</span><b>${ct.title}</b><span class="pay">${brl(ct.freight)}</span>
-        <small>${ct.cargo} · calado ${(3.6 + 1.6 * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min<br>${ct.note}</small></button>`).join('')}</div>`
-    : shopRows(portTab === 'oficina' ? 'part' : 'crew');
+    ? `<div class="contracts">${list.map(ct => { const locked = ct.stars > stars; return `<button data-contract="${ct.id}" ${locked ? 'disabled' : ''}>
+        <span class="stars">${'★'.repeat(ct.stars)}${'☆'.repeat(5 - ct.stars)}${locked ? ` · exige reputação ${repFor(ct.stars)}` : ''}</span><b>${ct.title}</b><span class="pay">${brl(ct.freight)}</span>
+        <small>${ct.cargo} · calado ${(SHIPS[c.ship].Tmin + (SHIPS[c.ship].Tmax - SHIPS[c.ship].Tmin) * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min<br>${ct.note}</small></button>`; }).join('')}</div>
+       <p class="dim">As ofertas mudam a cada viagem. Entregar bem aumenta a reputação, que libera contratos com mais estrelas e navios maiores.</p>`
+    : portTab === 'estaleiro' ? yard : shopRows(portTab === 'oficina' ? 'part' : 'crew');
   overlay.innerHTML = `<div class="card wide">${head}
-    <div class="purse"><span>N/M Maré Mansa · ${c.voyages} viage${c.voyages === 1 ? 'm' : 'ns'}</span><span>Caixa <b class="${c.money >= 0 ? 'pos' : 'neg'}">${brl(c.money)}</b>${salaries(c) ? ` · soldadas ${brl(salaries(c))} por viagem` : ''}</span></div>
+    <div class="purse"><span>N/M Maré Mansa · ${SHIPS[c.ship].label} · ${c.voyages} viage${c.voyages === 1 ? 'm' : 'ns'} · reputação <b>${Math.round(c.rep)}</b></span><span>Caixa <b class="${c.money >= 0 ? 'pos' : 'neg'}">${brl(c.money)}</b>${salaries(c) ? ` · soldadas ${brl(salaries(c))} por viagem` : ''}</span></div>
     <div class="tabs">${tabs}<span class="sp"></span><button data-newcareer="1" class="${confirmNew ? 'danger' : ''}">${confirmNew ? 'Confirmar: apagar a carreira' : 'Recomeçar'}</button></div>
     ${portMsg ? `<p class="neg">${portMsg}</p>` : ''}
     ${body}
@@ -150,7 +160,7 @@ function showResult() {
     <p>${r.detail}</p>
     <table>${r.lines.map(([l, v]) => `<tr><td>${l}</td><td>${money(v)}</td></tr>`).join('')}
       <tr class="total"><td>Resultado da viagem</td><td>${money(r.total)}</td></tr>
-      ${game.free ? '' : `<tr><td>Caixa</td><td>${money(game.career.money)}</td></tr>`}
+      ${game.free ? '' : `<tr><td>Caixa</td><td>${money(game.career.money)}</td></tr><tr><td>Reputação</td><td><span class="${r.rep >= 0 ? 'pos' : 'neg'}">${sign(r.rep)}</span> → ${Math.round(game.career.rep)}</td></tr>`}
       <tr><td>Confiança da tripulação</td><td>${sign(r.trustBefore)} → <span class="${r.trustAfter >= r.trustBefore ? 'pos' : 'neg'}">${sign(r.trustAfter)}</span></td></tr></table>
     ${r.left ? '<p class="neg">A tripulação perdeu a confiança em você e alguém desembarcou. O substituto chega desconfiado.</p>' : ''}
     <div class="choices"><button data-again="1">↻ ${game.free ? 'Tentar de novo' : 'Repetir o contrato'}</button><button data-menu="1">${game.free ? '☰ Menu' : '⚓ Voltar ao porto'}</button></div>
@@ -173,8 +183,10 @@ overlay.addEventListener('click', e => {
   if (d.port) { portTab = d.port as typeof portTab; return menu(); }
   if (d.buy) { const [kind, id] = d.buy.split(':'); portMsg = buy(game.career, kind as 'part' | 'crew', id) ?? ''; saveCareer(game.career); return menu(); }
   if (d.newcareer) { if (!confirmNew) { confirmNew = true; return menu(); } confirmNew = false; game.career = newCareer(); saveCareer(game.career); game.resetTrust(); return menu(); }
-  if (d.contract) { const ct = CONTRACTS.find(x => x.id === d.contract)!; game.contract = ct; return launch(ct.scenario); }
-  if (d.again) return launch(game.scenario);
+  if (d.contract) { const ct = offers(game.career).find(x => x.id === d.contract)!; game.contract = ct; return launch(ct.scenario); }
+  if (d.ship) { portMsg = buyShip(game.career, d.ship as ShipClass) ?? ''; saveCareer(game.career); return menu(); }
+  if (d.freeship) { game.freeShip = d.freeship as ShipClass; return menu(); }
+  if (d.again) return launch(game.scenario); // repete o mesmo contrato, com a mesma oferta
   if (d.sc) { game.contract = null; return launch(d.sc as Scenario); }
 });
 

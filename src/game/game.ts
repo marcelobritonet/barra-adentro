@@ -1,6 +1,6 @@
 import { anchorForce, HEAVE_RATE, letGo, makeAnchor, SHACKLE } from '../sim/anchor';
 import {
-  BodyForce, bodyToWorld, D2R, Env, KN, makeCoaster, makeState, pointVelocity, ShipState,
+  BodyForce, bodyToWorld, D2R, Env, KN, makeCoaster, makeShipParams, makeState, pointVelocity, ShipClass, shipGeo, ShipState,
   stepShip, TELEGRAPH, TELEGRAPH_LABELS, worldForceAt,
 } from '../sim/ship';
 import * as W from '../world/santos';
@@ -8,26 +8,25 @@ import { Pilot, PilotGrade, PILOTS } from './pilot';
 import { makeTugs, TugMode } from './tugs';
 import { bearingText, berthBusy, berthShip, DEPART_ON_REQUEST, hullDistance, makeTraffic, Other, swingRadius, updateTraffic } from './traffic';
 import { Tide, tideAt, TidePreset, tideText } from '../world/tide';
-import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, salaries, saveCareer, wearFactor } from './career';
+import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, reputation, salaries, saveCareer, wearFactor } from './career';
 
 export type Scenario = 'entrada' | 'fundeio';
 export interface Msg { t: number; text: string; level: 'info' | 'warn' | 'bad' | 'pilot'; who: string }
-export interface Result { ok: boolean; title: string; detail: string; lines: [string, number][]; total: number; trustBefore: number; trustAfter: number; left: boolean }
+export interface Result { ok: boolean; title: string; detail: string; lines: [string, number][]; total: number; trustBefore: number; trustAfter: number; left: boolean; rep: number }
 
 const TRUST_KEY = 'barra-adentro.confianca';
 function loadTrust() { try { return Math.max(-100, Math.min(100, +(localStorage.getItem(TRUST_KEY) ?? 0) || 0)); } catch { return 0; } }
 function saveTrust(v: number) { try { localStorage.setItem(TRUST_KEY, String(Math.round(v))); } catch { /* sem armazenamento */ } }
 
 const DT = 0.05;
-const HULL: [number, number][] = [
-  [45, 0], [36, 5], [36, -5], [20, 7], [20, -7], [0, 7], [0, -7],
-  [-25, 7], [-25, -7], [-42, 6], [-42, -6], [-45, 0],
-];
 const KQ = 4e5, CQ = 6e5, MU = 0.3;
 const PAR_MIN: Record<Scenario, number> = { entrada: 75, fundeio: 40 };
 
 export class Game {
   p = makeCoaster(1);
+  geo = shipGeo(this.p);
+  /** Porte em relação ao costeiro: escala defensas, cabos e ferro. */
+  private size = 1;
   s: ShipState = makeState(0, 0, 0);
   anchor = makeAnchor();
   env: Env;
@@ -37,6 +36,7 @@ export class Game {
   /** Carreira: dinheiro, peças e tripulação. No modo livre nada disso vale e os equipamentos são chaves de teste. */
   career: Career = newCareer();
   free = false;
+  freeShip: ShipClass = 'coaster';
   contract: Contract | null = null;
   tidePreset: TidePreset = 'vazante';
   tide: Tide = tideAt(0, 'vazante');
@@ -82,7 +82,9 @@ export class Game {
     this.scenario = sc;
     const ct = this.contract && this.contract.scenario === sc ? this.contract : null;
     this.contract = ct;
-    this.p = makeCoaster(ct ? ct.load : 1);
+    const cls: ShipClass = this.free ? this.freeShip : this.career.ship;
+    this.p = makeShipParams(cls, ct ? ct.load : 1);
+    this.geo = shipGeo(this.p); this.size = this.p.mass / makeCoaster(1).mass;
     if (ct) this.tidePreset = ct.tide;
     if (!this.free) { applyCareer(this.p, this.career); this.equip = equipOf(this.career); }
     if (sc === 'entrada') {
@@ -92,12 +94,12 @@ export class Game {
     } else {
       this.s = makeState(-700, -5100, 320, 5, 6);
     }
-    this.anchor = makeAnchor();
+    this.anchor = makeAnchor(); this.anchor.scale = this.size ** 0.8;
     this.tide = tideAt(0, this.tidePreset);
     this.time = 0; this.warp = 1; this.paused = false; this.acc = 0;
     this.msgs = []; this.result = null; this.hitBuoys.clear();
     this.ledger = { fuel: 0, speeding: 0, buoys: 0, contact: 0, anchor: 0, pilot: 0, vts: 0, tugs: 0 };
-    this.tugs = makeTugs();
+    this.tugs = makeTugs(this.geo.tug);
     this.traffic = makeTraffic(sc === 'entrada'); updateTraffic(this, 0);
     this.pilot = new Pilot(); this.vts = sc === 'entrada' ? 'none' : 'ok'; this.vtsTimer = 0;
     this.mooring = 0; this.holdTime = 0; this.anchorPhase = 'stowed'; this.berthSig = ''; this.berthAt = -99; this.said.clear(); this.lastContact = -99;
@@ -205,7 +207,7 @@ export class Game {
       a.state = 'lost'; this.ledger.anchor += 25000; this.trustEvent(-20, 'ferro perdido');
       return this.say('Proa', 'Largou com muito seguimento: a amarra partiu. Ferro perdido!', 'bad');
     }
-    const [bx, by] = bodyToWorld(this.s, 42, 0);
+    const [bx, by] = bodyToWorld(this.s, this.geo.bow, 0);
     letGo(a, bx, by, this.shackles, this.env.depth(bx, by));
     this.say('Proa', `Ferro largado. Arriando ${this.shackles} quartéis.`, 'info');
   }
@@ -225,8 +227,8 @@ export class Game {
   /** Situação do navio em relação ao berço. */
   berth() {
     const [ac] = W.quayLocal(this.s.x, this.s.y);
-    const bow = W.quayLocal(...bodyToWorld(this.s, 36, -5))[1] - W.QUAY.fender;
-    const stern = W.quayLocal(...bodyToWorld(this.s, -42, -6))[1] - W.QUAY.fender;
+    const bow = W.quayLocal(...bodyToWorld(this.s, ...this.geo.berthBow))[1] - W.QUAY.fender;
+    const stern = W.quayLocal(...bodyToWorld(this.s, ...this.geo.berthStern))[1] - W.QUAY.fender;
     return { along: ac, bow, stern };
   }
   moor() {
@@ -272,10 +274,11 @@ export class Game {
     const ext: BodyForce = { X: 0, Y: 0, N: 0 };
 
     // --- amarra
-    const [bx, by] = bodyToWorld(s, 42, 0);
-    const [bvx, bvy] = pointVelocity(s, 42, 0);
+    const HULL = this.geo.hull, hx = this.geo.bow;
+    const [bx, by] = bodyToWorld(s, hx, 0);
+    const [bvx, bvy] = pointVelocity(s, hx, 0);
     const [fx, fy] = anchorForce(this.anchor, bx, by, bvx, bvy, Math.max(env.depth(bx, by), 1), DT);
-    if (fx || fy) worldForceAt(s, fx, fy, 42, 0, ext);
+    if (fx || fy) worldForceAt(s, fx, fy, hx, 0, ext);
     if (this.anchor.stalled) this.say('Proa', 'Amarra tesa, o molinete não vence. Dê um toque de máquina adiante para aliviar.', 'warn', 'stall', 20);
     if (this.anchor.state === 'heaving') {
       const q = Math.ceil(this.anchor.paid / SHACKLE);
@@ -328,17 +331,17 @@ export class Game {
       if (b < -4) return this.finish(false, 'Colisão com o cais', 'O navio entrou cais adentro.', 60000);
       const [vx, vy] = pointVelocity(s, xf, ys);
       const vn = vx * Q.nx + vy * Q.ny, vt = vx * Q.tx + vy * Q.ty;
-      const F = Math.max(0, KQ * (Q.fender - b) - CQ * vn);
+      const F = Math.max(0, KQ * (Q.fender - b) - CQ * vn) * this.size;
       const fr = -MU * F * Math.tanh(vt / 0.05);
       worldForceAt(s, F * Q.nx + fr * Q.tx, F * Q.ny + fr * Q.ty, xf, ys, ext);
       contact = true; impact = Math.max(impact, -vn);
     }
     // amarrando: os cabos e os guinchos trazem o navio para o cais, devagar
     if (this.mooring > 0) {
-      for (const [xf, ys] of [[36, -5], [-42, -6]]) {
+      for (const [xf, ys] of [this.geo.berthBow, this.geo.berthStern]) {
         const gap = W.quayLocal(...bodyToWorld(s, xf, ys))[1] - Q.fender;
         const [vx, vy] = pointVelocity(s, xf, ys);
-        const F = Math.max(0, Math.min(60e3, 8e3 * gap)) + 4e5 * (vx * Q.nx + vy * Q.ny);
+        const F = (Math.max(0, Math.min(60e3, 8e3 * gap)) + 4e5 * (vx * Q.nx + vy * Q.ny)) * this.size;
         worldForceAt(s, -F * Q.nx, -F * Q.ny, xf, ys, ext);
       }
     }
@@ -385,7 +388,7 @@ export class Game {
       if (this.hitBuoys.has(i)) return;
       const dx = bu.x - s.x, dy = bu.y - s.y;
       const xf = dx * sin + dy * cos, ys = dx * cos - dy * sin;
-      if (Math.abs(xf) < 46 && Math.abs(ys) < 8) {
+      if (Math.abs(xf) < p.L / 2 + 1 && Math.abs(ys) < p.B / 2 + 1) {
         this.hitBuoys.add(i); this.ledger.buoys += 2500; this.trustEvent(-8, 'boia abalroada');
         this.say('Imediato', `Abalroamos a boia ${bu.id}!`, 'bad');
       }
@@ -491,8 +494,10 @@ export class Game {
     if (left) this.trust = -30;
     saveTrust(this.trust);
     const total = lines.reduce((a, l) => a + l[1], 0);
+    const cleanRun = !L.speeding && !L.buoys && !L.contact && !L.anchor && !L.vts;
+    const repDelta = !this.free && ct ? reputation(this.career, ct, ok, cleanRun) : 0;
     if (!this.free) { this.career.money += total; this.career.voyages++; saveCareer(this.career); }
-    this.result = { ok, title, detail, lines, total: lines.reduce((a, l) => a + l[1], 0), trustBefore: this.trustStart, trustAfter, left };
+    this.result = { ok, title, detail, lines, total: lines.reduce((a, l) => a + l[1], 0), trustBefore: this.trustStart, trustAfter, left, rep: repDelta };
     this.status = 'done';
   }
 }

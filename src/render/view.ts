@@ -16,6 +16,7 @@ export class View {
   private ship = new THREE.Group();
   private chain: THREE.Line;
   private mark = box(5, 5, 5, 0xffd21a);
+  private shipKey = '';
   private tugs: { mesh: THREE.Group; line: THREE.Line }[] = [];
   private others: { mesh: THREE.Group; line: THREE.Line }[] = [];
   private wake: THREE.Mesh[] = [];
@@ -36,7 +37,7 @@ export class View {
 
     this.scene.add(makeWater(grid), makeLand(grid), makeTown(), makeQuay(), makeZones());
     for (const b of W.BUOYS) { const m = makeBuoy(b.kind); m.position.set(b.x, 0, -b.y); this.buoys.push(m); this.scene.add(m); }
-    this.ship.add(makeShip(p));
+    this.ship.add(makeShip(p)); this.shipKey = `${p.L}/${p.T.toFixed(1)}`;
     this.scene.add(this.ship);
 
     this.chain = new THREE.Line(
@@ -73,6 +74,9 @@ export class View {
 
   render(g: Game, dt: number) {
     const s = g.s;
+    // trocou de navio ou de carga: refaz o casco
+    const key = `${g.p.L}/${g.p.T.toFixed(1)}`;
+    if (key !== this.shipKey) { this.shipKey = key; this.ship.clear(); this.ship.add(makeShip(g.p, 0x1d2733, g.p.L / 90)); }
     this.bob += dt;
     this.ship.position.set(s.x, -0.4 * s.squat, -s.y);
     this.ship.rotation.y = -s.psi;
@@ -86,7 +90,7 @@ export class View {
     if (this.wakeT <= 0 && Math.abs(s.u) > 0.4 && g.status === 'running' && !g.paused) {
       this.wakeT = 9 / Math.max(1, Math.abs(s.u));
       const m = this.wake[this.wakeI = (this.wakeI + 1) % this.wake.length];
-      const [wx, wy] = bodyToWorld(s, s.u > 0 ? -46 : 46, 0);
+      const [wx, wy] = bodyToWorld(s, (s.u > 0 ? -1 : 1) * (g.p.L / 2 + 1), 0);
       m.position.set(wx, 0.15, -wy); m.rotation.y = -s.psi;
       m.scale.set(8 + 10 * Math.abs(s.n), 1, 5); (m.material as THREE.MeshBasicMaterial).opacity = 0.75;
     }
@@ -119,7 +123,7 @@ export class View {
       v.mesh.visible = t.state !== 'none' && g.scenario === 'entrada'; v.line.visible = v.mesh.visible && t.line;
       v.mesh.position.set(t.x, 0, -t.y); v.mesh.rotation.y = -t.psi;
       if (v.line.visible) {
-        const [ax, ay] = bodyToWorld(s, t.xf, 6.5), pos = v.line.geometry.attributes.position as THREE.BufferAttribute;
+        const [ax, ay] = bodyToWorld(s, t.xf, g.p.B / 2 - 0.5), pos = v.line.geometry.attributes.position as THREE.BufferAttribute;
         pos.setXYZ(0, t.x, 3, -t.y); pos.setXYZ(1, ax, 3.5, -ay); pos.needsUpdate = true;
       }
     });
@@ -129,7 +133,7 @@ export class View {
     this.chain.visible = this.mark.visible = a.state === 'down' || a.state === 'heaving';
     this.mark.position.set(a.ax, 1.5, -a.ay); // boia de arinque: onde o ferro está
     if (this.chain.visible) {
-      const [bx, by] = bodyToWorld(s, 42, 0);
+      const [bx, by] = bodyToWorld(s, g.geo.bow, 0);
       const pos = this.chain.geometry.attributes.position as THREE.BufferAttribute;
       pos.setXYZ(0, bx, 3, -by); pos.setXYZ(1, a.ax, 1, -a.ay); pos.needsUpdate = true;
     }
@@ -306,7 +310,8 @@ function makeShip(p: ShipParams, hullColor = 0x1d2733, k = 1) {
     sh.lineTo(b * 0.7, -l); sh.lineTo(-b * 0.7, -l); sh.lineTo(-b, -l + 6); sh.lineTo(-b, l - 22); sh.lineTo(-b * 0.55, l - 9);
     sh.closePath(); return sh;
   };
-  const free = (8 - p.T) * (k > 1 ? 0.8 : 1);
+  // borda livre: pontal menos calado (navio maior tem pontal maior); nos navios de cenário, um valor fixo
+  const free = p.T > 0 ? Math.max(1.6, (p.L > 100 ? 11 : 8) - p.T) : 7;
   const ex = (inset: number, h: number, y: number, color: number) => {
     const m = new THREE.Mesh(new THREE.ExtrudeGeometry(outline(inset), { depth: h, bevelEnabled: false }).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color }));
     m.position.y = y; return m;
