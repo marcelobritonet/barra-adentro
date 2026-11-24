@@ -2,6 +2,14 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.8.0 — Prático comanda os rebocadores
+
+- Com os dois rebocadores de cabo passado, é o prático que fala com eles, como na vida real: você continua executando só leme e máquina.
+- Na aproximação, o rebocador de popa segura o seguimento. Junto ao berço o prático para o navio paralelo a 20 m do cais e cada rebocador fecha a sua ponta devagar, quase parado ao tocar.
+- Com rebocadores o prático atraca nas quatro marés, inclusive com corrente a favor, em cerca de 50 min de jogo. Sem eles continua recusando a enchente.
+- Se ele já tinha recusado e os rebocadores passam o cabo, ele retoma a manobra.
+- 4 testes novos: viagem completa com prático e rebocadores em vazante, preamar, enchente e baixa-mar.
+
 ## v0.7.0 — Berço ocupado e rádio entre navios
 
 - O navio de 180 m agora começa atracado no seu berço. Sem ninguém pedir, larga aos 30 min; ele leva 4 min para abrir do cais e então sai pelo canal.

@@ -112,6 +112,7 @@ Estado do prático por maré, com comandante obediente (teste automático):
 | Vazante | Atraca limpo em 56 min (sênior) e 59 min (padrão) |
 | Preamar | Atraca, mas em 84 min e com prejuízo: a manobra em corrente parada ainda é ruim |
 | Enchente e baixa-mar | Leva o navio inteiro até perto do berço e recusa atracar |
+| Qualquer maré, com os dois rebocadores | Atraca em cerca de 50 min, com resultado de uns R$ 9.000 (os rebocadores custam perto de R$ 7.500) |
 
 ## Confiança da tripulação
 
@@ -173,7 +174,7 @@ Sem doppler, quem informa a distância ao cais é a proa, pelo rádio ("Proa a 1
 | Ordens | Empurrar (leva para bombordo, para o cais), puxar (para boreste), parar; o de popa também segura o seguimento. Potência de 10, 25, 50 ou 100% |
 | Força | 120 kN cada (80 kN segurando); rendem menos com o navio andando e nada acima de 6 nós |
 | Atraso | 4 s para cumprir, a força sobe aos poucos, e trocar entre empurrar e puxar leva 15 s de reposicionamento |
-| O prático ainda não comanda os rebocadores | A fazer |
+| Com prático a bordo | É ele quem dá as ordens aos rebocadores: o de popa segura o seguimento na chegada e os dois encostam o navio de lado |
 
 Com um comandante que obedece na hora (teste automático), os dois atracam: o sênior em 56 min e o padrão em 59 min de jogo. A diferença entre eles ainda é pequena e precisa de calibragem.
 

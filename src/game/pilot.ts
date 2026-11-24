@@ -1,5 +1,6 @@
 // Prático: só dá ordens. Quem executa é o comandante.
-import { D2R, KN } from '../sim/ship';
+import { D2R, KN, pointVelocity } from '../sim/ship';
+import type { TugMode } from './tugs';
 import * as W from '../world/santos';
 import type { Game } from './game';
 import { berthBusy, berthShip, UNBERTH_TIME } from './traffic';
@@ -29,6 +30,14 @@ export class Pilot {
   /** Recusou atracar com corrente a favor; volta a orientar quando a maré virar. */
   declined = false;
   private meetSaid = false; private waitSaid = false; private paceSaid = false;
+  private tugThink = 0; private tugSaid = false;
+  /** O prático fala com os rebocadores ele mesmo, como na vida real. */
+  private tug(g: Game, i: number, mode: TugMode, power = 0.25) {
+    const t = g.tugs[i];
+    if (t.state !== 'fast' || (t.mode === mode && (mode === 'stop' || t.power === power))) return;
+    g.tugOrder(i, mode, power);
+    g.say(this.name, `${t.name}, ${mode === 'stop' ? 'parar' : `${mode === 'push' ? 'empurrar' : mode === 'pull' ? 'puxar' : 'segurar'} a ${Math.round(power * 100)}%`}.`, 'pilot');
+  }
 
   get name() { return PILOTS[this.grade].label; }
 
@@ -86,9 +95,11 @@ export class Pilot {
 
     // --- com corrente a favor não se atraca: o navio não para nem governa. Espera a maré virar.
     if (ds < 1000 && !this.final && g.mooring <= 0) {
-      if (g.tide.flow < -0.1 && !this.declined) {
+      const helped = g.tugs.every(t => t.state === 'fast');
+      if (this.declined && helped) { this.declined = false; g.say(this.name, 'Com os dois rebocadores eu atraco mesmo com esta corrente. Vamos.', 'info'); }
+      if (g.tide.flow < -0.1 && !this.declined && !helped) {
         this.declined = true;
-        g.say(this.name, `Corrente a favor no berço: assim eu não atraco. Tire o seguimento, largue o ferro e aguarde a maré virar, em ${Math.round(g.tide.toSlack / 60)} min. Se quiser atracar agora, é por sua conta, com rebocadores.`, 'warn');
+        g.say(this.name, `Corrente a favor no berço: assim eu não atraco. Tire o seguimento, largue o ferro e aguarde a maré virar, em ${Math.round(g.tide.toSlack / 60)} min. Ou chame os dois rebocadores, que com eles eu atraco.`, 'warn');
       }
       if (this.declined) {
         const anchored = g.anchor.state === 'down' || g.anchor.state === 'heaving';
@@ -106,7 +117,10 @@ export class Pilot {
     if ((ds < 800 && !blocked) || this.final) {
       // rota em coordenadas do cais (a = ao longo, b = distância da face ao centro do navio):
       // sai do eixo, converge em ângulo raso e fica paralela só na hora de encostar
-      const end = Q.fender + 7.5;
+      // com os dois rebocadores de cabo passado, para paralelo a 20 m e eles encostam o navio
+      const tugs = g.tugs.every(t => t.state === 'fast');
+      if (tugs && !this.tugSaid) { this.tugSaid = true; g.say(this.name, 'Rebocadores de cabo passado. Eu falo com eles: paro o navio paralelo ao cais e eles encostam.', 'info'); }
+      const end = Q.fender + 7.5 + (tugs ? 20 : 0);
       // fica afastado da margem rasa até a bacia do berço: perto dela a proa é empurrada para fora
       const path: [number, number][] = [[-800, 200], [-240, 78], [-15, end]];
       const seg = (a: number) => (a < -240 ? 0 : 1);
@@ -127,9 +141,10 @@ export class Pilot {
       const u = s.u, rem = -a;                                 // quanto falta até o meio do berço
       const stopDist = u > 0 ? u * 30 + u * u / 0.012 : 0;     // o navio é pesado: começa a parar cedo
       const bowIn = b.bow <= 7, sternIn = b.stern <= 30, inPos = Math.abs(a) <= Q.berthHalf - 8;
+      this.tugThink -= 1;
 
       if (!this.final) {
-        if (rem < 60 || (inPos && bowIn)) this.final = true;
+        if (rem < (tugs ? 45 : 60) || (inPos && bowIn)) this.final = true;
         // perfil de velocidade NO FUNDO: com corrente a favor ou parada, a mesma máquina dá muito mais seguimento
         const vT = rem > 520 ? 1.5 : rem > 260 ? 1.0 : 0.55;
         let tel = this.tel < 4 && g.sog <= vT + 0.15 ? 4 : this.tel;
@@ -143,7 +158,34 @@ export class Pilot {
         if (off > 9 && rem > 150 && g.sog < 1.6) tel = 6;
         if (rem < 140 && b.bow < 30 && g.sog > 0.5) tel = 2;     // chega devagar: o toque tem de ser macio
         if (rem < stopDist + 15) tel = u > 0.5 ? 2 : 4;
+        // o rebocador de popa ajuda a tirar seguimento, o que salva a manobra com corrente a favor
+        if (tugs && this.tugThink <= 0) {
+          this.tugThink = 6;
+          if (g.sog > vT + 0.25) this.tug(g, 1, 'brake', g.sog > vT + 0.7 ? 1 : 0.5); else if (g.sog < vT + 0.05) this.tug(g, 1, 'stop');
+          this.tug(g, 0, 'stop');
+        }
         return [track(off > 6 ? 35 : 25), tel];
+      }
+      if (tugs) {
+        // cada rebocador fecha a sua ponta devagar: mais rápido longe, quase parado ao tocar
+        if (this.tugThink <= 0) {
+          this.tugThink = 6;
+          ([[0, 36, -5, b.bow], [1, -42, -6, b.stern]] as const).forEach(([i, xf, ys, gap]) => {
+            const [vx, vy] = pointVelocity(s, xf, ys), closing = -(vx * Q.nx + vy * Q.ny);
+            const wantV = gap > 12 ? 0.14 : gap > 4 ? 0.08 : 0.03;
+            if (closing < wantV - 0.03) this.tug(g, i, 'push', gap > 25 ? 0.5 : gap > 6 ? 0.25 : 0.1);
+            else if (closing > wantV + 0.10) this.tug(g, i, 'pull', 0.25);
+            else if (closing > wantV + 0.03 || g.tugs[i].mode === 'pull') this.tug(g, i, 'stop');
+          });
+        }
+        if (inPos && bowIn && b.stern <= 8 && g.sog < 0.25) {
+          if (!this.ready) { this.ready = true; g.say(this.name, 'Navio encostado. Pode passar as espias.', 'info'); }
+          return [0, 4];
+        }
+        if (rem < -12) return [0, u < -0.25 ? 4 : u > 0.1 ? 1 : 2];
+        if (u > 0.12 && rem < stopDist + 8) return [0, u > 0.5 ? 1 : 2];
+        if (rem > 20) return [0, u < 0.3 ? 5 : 4];
+        return [0, u < -0.15 ? 5 : 4];
       }
       // chegou torto ou longe demais: sai a ré e aproxima de novo, em vez de insistir
       if (!this.retry && Math.abs(u) < 0.25 && b.bow > 14) {

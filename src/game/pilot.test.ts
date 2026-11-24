@@ -6,9 +6,9 @@ import { PilotGrade } from './pilot';
 import { TidePreset } from '../world/tide';
 
 /** Comandante obediente: executa exatamente o que o prático manda. */
-function voyage(grade: PilotGrade, tide: TidePreset = 'vazante', ask = true) {
+function voyage(grade: PilotGrade, tide: TidePreset = 'vazante', ask = true, tugs = false) {
   const g = new Game();
-  g.trust = 0; g.tidePreset = tide; g.start('entrada'); g.callVTS(); g.callPilot(grade); if (ask) g.callShip();
+  g.trust = 0; g.tidePreset = tide; g.start('entrada'); g.callVTS(); g.callPilot(grade); if (ask) g.callShip(); if (tugs) { g.callTug(0); g.callTug(1); }
   g.warp = 8;
   let maxOff = 0, orders = 0, moorAt = 0;
   for (let i = 0; i < 12000 && g.status === 'running'; i++) {
@@ -23,7 +23,7 @@ function voyage(grade: PilotGrade, tide: TidePreset = 'vazante', ask = true) {
   }
   orders = g.msgs.filter(m => m.level === 'pilot').length;
   const r = g.result;
-  console.log(grade, tide, '→', r?.title ?? g.status, '|', (g.time / 60).toFixed(0), 'min | fora do eixo máx', maxOff.toFixed(0), 'm | sog', (g.sog / KN).toFixed(1),
+  console.log(grade, tide, tugs ? 'com rebocadores' : '', '→', r?.title ?? g.status, '|', (g.time / 60).toFixed(0), 'min | fora do eixo máx', maxOff.toFixed(0), 'm | sog', (g.sog / KN).toFixed(1),
     '| berço', JSON.stringify(Object.fromEntries(Object.entries(g.berth()).map(([k, v]) => [k, +v.toFixed(0)]))), '| total', r?.total, '| confiança', g.trust, '| espias aos', (moorAt / 60).toFixed(0), 'min');
   console.log(g.msgs.slice(-14).map(m => `${(m.t / 60).toFixed(1)} ${m.who}: ${m.text}`).join('\n'));
   return { g, maxOff, orders };
@@ -58,6 +58,13 @@ describe('prático', () => {
     expect(g.result?.ok).toBe(true);
     expect(g.time / 60).toBeGreaterThan(34);
   });
+  for (const tide of ['vazante', 'preamar', 'enchente', 'baixamar'] as TidePreset[]) {
+    it(`com os dois rebocadores o sênior atraca na ${tide}`, () => {
+      const { g } = voyage('senior', tide, true, true);
+      expect(g.result?.ok).toBe(true);
+      expect(g.ledger.contact).toBeLessThanOrEqual(3000);
+    });
+  }
   it('padrão também chega, com mais desvio', () => {
     const { g } = voyage('padrao');
     expect(g.result?.ok).toBe(true);
