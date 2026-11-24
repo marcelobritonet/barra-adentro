@@ -25,7 +25,8 @@ Estado atual da interface (v0.3.0):
 | Vista, canto superior direito | Girar, zoom, carta grande, ajuda; indicador de tempo acelerado |
 | Vista, centro alto | Faixa com as ordens do prático (amarelo piscando até cumprir) |
 | Vista, embaixo | As 6 últimas mensagens do rádio |
-| Painel, de cima para baixo | Relógio e confiança; agulha, velocidades e vento; leme, telégrafo e tacômetro; ecobatímetro, doppler e impelidor; tela multifunção e abas (rádio, rebocadores, convés, equipamentos) |
+| Painel, de cima para baixo | Relógio e confiança; agulha, velocidades e vento; leme, telégrafo e tacômetro; ecobatímetro, doppler e impelidor; tela multifunção e abas (cais, rádio, rebocadores, convés, equipamentos) |
+| Painel junto ao berço | A tela multifunção vira a tela de atracação e as abas mostram só espias e rebocadores; volta sozinho ao se afastar |
 
 O painel encolhe inteiro em janelas baixas, sem rolagem.
 
@@ -218,7 +219,8 @@ Sem doppler, quem informa a distância ao cais é a proa, pelo rádio ("Proa a 1
 | VTS: pedir entrada antes da barra (resposta em 20 s; cruzar sem autorização custa R$ 8.000 e confiança) | Feito |
 | Prático opcional, em dois níveis, que embarca depois de um tempo e só com o navio a até 7 nós | Feito |
 | Ordens do prático no rádio e num quadro do painel, em vermelho enquanto não cumpridas | Feito |
-| Amarração: proa a até 15 m das defensas, popa a até 45 m, ±60 m ao longo do cais e até 0,8 nó; os cabos trazem o navio | Feito |
+| Amarração: proa a até 15 m das defensas, popa a até 45 m, até 100 m fora do ponto ao longo do cais e até 0,8 nó. Os cabos trazem o navio de lado e os espringues o correm ao longo do cais até o ponto | Feito |
+| Tela de atracação e painel que muda sozinho junto ao berço: só espias e rebocadores | Feito |
 | Defensas absorvem a pancada: o navio encosta e fica, em vez de quicar | Feito |
 | Plano de atracação: velocidade por distância do berço, cobrada pelo imediato | Feito |
 | Rebocadores de proa e de popa, chamados e comandados pelo rádio | Feito |

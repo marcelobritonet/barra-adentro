@@ -48,12 +48,32 @@ describe('atracação', () => {
     expect(a.g.msgs.at(-1)!.text).toMatch(/Longe demais.*máx\. 15/);
     const b = near(5); b.g.s.u = 0.7; b.g.moor(); expect(b.g.mooring).toBe(0);
     expect(b.g.msgs.at(-1)!.text).toMatch(/Ainda com 1[.,]4 nó/);
-    const c = near(5); c.g.s.x -= W.QUAY.tx * 80; c.g.s.y -= W.QUAY.ty * 80; c.g.moor(); expect(c.g.mooring).toBe(0);
-    expect(c.g.msgs.at(-1)!.text).toMatch(/Fora da posição/);
+    const c = near(5); c.g.s.x -= W.QUAY.tx * 130; c.g.s.y -= W.QUAY.ty * 130; c.g.moor(); expect(c.g.mooring).toBe(0);
+    expect(c.g.msgs.at(-1)!.text).toMatch(/Fora do alcance dos cabos/);
   });
   it('o plano de atracação pede menos velocidade quanto mais perto, e o imediato cobra', () => {
     expect(berthSpeedKn(500)).toBe(2); expect(berthSpeedKn(300)).toBe(1.5); expect(berthSpeedKn(130)).toBe(1); expect(berthSpeedKn(60)).toBe(0.5); expect(berthSpeedKn(10)).toBe(0.3);
     const { g, run } = near(60); g.s.x -= W.QUAY.tx * 200; g.s.y -= W.QUAY.ty * 200; g.s.u = 1.6; run(15);
     expect(g.msgs.some(m => m.who === 'Imediato' && /o plano pede/.test(m.text))).toBe(true);
+  });
+
+  it('80 m fora do ponto e ainda andando: passa as espias e os cabos correm o navio até o lugar', () => {
+    const { g, run } = near(6, 0, true);
+    g.s.x -= W.QUAY.tx * 80; g.s.y -= W.QUAY.ty * 80; g.s.u = 0.3;
+    expect(g.canMoor).toBe(true);
+    g.moor(); expect(g.mooring).toBeGreaterThan(0);
+    let maxU = 0; for (let i = 0; i < 2000 && g.status === 'running'; i++) { g.update(0.1); maxU = Math.max(maxU, Math.abs(g.s.u)); }
+    console.log('correu 80 m nos cabos em', (g.time / 60).toFixed(1), 'min, a no máximo', (maxU / KN).toFixed(2), 'nó; terminou a', Math.abs(g.berth().along).toFixed(0), 'm do ponto');
+    expect(g.result?.ok).toBe(true);
+    expect(Math.abs(g.berth().along)).toBeLessThan(BERTH.alongDone);
+    expect(g.ledger.contact).toBe(0);
+    expect(g.time / 60).toBeLessThan(9);
+  });
+  it('o painel entra em modo de atracação perto do berço e sai longe dele', () => {
+    const far = new Game(); far.start('entrada'); expect(far.berthing).toBe(false);
+    const { g } = near(60); expect(g.berthing).toBe(true);
+    const f = new Game(); f.start('fundeio'); expect(f.berthing).toBe(false);
+    const c = new Game(); c.start('contrabordo'); expect(c.berthing).toBe(false);
+    const Q = W.QUAY; c.s.x = Q.cx + Q.nx * 40; c.s.y = Q.cy + Q.ny * 40; c.s.psi = Math.atan2(Q.tx, Q.ty); expect(c.berthing).toBe(true);
   });
 });

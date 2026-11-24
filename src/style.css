@@ -184,3 +184,15 @@ table.shop button { padding: 5px 8px; font-size: 12px; }
 
 #world > canvas:not(#bigchart) { cursor: grab; }
 #camctl button[hidden] { display: none; }
+
+#mfd .tabs button { padding: 3px 5px; }
+#moor.on { animation: blink 0.6s steps(2) infinite; }
+[data-pane="moor"] { margin-bottom: 6px; }
+
+/* modo de atracação: espias e rebocadores juntos, sem texto de explicação */
+#ops.compact .unit { display: none; }
+#ops.compact .tug { margin: 5px 0 2px; gap: 2px; }
+#ops.compact .tug button, #ops.compact .tug select { padding: 2px 4px; font-size: 10.5px; }
+#ops.compact h4 { margin-top: 0; }
+#ops .tabs button { padding: 3px 4px; font-size: 10.5px; }
+#mfd .tabs button { padding: 3px 4px; font-size: 10.5px; }

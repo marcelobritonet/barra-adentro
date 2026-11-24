@@ -7,12 +7,14 @@ import { SHACKLE } from '../sim/anchor';
 import { D2R, KN, TELEGRAPH, TELEGRAPH_LABELS, TELEGRAPH_STOP } from '../sim/ship';
 import * as W from '../world/santos';
 import { tideText } from '../world/tide';
-import { drawDoppler, Ecdis, ECDIS_SCALES, Radar, RADAR_RANGES } from './mfd';
+import { drawBerth, drawDoppler, Ecdis, ECDIS_SCALES, Radar, RADAR_RANGES } from './mfd';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const TAU = Math.PI * 2;
 const MFD = 236;
-type MfdMode = 'carta' | 'ecdis' | 'radar';
+type MfdMode = 'carta' | 'ecdis' | 'radar' | 'atracar';
+/** O que cada aba de operação mostra. Na atracação, só rebocadores e espias. */
+const PANES: Record<string, string[]> = { radio: ['radio'], tugs: ['tugs'], deck: ['deck', 'moor'], equip: ['equip'], manobra: ['moor', 'tugs'] };
 const EQUIP: [keyof Game['equip'], string][] = [
   ['gps', 'GPS'], ['rot', 'Indicador de guinada'], ['radar', 'Radar'], ['ecdis', 'ECDIS'], ['doppler', 'Doppler de atracação'], ['thruster', 'Impelidor de proa'],
 ];
@@ -33,6 +35,7 @@ export class Panel {
   private hdgShown = 0; private logCount = -1;
   private radar = new Radar(MFD); private ecdis: Ecdis;
   mfd: MfdMode = 'carta'; tab = 'radio';
+  private wasBerthing = false; private before: { mfd: MfdMode; tab: string } = { mfd: 'carta', tab: 'radio' };
   bigChart = false;
 
   constructor(private g: Game, private grid: Float32Array, private chartBase: HTMLCanvasElement) {
@@ -78,13 +81,13 @@ export class Panel {
       <div class="row" id="lower">
         <div class="inst" id="mfd">
           <div class="tabs">
-            <button data-mfd="carta">Carta</button><button data-mfd="ecdis">ECDIS</button><button data-mfd="radar">Radar</button>
+            <button data-mfd="carta">Carta</button><button data-mfd="ecdis">ECDIS</button><button data-mfd="radar">Radar</button><button data-mfd="atracar" title="Tela de atracação: navio e cais vistos de cima">Cais</button>
             <span class="sp"></span><button data-mfdz="-1" title="Afastar">−</button><button data-mfdz="1" title="Aproximar">+</button><button id="mfdmode" title="Norte ou proa para cima">N</button>
           </div>
           <canvas id="cMfd"></canvas>
         </div>
         <div class="inst" id="ops">
-          <div class="tabs"><button data-tab="radio">Rádio</button><button data-tab="tugs">Reboc.</button><button data-tab="deck">Convés</button><button data-tab="equip">Equip.</button></div>
+          <div class="tabs"><button data-tab="manobra" title="Só o que se usa junto ao cais: espias e rebocadores">Cais</button><button data-tab="radio">Rádio</button><button data-tab="tugs">Reboc.</button><button data-tab="deck">Convés</button><button data-tab="equip">Equip.</button></div>
           <div class="tab" data-pane="radio">
             <div id="vhf">
               <button id="vts">Santos VTS: pedir entrada</button>
@@ -96,6 +99,11 @@ export class Panel {
             <div class="lcd" id="pilotbox"></div>
             <div class="unit" id="radionote">O VTS autoriza a entrada. O prático é opcional e só dá ordens.</div>
           </div>
+          <div class="tab" data-pane="moor" style="display:none">
+            <h4>Espias</h4>
+            <div class="lcd" id="berthbox"></div>
+            <button id="moor">Passar espias (M)</button>
+          </div>
           <div class="tab" data-pane="tugs" style="display:none">
             <div class="unit">Saída R$ ${TUG_FEE.toLocaleString('pt-BR')} + R$ ${TUG_PER_MIN}/min com cabo. Empurrar e puxar: de lado, para o cais ou para fora. Vante, ré e segurar: ao longo do navio.</div>
             ${g.tugs.map((t, i) => `<div class="tug" data-tug="${i}">
@@ -103,7 +111,7 @@ export class Panel {
               <button data-tcall="1">Chamar</button>
               <button data-tmode="push" title="Empurra o navio para o cais">Empurrar</button><button data-tmode="pull" title="Puxa o navio para longe do cais">Puxar</button><button data-tmode="stop">Parar</button>
               <button data-tmode="ahead" title="Reboca o navio para vante">▲ Vante</button><button data-tmode="astern" title="Reboca o navio para ré">▼ Ré</button><button data-tmode="brake" title="Segura o navio no lugar: opõe-se ao vai e vem para vante e para ré">Segurar</button>
-              <select data-tpow="1">${[10, 25, 50, 100].map(p => `<option value="${p / 100}" ${p === 25 ? 'selected' : ''}>${p}%</option>`).join('')}</select>
+              <select data-tpow="1" title="Potência">${[10, 25, 50, 100].map(p => `<option value="${p / 100}" ${p === 25 ? 'selected' : ''}>${p}%</option>`).join('')}</select>
             </div>`).join('')}
           </div>
           <div class="tab" data-pane="deck" style="display:none">
@@ -113,9 +121,6 @@ export class Panel {
               <select id="shackles">${[2, 3, 4, 5, 6].map(n => `<option ${n === 4 ? 'selected' : ''} value="${n}">${n} quartéis</option>`).join('')}</select>
               <button id="letgo" class="danger">Largar (F)</button><button id="heave">Virar (G)</button>
             </div>
-            <h4 style="margin-top:10px">Atracação</h4>
-            <div class="lcd" id="berthbox"></div>
-            <button id="moor">Passar espias (M)</button>
           </div>
           <div class="tab" data-pane="equip" style="display:none">
             <div class="unit" id="equipnote"></div>
@@ -167,7 +172,7 @@ export class Panel {
     br.querySelectorAll('select').forEach(sel => sel.addEventListener('change', () => sel.blur()));
     br.querySelectorAll<HTMLInputElement>('[data-eq]').forEach(cb => cb.addEventListener('change', () => {
       g.equip[cb.dataset.eq as keyof Game['equip']] = cb.checked;
-      if (cb.checked && (cb.dataset.eq === 'radar' || cb.dataset.eq === 'ecdis')) this.mfd = cb.dataset.eq;
+      if (cb.checked && (cb.dataset.eq === 'radar' || cb.dataset.eq === 'ecdis')) this.mfd = cb.dataset.eq as MfdMode;
     }));
   }
 
@@ -176,6 +181,7 @@ export class Panel {
     if (this.mfd === 'ecdis') this.ecdis.scaleI = Math.max(0, Math.min(ECDIS_SCALES.length - 1, this.ecdis.scaleI - d));
   }
   reset() {
+    this.wasBerthing = false; if (this.mfd === 'atracar') this.mfd = 'carta'; if (this.tab === 'manobra') this.tab = 'radio';
     this.echo = []; this.logCount = -1; this.hdgShown = this.g.s.psi; this.radar.reset();
     // o contorno de segurança depende do calado do navio e da carga desta viagem
     const old = this.ecdis; this.ecdis = new Ecdis(this.grid, this.g.p.T + 1.5); this.ecdis.scaleI = old.scaleI; this.ecdis.headUp = old.headUp;
@@ -235,8 +241,16 @@ export class Panel {
     document.querySelectorAll<HTMLButtonElement>('[data-thr]').forEach(b => { b.disabled = !thr; b.classList.toggle('on', thr && +b.dataset.thr! === s.thrusterOrder); });
     $('thrnote').textContent = !thr ? 'não instalado' : `rende ${Math.round(s.thrusterEff * 100)}% a ${(Math.abs(s.stw) / KN).toFixed(1)} nós`;
 
+    // --- junto ao berço o painel muda de cara: sai a carta, entra a tela de atracação; ficam só espias e rebocadores
+    const nowB = g.berthing;
+    if (nowB && !this.wasBerthing) { this.before = { mfd: this.mfd === 'atracar' ? 'carta' : this.mfd, tab: this.tab === 'manobra' ? 'radio' : this.tab }; this.mfd = 'atracar'; this.tab = 'manobra'; }
+    else if (!nowB && this.wasBerthing && g.status === 'running') { this.mfd = this.before.mfd; this.tab = this.before.tab; }
+    this.wasBerthing = nowB;
     // --- tela multifunção
-    if (this.mfd !== 'carta' && !g.equip[this.mfd]) {
+    if (this.mfd === 'atracar') {
+      if (g.scenario === 'fundeio' || g.status === 'menu') { const c = this.cMfd; c.fillStyle = '#071018'; c.fillRect(0, 0, MFD, MFD); c.fillStyle = '#7f93a3'; c.font = '12px ui-monospace, monospace'; c.textAlign = 'center'; c.fillText('sem atracação nesta manobra', MFD / 2, MFD / 2); }
+      else drawBerth(this.cMfd, MFD, g);
+    } else if (this.mfd !== 'carta' && !g.equip[this.mfd]) {
       const c = this.cMfd; c.fillStyle = '#05080b'; c.fillRect(0, 0, MFD, MFD);
       c.fillStyle = '#2f4a3c'; c.font = '12px ui-monospace, monospace'; c.textAlign = 'center';
       c.fillText(`${this.mfd.toUpperCase()} não instalado`, MFD / 2, MFD / 2 - 4); c.fillText('ligue na aba Equip.', MFD / 2, MFD / 2 + 12);
@@ -258,11 +272,14 @@ export class Panel {
     const alert: Record<string, boolean> = {
       radio: g.scenario === 'entrada' && (g.vts === 'none' || (g.vts === 'ok' && !!berthShip(g) && berthShip(g)!.phase === 'berthed' && !berthShip(g)!.asked && g.time < 600) || (g.pilot.state === 'aboard' && (Math.round(s.rudderOrder / D2R) !== g.pilot.helm || s.telegraph !== g.pilot.tel))),
       tugs: g.tugs.some(t => t.state === 'waiting'),
-      deck: g.anchor.dragging || (!!bk && Math.abs(bk.along) <= W.QUAY.berthHalf && bk.bow <= 15 && g.mooring <= 0),
+      deck: g.anchor.dragging,
+      manobra: g.canMoor,
       equip: false,
     };
     document.querySelectorAll<HTMLElement>('[data-tab]').forEach(b => { b.classList.toggle('on', b.dataset.tab === this.tab); b.classList.toggle('alert', alert[b.dataset.tab!] && b.dataset.tab !== this.tab); });
-    document.querySelectorAll<HTMLElement>('[data-pane]').forEach(el => { el.style.display = el.dataset.pane === this.tab ? '' : 'none'; });
+    $('ops').classList.toggle('compact', this.tab === 'manobra');
+    document.querySelectorAll<HTMLElement>('[data-pane]').forEach(el => { el.style.display = (PANES[this.tab] ?? []).includes(el.dataset.pane!) ? '' : 'none'; });
+    $<HTMLButtonElement>('moor').classList.toggle('on', g.canMoor);
     document.querySelectorAll<HTMLInputElement>('[data-eq]').forEach(cb => { cb.checked = g.equip[cb.dataset.eq as keyof Game['equip']]; cb.disabled = !g.free; });
     $('equipnote').textContent = g.free ? 'Modo livre: ligue e desligue à vontade.' : 'Carreira: o que está ligado foi comprado na oficina do porto.';
 

@@ -15,6 +15,8 @@ export type Scenario = 'entrada' | 'fundeio' | 'contrabordo';
 
 /** Regras de atracação, num lugar só. Distâncias em metros, velocidades em m/s. */
 export const BERTH = {
+  alongMax: 100,     // até aqui fora do ponto ao longo do cais: os cabos correm o navio até o lugar
+  alongDone: 20,     // amarrado quando estiver a menos disto do meio do berço
   bowMax: 15,        // proa a esta distância das defensas: dá para lançar a retinida
   sternMax: 45,      // a popa vem depois, virada nos cabos
   speedMax: 0.4,     // até 0,8 nó ainda se passa a primeira espia
@@ -310,6 +312,20 @@ export class Game {
   /** Segundos que faltam para o ferro chegar a bordo. */
   get heaveLeft() { return this.anchor.state === 'heaving' ? this.anchor.paid / HEAVE_RATE : 0; }
 
+  /** O navio já está manobrando junto ao berço (ou ao navio, a contrabordo)? O painel muda de cara aqui. */
+  get berthing() {
+    if (this.status !== 'running' || this.scenario === 'fundeio') return false;
+    if (this.mooring > 0) return true;
+    if (this.scenario === 'entrada' && this.headOut && !this.pilot.turned && W.nearest(this.s.x, this.s.y).s < W.BASIN.s - 100) return false;
+    const b = this.berth();
+    return Math.abs(b.along) < 320 && Math.min(b.bow, b.stern) < 170 && Math.min(b.bow, b.stern) > -20;
+  }
+  /** Já dá para passar as espias? */
+  get canMoor() {
+    if (this.scenario === 'fundeio' || this.mooring > 0 || (this.scenario === 'entrada' && berthBusy(this))) return false;
+    const b = this.berth(), reach = Math.min(BERTH.alongMax, W.QUAY.half - this.p.L / 2 + 25);
+    return Math.abs(b.along) <= reach && b.bow <= BERTH.bowMax && b.stern <= BERTH.sternMax && this.sog <= BERTH.speedMax;
+  }
   /** Situação do navio em relação ao berço. */
   berth() {
     const [ac] = W.quayLocal(this.s.x, this.s.y);
@@ -322,13 +338,16 @@ export class Game {
     if (this.status !== 'running' || this.scenario === 'fundeio' || this.mooring > 0) return;
     if (this.scenario === 'entrada' && berthBusy(this)) return this.say('Imediato', `O berço ainda está ocupado pelo ${berthShip(this)!.name}.`, 'warn');
     const b = this.berth();
-    if (Math.abs(b.along) > W.QUAY.berthHalf) return this.say('Imediato', `Fora da posição: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'avante' : 'a ré'} do ${this.sts ? 'meio do navio' : 'berço'}.`, 'warn');
+    // ao longo do cais não precisa acertar com a máquina: até 100 m do ponto os cabos resolvem (sem passar da ponta do cais)
+    const reach = Math.min(BERTH.alongMax, W.QUAY.half - this.p.L / 2 + 25);
+    if (Math.abs(b.along) > reach) return this.say('Imediato', `Fora do alcance dos cabos: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'avante' : 'a ré'} do ${this.sts ? 'meio do navio' : 'ponto'} (máx. ${reach.toFixed(0)}).`, 'warn');
     // a proa precisa estar encostada; a popa pode vir depois, virada pelos cabos
     if (b.bow > BERTH.bowMax || b.stern > BERTH.sternMax) return this.say('Imediato', `Longe demais para passar espias: proa ${Math.max(0, b.bow).toFixed(0)} m (máx. ${BERTH.bowMax}), popa ${Math.max(0, b.stern).toFixed(0)} m (máx. ${BERTH.sternMax}).`, 'warn');
     if (this.sog > BERTH.speedMax) return this.say('Imediato', `Ainda com ${(this.sog / KN).toFixed(1)} nó. Abaixo de ${(BERTH.speedMax / KN).toFixed(1)} nó dá para passar a primeira espia.`, 'warn');
     this.mooring = 40 * this.crewFactor * (!this.free && this.career.crew.mate >= 2 ? 0.5 : 1);
     this.setTelegraph(4); this.emit('lines');
     this.say('Imediato', b.stern > 8 ? 'Lançante de proa em terra. Virando a popa nos cabos.' : 'Passando espias. Lançante e espringue em terra.', 'info');
+    if (Math.abs(b.along) > BERTH.alongDone) this.say('Imediato', `Estamos ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'avante' : 'a ré'} do ponto. Correndo o navio ao longo do cais nos espringues; máquina parada.`, 'info');
   }
 
   update(dtReal: number) {
@@ -454,6 +473,9 @@ export class Game {
     }
     // amarrando: os cabos e os guinchos trazem o navio para o cais, devagar
     if (this.mooring > 0) {
+      // espringues: correm o navio ao longo do cais até o ponto, a uns 0,2 nó
+      const al = W.quayLocal(s.x, s.y)[0], Fa = -Math.max(-95e3, Math.min(95e3, al * 9e3)) * this.size;
+      worldForceAt(s, Fa * Q.tx, Fa * Q.ty, 0, 0, ext);
       for (const [xf, y0] of [this.geo.berthBow, this.geo.berthStern]) {
         const ys = y0 * Q.side;
         const gap = W.quayLocal(...bodyToWorld(s, xf, ys))[1] - Q.fender;
@@ -477,11 +499,11 @@ export class Game {
     else if (s.air < 2 && s.n === 0) this.say('Máquinas', `Ar de partida baixo: só ${Math.floor(s.air)} partida${s.air >= 2 ? 's' : ''}.`, 'warn', 'airlow', 60);
 
     if (this.mooring > 0) {
-      s.u *= 0.96; // os espringues seguram o navio ao longo do cais
+      s.u *= 0.996; s.r *= 0.99; // os cabos amortecem o navio sem travá-lo: ele ainda corre até o ponto
       this.mooring -= DT;
       const mb = this.berth();
       if (this.mooring <= 0) this.mooring = DT; // só termina com o navio encostado
-      if (this.mooring <= DT && mb.bow < 3.5 && mb.stern < 2.5) return this.finish(true, this.sts ? 'Navio a contrabordo' : 'Navio atracado', this.sts ? `Amarrado ao costado do N/M ${this.sts.name}. Mangotes conectados.` : 'Espias passadas, portaló arriado.');
+      if (this.mooring <= DT && mb.bow < 3.5 && mb.stern < 2.5 && Math.abs(mb.along) < BERTH.alongDone && Math.abs(s.u) < 0.08) return this.finish(true, this.sts ? 'Navio a contrabordo' : 'Navio atracado', this.sts ? `Amarrado ao costado do N/M ${this.sts.name}. Mangotes conectados.` : 'Espias passadas, portaló arriado.');
     }
 
     // --- encalhe e margens

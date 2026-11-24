@@ -25,7 +25,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 18 | Preditor do ECDIS como "sombra" sobre o navio na vista | Decidido em teste: não fazer. Em vez disso, dicas visuais realistas na vista | Feito de outro jeito na v0.19.0 |
 | 19 | As dicas visuais bastam? | Faróis de setores, boias com corrente, fumaça, esteira, marola | Implementado; ver jogando se dá para navegar olhando o navio |
 | 20 | Entrada no canal | Retorno do teste (v0.19.0): "a parte de entrar no canal está sensacional" | Aprovado |
-| 21 | Atracação | Retorno do teste: "muito difícil controlar o vai e vem perto do cais, e precisa ser muito preciso"; "rebocadores não seguram para vante e ré" | Respondido na v0.20.0; falta confirmar jogando |
+| 21 | Atracação | Retorno do teste: "muito difícil controlar o vai e vem perto do cais, e precisa ser muito preciso"; depois, na v0.20.0: "ainda é difícil manter no ponto, é muito sensível" e "os equipamentos perdem o sentido" | Respondido na v0.20.0 e na v0.21.0; falta confirmar jogando |
 | 22 | Fundeio, contrabordo, giro, som | Ainda sem retorno do teste | Em aberto |
 | 17 | Plano de bordo | Retorno do teste: "ficou absurdo de bom" | Aprovado |
 
@@ -87,3 +87,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.18.0: progressão invertida, contrato "à moda antiga", publicação no GitHub Pages |
 | v0.19.0: dicas visuais na vista (faróis de setores, corrente nas boias, fumaça, esteira, marola) |
 | v0.20.0: atracação que perdoa (defensas, tolerâncias, plano de atracação) e rebocadores para vante, ré e segurar |
+| v0.21.0: cabos correm o navio até o ponto; tela de atracação e painel que muda sozinho |

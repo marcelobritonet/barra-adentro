@@ -50,8 +50,8 @@ function steps(): [string, boolean][] {
         const inBasin = Math.hypot(s.x - W.BASIN.x, s.y - W.BASIN.y) < W.BASIN.r, turned = e < 0.5 && n.s > W.QUAY_S - 200;
         return [['Passar do cais e parar na bacia de evolução', inBasin || turned || done || game.mooring > 0], ['Girar o navio: proa para o mar', turned || done || game.mooring > 0]] as [string, boolean][];
       })() : []),
-      [`Encostar a proa no berço amarelo (${W.QUAY.name}), por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}`, done || game.mooring > 0 || (Math.abs(b.along) <= W.QUAY.berthHalf && b.bow <= BERTH.bowMax)],
-      ['Parar e passar as espias (M)', done || game.mooring > 0],
+      [`Encostar a proa no berço amarelo (${W.QUAY.name}), por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}`, done || game.mooring > 0 || (Math.abs(b.along) <= BERTH.alongMax && b.bow <= BERTH.bowMax)],
+      ['Passar as espias (M): os cabos acertam a posição', done || game.mooring > 0],
     ];
   }
   if (game.scenario === 'contrabordo') {
@@ -61,7 +61,7 @@ function steps(): [string, boolean][] {
     return [
       [`Chegar ao N/M ${o.name}, pela popa dele`, done || dist < 450],
       ['Emparelhar pelo boreste dele: paralelo, a menos de 40 m', done || (Math.abs(b.along) < 120 && Math.min(b.bow, b.stern) < 40 && dh < 0.3)],
-      ['Encostar a proa nas defensas, a meia-nau dele, quase parado', done || (Math.abs(b.along) <= W.QUAY.berthHalf && b.bow <= BERTH.bowMax)],
+      ['Encostar a proa nas defensas, a meia-nau dele, quase parado', done || (game.canMoor)],
       ['Passar as espias (M)', done],
     ];
   }
@@ -151,7 +151,7 @@ function berthLine() {
   const b = game.berth(), d = Math.abs(b.along);
   if (d > 420 || Math.min(b.bow, b.stern) > 220) return '';
   const want = berthSpeedKn(d), have = game.sog / KN, fast = have > want * 1.25 + 0.1;
-  const can = Math.abs(b.along) <= W.QUAY.berthHalf && b.bow <= BERTH.bowMax && b.stern <= BERTH.sternMax && game.sog <= BERTH.speedMax;
+  const can = game.canMoor;
   return `<div class="${fast ? '' : 'next'}">${fast ? '<span class="now">RÁPIDO</span> ' : ''}Atracação: a ${Math.round(d / 10) * 10} m do berço o plano pede ${dec(want)} nó; você está com ${dec(have)}</div>` + (can ? '<div><span class="now">PODE PASSAR AS ESPIAS (M)</span></div>' : '');
 }
 /** Quadro com a perna atual do plano e a próxima ação. */

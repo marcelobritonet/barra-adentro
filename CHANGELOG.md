@@ -2,6 +2,16 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.21.0 — Os cabos acertam a posição; painel de atracação
+
+Retorno do teste da v0.20.0: "ainda é difícil manter o navio no ponto sem ficar indo para a frente e para trás; é muito sensível" e "na atracação os equipamentos perdem o sentido; tem que ficar só rebocador e convés".
+
+- Ao longo do cais, quem acerta a posição são os cabos, não a máquina. As espias passam com o navio até 100 m fora do ponto (antes 60); os espringues correm o navio ao longo do cais até o lugar, a uns 0,5 nó, e ele só é dado como atracado a menos de 20 m do ponto. No teste, 80 m em 6 minutos de jogo, com a máquina parada.
+- Tela de atracação: junto ao berço, no lugar da carta entra uma tela com o navio e o cais vistos de cima. Mostra quantos metros faltam ao longo do cais, a distância da proa e da popa às defensas, o seguimento avante ou a ré contra o que o plano pede e, com doppler, quanto cada ponta fecha ou abre. O navio fica verde quando já dá para passar as espias.
+- O painel muda sozinho: ao chegar ao berço, as abas viram "Cais", com só espias e rebocadores, sem textos de explicação. Ao se afastar, volta ao que estava. As outras abas continuam ao alcance.
+- Vale também para a manobra a contrabordo.
+- 2 testes novos.
+
 ## v0.20.0 — Atracação que perdoa
 
 Retorno do teste: "atracar ainda é um problema: muito difícil controlar o vai e vem do navio próximo ao cais, e precisa ser muito preciso" e "os rebocadores só puxam e empurram; não seguram para não ir para vante e para ré".

@@ -1,5 +1,6 @@
 // Telas do passadiço: radar, ECDIS e doppler de atracação.
-import { Game } from '../game/game';
+import { BERTH, berthSpeedKn, Game } from '../game/game';
+import { pointVelocity } from '../sim/ship';
 import { bodyToWorld, D2R, KN } from '../sim/ship';
 import * as W from '../world/santos';
 
@@ -204,4 +205,65 @@ export function drawDoppler(c: CanvasRenderingContext2D, Wd: number, H: number, 
   c.fillStyle = '#d8e2ea'; c.font = `bold 12px ${FONT}`; c.textAlign = 'center';
   c.fillText(`${fwd >= 0 ? '▲' : '▼'} ${Math.abs(fwd).toFixed(2).replace('.', ',')}`, cx, H / 2 + 4);
   c.fillStyle = '#7f93a3'; c.font = `8px ${FONT}`; c.textAlign = 'left'; c.fillText('nós', 3, H - 3);
+}
+
+// ------------------------------------------------------------------ tela de atracação
+/**
+ * Navio e cais vistos de cima, com o que importa junto ao berço: distância da proa e da popa,
+ * quanto falta ao longo do cais e as velocidades. Os números são os que a proa e a popa cantam pelo rádio.
+ */
+export function drawBerth(c: CanvasRenderingContext2D, S: number, g: Game) {
+  const s = g.s, p = g.p, Q = W.QUAY, b = g.berth(), m = Q.side;
+  c.fillStyle = '#071018'; c.fillRect(0, 0, S, S);
+  const k = (S - 70) / (p.L + 150);                    // pixels por metro
+  // tela: o cais fica embaixo, a água em cima; "para vante" é para a direita se o cais está a bombordo
+  const cx = S / 2, qy = S - 58, dir = m;              // dir: sentido de "avante" na tela
+  const X = (a: number) => cx + dir * a * k, Y = (d: number) => qy - d * k;
+  // cais e defensas
+  c.fillStyle = '#5c6268'; c.fillRect(0, qy + Q.fender * k, S, 26);
+  c.fillStyle = '#20242a'; c.fillRect(0, qy, S, Q.fender * k + 1);
+  // ponto: onde o navio deve ficar, e até onde os cabos alcançam
+  const reach = Math.min(BERTH.alongMax, Q.half - p.L / 2 + 25);
+  c.fillStyle = '#ffe14a22'; c.fillRect(X(-p.L / 2 * dir) < X(p.L / 2 * dir) ? X(-p.L / 2 * dir) : X(p.L / 2 * dir), qy - (p.B + 4) * k, p.L * k, (p.B + 4) * k);
+  c.strokeStyle = '#ffe14a'; c.setLineDash([4, 3]); c.strokeRect(Math.min(X(-p.L / 2), X(p.L / 2)), qy - (p.B + 4) * k, p.L * k, (p.B + 4) * k); c.setLineDash([]);
+  c.strokeStyle = '#ffe14a'; c.beginPath(); c.moveTo(cx, qy + 2); c.lineTo(cx, qy + 14); c.stroke();
+  // o navio, pela distância da proa e da popa às defensas e pela posição ao longo do cais
+  const [bf] = g.geo.berthBow, [sf] = g.geo.berthStern, a = b.along;
+  const along = Math.max(-(p.L + 60), Math.min(p.L + 60, a));
+  const bx = X(along + bf), sx = X(along + sf), by = Y(Math.max(0, b.bow) + Q.fender), sy = Y(Math.max(0, b.stern) + Q.fender);
+  const ang = Math.atan2(by - sy, bx - sx);
+  c.save(); c.translate((bx + sx) / 2, (by + sy) / 2 - p.B * k / 2); c.rotate(ang);
+  const hl = p.L * k / 2, hb = p.B * k / 2;
+  c.fillStyle = g.canMoor || g.mooring > 0 ? '#2fb85a' : '#c7d2da'; c.strokeStyle = '#05080b'; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(hl, 0); c.lineTo(hl * 0.62, -hb); c.lineTo(-hl, -hb); c.lineTo(-hl, hb); c.lineTo(hl * 0.62, hb); c.closePath(); c.fill(); c.stroke();
+  c.restore();
+  // cotas
+  const kn = (v: number) => (Math.abs(v) / KN).toFixed(2).replace('.', ',');
+  const lab = (txt: string, x: number, y: number, col: string, align: CanvasTextAlign = 'center', size = 11) => { c.fillStyle = col; c.font = `bold ${size}px ${FONT}`; c.textAlign = align; c.fillText(txt, x, y); };
+  const gapCol = (d: number, max: number) => (d <= max ? '#7dffb0' : '#ffcf6a');
+  c.strokeStyle = '#7f93a3'; c.lineWidth = 1; c.setLineDash([2, 2]);
+  c.beginPath(); c.moveTo(bx, by); c.lineTo(bx, qy); c.moveTo(sx, sy); c.lineTo(sx, qy); c.stroke(); c.setLineDash([]);
+  lab(`PROA ${Math.max(0, b.bow).toFixed(b.bow < 10 ? 1 : 0)} m`, Math.max(46, Math.min(S - 46, bx)), qy + 38, gapCol(b.bow, BERTH.bowMax));
+  lab(`POPA ${Math.max(0, b.stern).toFixed(b.stern < 10 ? 1 : 0)} m`, Math.max(46, Math.min(S - 46, sx)), qy + 52, gapCol(b.stern, BERTH.sternMax));
+  // ao longo do cais
+  const off = Math.abs(a), okA = off <= reach;
+  lab(off < 3 ? 'NO PONTO' : `${off.toFixed(0)} m ${a > 0 ? 'AVANTE' : 'A RÉ'} do ponto`, cx, 16, off <= BERTH.alongDone ? '#7dffb0' : okA ? '#ffd76a' : '#ff7a6a', 'center', 12);
+  lab(okA ? (off <= BERTH.alongDone ? '' : 'os cabos alcançam') : `cabos alcançam até ${reach.toFixed(0)} m`, cx, 29, '#7f93a3', 'center', 9);
+  // velocidades: avante ou a ré, e de lado se houver doppler
+  const want = berthSpeedKn(off), fast = g.sog / KN > want * 1.25 + 0.1;
+  lab(`${s.u >= 0 ? 'AVANTE' : 'A RÉ'} ${kn(s.u)} nó`, 6, 48, fast ? '#ff7a6a' : '#d8e2ea', 'left', 13);
+  lab(`plano: ${String(want).replace('.', ',')} nó`, 6, 61, '#7f93a3', 'left', 9);
+  // seta do seguimento
+  const ax = S - 60, ay = 46, len = Math.max(-34, Math.min(34, dir * s.u * 60));
+  c.strokeStyle = fast ? '#ff7a6a' : '#d8e2ea'; c.lineWidth = 3; c.beginPath(); c.moveTo(ax - len, ay); c.lineTo(ax + len, ay); c.stroke();
+  if (Math.abs(len) > 3) { c.fillStyle = c.strokeStyle; c.beginPath(); c.moveTo(ax + len + Math.sign(len) * 7, ay); c.lineTo(ax + len, ay - 5); c.lineTo(ax + len, ay + 5); c.closePath(); c.fill(); }
+  if (g.equip.doppler) {
+    const side = (xf: number, y0: number) => { const [vx, vy] = pointVelocity(s, xf, y0 * m); return -(vx * Q.nx + vy * Q.ny); };   // + = fechando
+    const vb = side(...g.geo.berthBow), vs = side(...g.geo.berthStern);
+    const col = (v: number) => (v > BERTH.hard ? '#ff7a6a' : v > BERTH.soft ? '#ffcf6a' : '#7dffb0');
+    lab(`${vb >= 0 ? 'fecha' : 'abre'} ${kn(vb)}`, Math.max(46, Math.min(S - 46, bx)), Math.min(by, sy) - p.B * k - 18, col(vb), 'center', 10);
+    lab(`${vs >= 0 ? 'fecha' : 'abre'} ${kn(vs)}`, Math.max(46, Math.min(S - 46, sx)), Math.min(by, sy) - p.B * k - 6, col(vs), 'center', 10);
+  }
+  if (g.mooring > 0) lab('AMARRANDO: máquina parada', cx, 84, '#7dffb0', 'center', 11);
+  else if (g.canMoor) { c.fillStyle = '#ffcf6a'; c.fillRect(cx - 94, 72, 188, 16); lab('PODE PASSAR AS ESPIAS (M)', cx, 84, '#10151a', 'center', 11); }
 }
