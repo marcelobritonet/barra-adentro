@@ -27,10 +27,15 @@ const fogEl = document.getElementById('fog')!, skyflag = document.getElementById
 let fogCss = '';
 
 // equipamentos ligados ficam guardados entre partidas
-const EQ_KEY = 'barra-adentro.equip';
-try { Object.assign(game.equip, JSON.parse(localStorage.getItem(EQ_KEY) ?? '{}')); } catch { /* sem armazenamento */ }
-let eqSaved = JSON.stringify(game.equip);
-function setAllEquip(on: boolean) { for (const k of Object.keys(game.equip) as (keyof typeof game.equip)[]) game.equip[k] = on; }
+// só os equipamentos do modo livre são guardados aqui; os da carreira vêm das compras
+const EQ_KEY = 'barra-adentro.equip-livre';
+const SERIES = { gps: true, rot: true, radar: false, ecdis: false, doppler: true, thruster: false };
+try { Object.assign(game.freeEquip, JSON.parse(localStorage.getItem(EQ_KEY) ?? '{}')); } catch { /* sem armazenamento */ }
+let eqSaved = JSON.stringify(game.freeEquip);
+function setFreeEquip(preset: string) {
+  for (const k of Object.keys(game.freeEquip) as (keyof typeof game.freeEquip)[]) game.freeEquip[k] = preset === 'on' ? true : preset === 'off' ? false : SERIES[k];
+}
+const sameEquip = (a: object, b: object) => JSON.stringify(a) === JSON.stringify(b);
 const north = document.getElementById('north')!;
 
 /** Lista de passos da missão, com o passo atual em destaque. */
@@ -241,7 +246,8 @@ function menu() {
       <div class="preset">Céu: ${(Object.keys(SKY) as Sky[]).map(k => `<button data-sky="${k}" class="${game.freeSky === k ? 'on' : ''}">${SKY[k].label}</button>`).join('')}<span class="dim">${SKY[game.freeSky].hint}</span></div>
       <div class="preset">Maré: ${(Object.keys(TIDE_PRESETS) as TidePreset[]).map(k => `<button data-tide="${k}" class="${game.tidePreset === k ? 'on' : ''}">${TIDE_PRESETS[k].label}</button>`).join('')}</div>
       <p class="dim" style="margin-top:0">${TIDE_PRESETS[game.tidePreset].hint} A maré corre 2× mais rápido que a real.</p>
-      <div class="preset">Equipamentos: <button data-eq="off" class="${Object.values(game.equip).some(Boolean) ? '' : 'on'}">À moda antiga (nada)</button><button data-eq="on" class="${Object.values(game.equip).every(Boolean) ? 'on' : ''}">Tudo ligado</button><span class="dim">(ou um a um, na aba Equip. do painel)</span></div>
+      <div class="preset">Equipamentos: <button data-eq="series" class="${sameEquip(game.freeEquip, SERIES) ? 'on' : ''}">De série</button><button data-eq="on" class="${Object.values(game.freeEquip).every(Boolean) ? 'on' : ''}">Tudo ligado</button><button data-eq="off" class="${Object.values(game.freeEquip).some(Boolean) ? '' : 'on'}">À moda antiga (nada)</button></div>
+      <p class="dim" style="margin-top:0">De série: GPS, indicador de guinada e doppler, como no começo da carreira. Dá para ligar um a um na aba Equip. do painel.</p>
       ${foot}</div>`;
     return;
   }
@@ -293,7 +299,7 @@ overlay.addEventListener('click', e => {
   portMsg = '';
   if (d.menu) return menu();
   if (d.reset) { game.resetTrust(); return menu(); }
-  if (d.eq) { setAllEquip(d.eq === 'on'); return menu(); }
+  if (d.eq) { setFreeEquip(d.eq); return menu(); }
   if (d.tide) { game.tidePreset = d.tide as TidePreset; return menu(); }
   if (d.mode) { game.free = d.mode === 'free'; try { localStorage.setItem(FREE_KEY, game.free ? '1' : '0'); } catch { /* sem armazenamento */ } return menu(); }
   if (d.port) { portTab = d.port as typeof portTab; return menu(); }
@@ -389,7 +395,7 @@ function frame(now: number) {
   if (css !== fogCss) fogEl.style.background = fogCss = css;
   const skyTxt = game.status === 'menu' || game.sky === 'dia' ? '' : game.sky === 'noite' ? 'NOITE' : `NEVOEIRO · limite ${game.limitKn} nós`;
   skyflag.hidden = !skyTxt; if (skyTxt && skyflag.textContent !== skyTxt) skyflag.textContent = skyTxt;
-  const eq = JSON.stringify(game.equip);
+  const eq = JSON.stringify(game.freeEquip);
   if (eq !== eqSaved) { eqSaved = eq; try { localStorage.setItem(EQ_KEY, eq); } catch { /* sem armazenamento */ } }
   if (game.status === 'done' && !shown) { shown = true; showResult(); }
   requestAnimationFrame(frame);

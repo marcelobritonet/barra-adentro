@@ -69,6 +69,8 @@ export class Game {
   tidePreset: TidePreset = 'vazante';
   tide: Tide = tideAt(0, 'vazante');
   equip = { gps: false, rot: false, radar: false, ecdis: false, doppler: false, thruster: false };
+  /** Equipamentos escolhidos no modo livre. De série: o mesmo com que a carreira começa. */
+  freeEquip = { gps: true, rot: true, radar: false, ecdis: false, doppler: true, thruster: false };
   shackles = 4;
   msgs: Msg[] = [];
   /** Plano de viagem desta manobra; calculado na primeira vez que alguém pede. */
@@ -148,6 +150,7 @@ export class Game {
     this.headOut = sc === 'entrada' && (ct ? !!ct.headOut : this.free && this.freeHeadOut) && W.QUAY.id === 'cais';
     if (this.headOut) W.useQuay(W.headOut(W.QUAY));
     this.blind = !this.free && !!ct?.blind;
+    if (this.free) this.equip = { ...this.freeEquip };
     if (!this.free) {
       applyCareer(this.p, this.career); this.equip = equipOf(this.career);
       if (this.blind) Object.assign(this.equip, { gps: false, rot: false, radar: false, ecdis: false, doppler: false });

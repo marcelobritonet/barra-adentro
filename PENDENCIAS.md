@@ -88,3 +88,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.19.0: dicas visuais na vista (faróis de setores, corrente nas boias, fumaça, esteira, marola) |
 | v0.20.0: atracação que perdoa (defensas, tolerâncias, plano de atracação) e rebocadores para vante, ré e segurar |
 | v0.21.0: cabos correm o navio até o ponto; tela de atracação e painel que muda sozinho |
+| v0.21.1: modo livre começa equipado e guarda a própria escolha (defeito achado em teste) |

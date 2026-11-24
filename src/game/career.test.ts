@@ -53,9 +53,11 @@ describe('carreira', () => {
     expect(g.result!.lines.some(l => l[0].includes('Chefe de primeira pediu desembarque'))).toBe(true);
   });
   it('no modo livre a carreira não mexe no navio nem no caixa', () => {
-    const g = new Game(); g.free = true; g.career.parts.engine = 2; g.equip.radar = true; const m = g.career.money;
+    const g = new Game(); g.free = true; g.career.parts.engine = 2; g.career.parts.radar = 1; const m = g.career.money;
     g.start('entrada');
-    expect(g.p.revDelay).toBe(15); expect(g.equip.radar).toBe(true);
+    // de série, como no começo da carreira; o radar comprado na carreira não vem junto
+    expect(g.p.revDelay).toBe(15); expect(g.equip).toEqual({ gps: true, rot: true, radar: false, ecdis: false, doppler: true, thruster: false });
+    g.freeEquip.radar = true; g.start('entrada'); expect(g.equip.radar).toBe(true);
     g.s.x = -1000; g.s.y = -1500; g.warp = 8; for (let i = 0; i < 200 && g.status === 'running'; i++) g.update(0.1);
     expect(g.status).toBe('done');
     expect(g.career.money).toBe(m);

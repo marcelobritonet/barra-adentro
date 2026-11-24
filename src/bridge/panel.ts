@@ -172,6 +172,7 @@ export class Panel {
     br.querySelectorAll('select').forEach(sel => sel.addEventListener('change', () => sel.blur()));
     br.querySelectorAll<HTMLInputElement>('[data-eq]').forEach(cb => cb.addEventListener('change', () => {
       g.equip[cb.dataset.eq as keyof Game['equip']] = cb.checked;
+      if (g.free) g.freeEquip[cb.dataset.eq as keyof Game['equip']] = cb.checked;   // a escolha vale para as próximas viagens livres
       if (cb.checked && (cb.dataset.eq === 'radar' || cb.dataset.eq === 'ecdis')) this.mfd = cb.dataset.eq as MfdMode;
     }));
   }

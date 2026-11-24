@@ -2,6 +2,15 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.21.1 — Modo livre também começa equipado
+
+Pergunta do teste: "começar o jogo do zero ainda está com o navio sem nenhum equipamento?"
+
+- Na carreira não: desde a v0.18.0 o navio sai com GPS, indicador de guinada e doppler.
+- No modo livre, sim, e era um defeito: ele continuava com o padrão antigo, sem nada ligado. Agora começa "de série", igual à carreira.
+- Segundo defeito corrigido: o modo livre herdava os equipamentos da última viagem da carreira, porque os dois gravavam no mesmo lugar. Agora o modo livre guarda a própria escolha.
+- Três predefinições no modo livre: De série, Tudo ligado e À moda antiga. Ligar um equipamento na aba Equip. passa a valer para as viagens livres seguintes.
+
 ## v0.21.0 — Os cabos acertam a posição; painel de atracação
 
 Retorno do teste da v0.20.0: "ainda é difícil manter o navio no ponto sem ficar indo para a frente e para trás; é muito sensível" e "na atracação os equipamentos perdem o sentido; tem que ficar só rebocador e convés".
