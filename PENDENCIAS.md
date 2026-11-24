@@ -21,6 +21,8 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 15 | ECDIS forte demais? | Dividir em dois níveis (carta e posição; depois preditor, próxima curva e AIS), ruído no preditor abaixo de 2 nós, horizonte ajustável | Decidido em 2026-11-23: fica como está por enquanto. "Meio arcade, mas gostei" |
 | 13 | Onde publicar as releases | github.com/marcelobritonet/barra-adentro (público) | Decidido; v0.1.0 a v0.5.0 publicadas |
 | 14 | Publicar o jogo em produção | GitHub Pages a partir do build, a cada release | Em aberto |
+| 16 | **Progressão invertida** | Retorno do teste (v0.17.1): "navio sem nada é praticamente impossível; em vez de navio iniciante tem cara de avançado; quanto menos equipado, mais difícil". O começo precisa ser o mais fácil, não o mais difícil | Em aberto: escolher como inverter |
+| 17 | Plano de bordo | Retorno do teste: "ficou absurdo de bom" | Aprovado |
 
 ## A fazer
 
