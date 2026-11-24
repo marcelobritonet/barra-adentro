@@ -9,7 +9,7 @@ import { makeTugs, TugMode } from './tugs';
 import { bearingText, berthBusy, berthShip, DEPART_ON_REQUEST, DREDGE_KN, hullDistance, interaction, makeTraffic, Other, slowAhead, swingRadius, updateTraffic, YIELD_TIME } from './traffic';
 import { Tide, tideAt, TidePreset, tideText } from '../world/tide';
 import { makePlan, Plan } from './plan';
-import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, reputation, salaries, saveCareer, Sky, wearFactor } from './career';
+import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, reputation, salaries, saveCareer, Sky, wearFactor, WindKey, WINDS } from './career';
 
 export type Scenario = 'entrada' | 'fundeio' | 'contrabordo';
 
@@ -59,6 +59,8 @@ export class Game {
   freeBerth = 'cais';
   /** "À moda antiga": viagem com os instrumentos eletrônicos apagados. */
   blind = false;
+  /** Vento desta viagem. */
+  wind: WindKey = 'sueste'; freeWind: WindKey = 'sueste';
   /** Atracar aproado ao mar: passar do berço, girar na bacia de evolução e voltar. */
   headOut = false; freeHeadOut = false;
   /** Limite de velocidade no canal: 8 nós, 6 com nevoeiro. */
@@ -150,6 +152,9 @@ export class Game {
     this.headOut = sc === 'entrada' && (ct ? !!ct.headOut : this.free && this.freeHeadOut) && W.QUAY.id === 'cais';
     if (this.headOut) W.useQuay(W.headOut(W.QUAY));
     this.blind = !this.free && !!ct?.blind;
+    this.wind = ct ? ct.wind ?? 'sueste' : this.free ? this.freeWind : 'sueste';
+    this.windBase = WINDS[this.wind].kn * KN; this.windFromBase = WINDS[this.wind].from * D2R;
+    this.env.windSpeed = this.windBase; this.env.windFrom = this.windFromBase;
     if (this.free) this.equip = { ...this.freeEquip };
     if (!this.free) {
       applyCareer(this.p, this.career); this.equip = equipOf(this.career);
@@ -184,7 +189,7 @@ export class Game {
     this.trustStart = this.trust; this.trustNote = ''; this.trustNoteAt = -99; this.telTimes = [];
     this.baseAck = this.p.ackDelay; this.baseHelm = this.p.helmDelay;
     if (sc === 'entrada') {
-      this.say('Imediato', `Vento sueste. Maré: ${tideText(this.tide)}.`, 'info');
+      this.say('Imediato', `Vento: ${WINDS[this.wind].label.toLowerCase()}. ${WINDS[this.wind].hint} Maré: ${tideText(this.tide)}.`, this.wind === 'sueste' || this.wind === 'calmaria' ? 'info' : 'warn');
       if (this.sky === 'nevoeiro') this.say('Imediato', 'Nevoeiro fechado, uns 300 metros de visibilidade. Limite de 6 nós no canal; navegamos pelo radar e pelas boias.', 'warn');
       if (this.sky === 'noite') this.say('Imediato', 'Noite sem lua. Encarnada a boreste, verde a bombordo: siga as luzes das boias.', 'info');
       if (this.blind) this.say('Chefe de máquinas', 'Pane no quadro de 24 volts: GPS, guinada, doppler, radar e ECDIS apagados. Agulha, odômetro e ecobatímetro seguem vivos.', 'bad');
@@ -228,6 +233,8 @@ export class Game {
   }
 
   get sog() { return Math.hypot(this.s.u, this.s.v); }
+  /** Abatimento: quanto o caminho no fundo foge da proa, em graus (+ para boreste). Só faz sentido com seguimento. */
+  get leeway() { const d = Math.atan2(this.s.v, Math.abs(this.s.u)) / D2R; return this.sog > 0.4 ? d * Math.sign(this.s.u || 1) : 0; }
   get cog() {
     const s = this.s, sin = Math.sin(s.psi), cos = Math.cos(s.psi);
     return (Math.atan2(s.u * sin + s.v * cos, s.u * cos - s.v * sin) + 2 * Math.PI) % (2 * Math.PI);
@@ -260,6 +267,8 @@ export class Game {
   callPilot(grade: PilotGrade) {
     if (this.status !== 'running' || this.scenario !== 'entrada' || this.pilot.state !== 'none') return;
     this.say('Maré Mansa', `Praticagem, Maré Mansa. Solicito ${PILOTS[grade].label.toLowerCase()}.`, 'info');
+    // com vento forte a praticagem suspende o serviço, como acontece de verdade
+    if (WINDS[this.wind].kn >= 20) return this.say('Praticagem', `Maré Mansa, praticagem suspensa: vento de ${Math.round(WINDS[this.wind].kn)} nós, acima do limite de 20. A barra segue aberta; a manobra é por sua conta.`, 'warn');
     this.pilot.call(this, grade);
   }
 

@@ -112,4 +112,17 @@ describe('carreira', () => {
     for (let v = 0; v < 60; v++) { c.voyages = v; for (const o of offers(c)) { if (o.blind) { blind++; if (o.stars < 5) low++; } } }
     expect(blind).toBeGreaterThan(5); expect(low).toBe(0);   // só aparece como desafio de cinco estrelas
   });
+
+  it('vento do contrato vale na viagem; acima de 20 nós a praticagem é suspensa', () => {
+    const g = new Game(); g.contract = { ...CONTRACTS.find(c => c.id === 'cheia')!, wind: 'sudoeste' }; g.start('entrada');
+    expect(g.wind).toBe('sudoeste'); expect(g.env.windSpeed / 0.514444).toBeCloseTo(22, 0);
+    g.callPilot('senior');
+    expect(g.pilot.state).toBe('none'); expect(g.ledger.pilot).toBe(0);
+    expect(g.msgs.at(-1)!.text).toMatch(/praticagem suspensa/);
+    g.contract = { ...CONTRACTS.find(c => c.id === 'cheia')!, wind: 'leste' }; g.start('entrada'); g.callPilot('senior');
+    expect(g.pilot.state).toBe('called');
+    const c = newCareer(); c.rep = 100; const seen = new Set<string>();
+    for (let v = 0; v < 60; v++) { c.voyages = v; for (const o of offers(c)) { seen.add(o.wind ?? 'sueste'); if (o.stars < 2) expect(o.wind ?? 'sueste').toBe('sueste'); } }
+    expect([...seen].sort()).toEqual(['leste', 'nordeste', 'sudoeste', 'sueste']);
+  });
 });

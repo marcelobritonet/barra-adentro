@@ -215,7 +215,7 @@ export class Panel {
     const gps = $('gps'), hasPos = g.equip.gps || g.equip.ecdis;
     gps.classList.toggle('off', !hasPos);
     gps.innerHTML = hasPos
-      ? `<span class="big">${(g.sog / KN).toFixed(1)}</span> <span class="unit">nós</span> rumo ${g.sog > 0.1 ? deg3(g.cog) : '---'}°`
+      ? `<span class="big">${(g.sog / KN).toFixed(1)}</span> <span class="unit">nós</span> rumo ${g.sog > 0.1 ? deg3(g.cog) : '---'}°<br><span class="${Math.abs(g.leeway) >= 3 ? 'drift' : ''}">${Math.abs(g.leeway) < 0.5 ? 'sem abatimento' : `abatendo ${Math.abs(g.leeway).toFixed(0)}° para ${g.leeway > 0 ? 'BE ▶' : '◀ BB'}`}</span>`
       : `<span class="big">--.-</span> não instalado`;
     const rot = $('rot');
     rot.classList.toggle('off', !g.equip.rot);

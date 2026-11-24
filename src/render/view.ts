@@ -48,6 +48,7 @@ export class View {
   private flow: [number, number][] = []; private flowT = 0;
   private smoke: THREE.Mesh[] = []; private smokeI = 0; private smokeT = 0; private lastN = 0;
   private bowWave: THREE.Mesh[] = [];
+  private caps: THREE.Mesh[] = [];
   private buoys: THREE.Group[] = [];
   private bob = 0;
   quarter = 0; zoomI = 2; top = false;
@@ -99,6 +100,11 @@ export class View {
     for (let i = 0; i < 40; i++) {
       const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x8a8f96, transparent: true, opacity: 0, depthWrite: false }));
       this.smoke.push(m); this.scene.add(m);
+    }
+    // carneirinhos: riscos de espuma que correm com o vento
+    for (let i = 0; i < 70; i++) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xeaf6ff, transparent: true, opacity: 0, depthWrite: false }));
+      m.userData.life = Math.random() * 6; m.position.set(1e6, 0.1, 0); this.caps.push(m); this.scene.add(m);
     }
     for (const sd of [-1, 1]) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xf4fbff, transparent: true, opacity: 0, depthWrite: false }));
@@ -189,6 +195,22 @@ export class View {
       m.position.x += ax * wd; m.position.z -= ay * wd; m.position.y += 0.9 * wd;
       m.scale.addScalar(0.9 * wd); mat.opacity = Math.max(0, mat.opacity - 0.03 * wd);
     }
+    // carneirinhos: nascem em volta do navio, correm com o vento e somem; quanto mais vento, mais e maiores
+    const wKn = g.env.windSpeed / 0.5144, strength = Math.max(0, Math.min(1, (wKn - 6) / 16)), span = Math.max(500, this.mpp * 260);
+    this.caps.forEach((m, i) => {
+      const mat = m.material as THREE.MeshBasicMaterial;
+      m.userData.life -= dt;
+      if (m.userData.life <= 0 || Math.abs(m.position.x - s.x) > span * 1.3 || Math.abs(m.position.z + s.y) > span * 1.3) {
+        m.userData.life = 3 + Math.random() * 5;
+        const px = s.x + this.pan.x + (Math.random() - 0.5) * 2 * span, pz = -s.y + this.pan.z + (Math.random() - 0.5) * 2 * span;
+        m.position.set(px, 0.1, pz); m.rotation.y = Math.atan2(ax, -ay) + Math.PI / 2;      // atravessado ao vento, como a crista
+        m.scale.set(6 + 22 * strength + Math.random() * 8, 1, 1.6 + this.mpp * 0.5);
+        m.visible = i < 70 * strength && g.env.depth(px, -pz) > 0 && g.sky !== 'nevoeiro';
+      }
+      if (!m.visible) return;
+      m.position.x += ax * 0.35 * dt; m.position.z -= ay * 0.35 * dt;
+      const life = m.userData.life as number; mat.opacity = Math.min(0.5, life * 0.35, 0.55 * strength + 0.1);
+    });
     // marola de proa: cresce com a velocidade na água
     for (const m of this.bowWave) {
       const v = Math.abs(s.stw), sd = m.userData.side as number, [bx, by] = bodyToWorld(s, g.p.L / 2 - 6 - v * 2, sd * (g.p.B * 0.42 + v));

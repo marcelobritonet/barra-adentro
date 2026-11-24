@@ -69,4 +69,38 @@ describe('plano de viagem', () => {
     expect(makePlan(Object.assign(new Game(), {})).calls.length).toBe(5);
     const f = new Game(); f.start('fundeio'); expect(makePlan(f).calls.length).toBe(0);
   });
+
+  it('o plano dá o rumo a governar: compensa a corrente de través na baía e o vento de través no canal', () => {
+    const g = new Game(); g.free = true; g.freeWind = 'calmaria'; g.start('entrada');
+    const calm = makePlan(g);
+    expect(calm.steps[0].set!).toBeGreaterThan(1.5);                                   // na baía a corrente costeira leva para leste, boreste de quem entra
+    expect(calm.steps[0].steer!).toBeLessThan(calm.steps[0].course!);                  // então governa-se mais para bombordo
+    const inCanal = calm.steps.find(s => s.s > W.S_MOUTH + 200)!;
+    expect(Math.abs(inCanal.set!)).toBeLessThan(0.6);                                  // no canal a corrente é pela proa: não abate
+    g.freeWind = 'leste'; g.start('entrada');
+    const east = makePlan(g), leg = east.steps.find(s => s.s > W.S_MOUTH + 200)!;
+    console.log('vento leste de 18 nós no canal: abate', leg.set!.toFixed(1), '°; governar', leg.steer!.toFixed(0), 'para fazer', leg.course!.toFixed(0));
+    expect(leg.set!).toBeLessThan(-1);                                                 // vento de boreste empurra para bombordo
+    expect(leg.steer!).toBeGreaterThan(leg.course!);
+    expect(g.env.windSpeed).toBeCloseTo(18 * 0.514444, 1);
+  });
+  it('com vento de través o navio abate de verdade, e o GPS mostra para que lado', () => {
+    const run = (wind: 'calmaria' | 'leste') => {
+      const g = new Game(); g.free = true; g.freeWind = wind; g.trust = 0; g.start('entrada'); g.vts = 'ok'; g.traffic = [];
+      g.env.current = () => [0, 0];
+      const s0 = W.S_MOUTH + 1050, [x, y] = W.pointAt(s0, 0), hdg = W.courseAt(s0 + 10), s = g.s;
+      s.x = x; s.y = y; s.psi = hdg * D2R; s.u = 2; g.setTelegraph(6); g.warp = 8;
+      let acc = 0;   // timoneiro que segura o rumo de verdade, sem deixar o navio orçar para o vento
+      for (let i = 0; i < 3000 && g.status === 'running' && W.nearest(s.x, s.y).s < s0 + 700; i++) {
+        let e = hdg - s.psi / D2R; if (e > 180) e -= 360; if (e < -180) e += 360; acc = Math.max(-40, Math.min(40, acc + e * 0.8));
+        g.setRudderDeg(Math.round(Math.max(-25, Math.min(25, e * 3 + acc * 0.25 - s.r / D2R * 40)))); g.update(0.1);
+      }
+      const n = W.nearest(s.x, s.y); return { off: n.d * (n.side > 0 ? -1 : 1), leeway: g.leeway };
+    };
+    const calm = run('calmaria'), east = run('leste');
+    console.log('700 m segurando o rumo: calmaria sai', calm.off.toFixed(0), 'm; leste de 18 nós sai', east.off.toFixed(0), 'm, abatendo', east.leeway.toFixed(1), '°');
+    expect(Math.abs(calm.off)).toBeLessThan(8);
+    expect(east.off).toBeLessThan(-4);        // empurrado para bombordo
+    expect(east.leeway).toBeLessThan(-1);
+  });
 });

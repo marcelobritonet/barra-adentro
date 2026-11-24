@@ -73,8 +73,18 @@ export interface Contract {
   sky?: Sky;
   berth?: string;         // berço de destino; sem isso, o Cais de Santos
   blind?: boolean;        // "à moda antiga": instrumentos eletrônicos apagados nesta viagem
+  wind?: WindKey;         // vento desta viagem; sem isso, o sueste de todo dia
   headOut?: boolean;      // atracar aproado ao mar: passa do berço, gira na bacia e volta
 }
+export type WindKey = 'sueste' | 'sudoeste' | 'leste' | 'nordeste' | 'calmaria';
+/** Ventos de Santos. O sueste é o de todo dia; os outros atravessam o canal ou jogam o navio no cais. */
+export const WINDS: Record<WindKey, { label: string; from: number; kn: number; bonus: number; hint: string }> = {
+  sueste: { label: 'Sueste, 14 nós', from: 160, kn: 7 / 0.514444, bonus: 1, hint: 'Pela popa na entrada: quase não se sente até parar.' },
+  sudoeste: { label: 'Sudoeste, 22 nós', from: 225, kn: 22, bonus: 1.12, hint: 'Frente fria. De través por bombordo no canal e abrindo o navio do Cais de Santos.' },
+  leste: { label: 'Leste, 18 nós', from: 90, kn: 18, bonus: 1.1, hint: 'De través por boreste no canal e jogando o navio contra o Cais de Santos.' },
+  nordeste: { label: 'Nordeste, 16 nós', from: 45, kn: 16, bonus: 1.08, hint: 'Pela proa na entrada, e contra o cais na atracação.' },
+  calmaria: { label: 'Calmaria', from: 160, kn: 2, bonus: 1, hint: 'Sem vento: só a corrente mexe com o navio.' },
+};
 export type Sky = 'dia' | 'noite' | 'nevoeiro';
 export const SKY: Record<Sky, { label: string; bonus: number; hint: string }> = {
   dia: { label: 'Dia claro', bonus: 1, hint: '' },
@@ -177,10 +187,12 @@ export function offers(c: Career): Contract[] {
     const roll = rnd(), sky: Sky = t.stars >= 4 && roll < 0.3 ? 'nevoeiro' : t.stars >= 3 && roll < 0.6 ? 'noite' : 'dia';
     // desafio de fim de jogo: a mesma viagem com os instrumentos apagados, pagando bem mais
     const blind = t.stars >= 4 && rnd() < 0.25;
+    // de duas estrelas para cima o tempo pode mudar: vento de través paga mais
+    const wr = rnd(), wind: WindKey = t.stars >= 3 && wr < 0.22 ? 'sudoeste' : t.stars >= 2 && wr < 0.42 ? 'leste' : t.stars >= 2 && wr < 0.55 ? 'nordeste' : 'sueste';
     return {
-      ...t, sky, blind, stars: Math.min(5, t.stars + (blind ? 1 : 0)), cargo: `${tons.toLocaleString('pt-BR')} t de ${name}`,
+      ...t, sky, blind, wind, stars: Math.min(5, t.stars + (blind ? 1 : 0)), cargo: `${tons.toLocaleString('pt-BR')} t de ${name}`,
       title: t.title.replace(/^(Fertilizante|Açúcar|Trigo|Granel líquido)/, name[0].toUpperCase() + name.slice(1)),
-      freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing * SKY[sky].bonus * (blind ? BLIND_BONUS : 1) / 100) * 100,
+      freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing * SKY[sky].bonus * WINDS[wind].bonus * (blind ? BLIND_BONUS : 1) / 100) * 100,
       parMin: t.parMin + (c.ship === 'handy' ? 15 : 0) + (sky === 'nevoeiro' ? 10 : 0),
     };
   });

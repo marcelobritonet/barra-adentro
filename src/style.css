@@ -196,3 +196,6 @@ table.shop button { padding: 5px 8px; font-size: 12px; }
 #ops.compact h4 { margin-top: 0; }
 #ops .tabs button { padding: 3px 4px; font-size: 10.5px; }
 #mfd .tabs button { padding: 3px 4px; font-size: 10.5px; }
+
+.lcd .drift { color: #ffcf6a; font-weight: 700; }
+#plan td small { color: #ffcf6a; }

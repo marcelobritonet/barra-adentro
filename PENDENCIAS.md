@@ -27,6 +27,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 20 | Entrada no canal | Retorno do teste (v0.19.0): "a parte de entrar no canal está sensacional" | Aprovado |
 | 21 | Atracação | Retorno do teste: "muito difícil controlar o vai e vem perto do cais, e precisa ser muito preciso"; depois, na v0.20.0: "ainda é difícil manter no ponto, é muito sensível" e "os equipamentos perdem o sentido" | Respondido na v0.20.0 e na v0.21.0; falta confirmar jogando |
 | 22 | Fundeio, contrabordo, giro, som | Ainda sem retorno do teste | Em aberto |
+| 24 | Vento e corrente se percebem? | Pergunta do teste: "ela acontece?". Respondido na v0.22.0 com vento por contrato, abatimento no GPS, rumo a governar no plano e carneirinhos | Falta confirmar jogando; se ainda for pouco, aumentar a corrente de través nas curvas (item 9) |
 | 17 | Plano de bordo | Retorno do teste: "ficou absurdo de bom" | Aprovado |
 
 ## A fazer
@@ -48,6 +49,8 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 10 | Mais céu | Sinais sonoros de nevoeiro, noite com nevoeiro, chuva |
 | 16 | Prático sem rebocadores na corrente parada e a favor | Com os dois rebocadores atraca em qualquer maré. Sem eles, na preamar atraca quase sem lucro e na enchente recusa |
 | 17 | Prazo da viagem conforme a maré | Hoje é fixo em 75 min; esperar a virada estoura o prazo |
+| 24 | Prático com vento forte | Com sudoeste de 22 nós o prático encalha, com e sem rebocadores; por isso a praticagem é suspensa acima de 20 nós. Com leste e nordeste ele atraca |
+| 25 | Corrente de través nas curvas | Tentada na v0.22.0 e retirada: quebrava o prático |
 | 11 | Ajustar o som de ouvido | Feito por cálculo na v0.12.0; ninguém ouviu ainda |
 
 ## Feito
@@ -89,3 +92,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.20.0: atracação que perdoa (defensas, tolerâncias, plano de atracação) e rebocadores para vante, ré e segurar |
 | v0.21.0: cabos correm o navio até o ponto; tela de atracação e painel que muda sozinho |
 | v0.21.1: modo livre começa equipado e guarda a própria escolha (defeito achado em teste) |
+| v0.22.0: vento por contrato, abatimento no GPS, rumo a governar no plano, carneirinhos (pergunta do teste) |

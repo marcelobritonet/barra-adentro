@@ -8,7 +8,7 @@ import * as W from './world/santos';
 import { buildGrid } from './world/santos';
 import { TIDE_PRESETS, TidePreset } from './world/tide';
 import { berthBusy } from './game/traffic';
-import { BLIND_BONUS, Sky, SKY } from './game/career';
+import { BLIND_BONUS, Sky, SKY, WindKey, WINDS } from './game/career';
 import { buy, buyShip, CREW, CrewId, Level, loadCareer, maxStars, newCareer, offers, PARTS, PartId, repFor, salaries, saveCareer, shipCost, SHIP_REP } from './game/career';
 import { ShipClass, SHIPS } from './sim/ship';
 
@@ -119,6 +119,8 @@ help.innerHTML = `<h2>AJUDA</h2><p>Clique ou aperte <kbd>H</kbd> para fechar.</p
     <tr><td>Fumaça</td><td>Vai com o vento verdadeiro. Sai preta quando a máquina está ganhando rotação.</td></tr>
     <tr><td>Esteira</td><td>Mostra o caminho que a popa fez: curva na guinada, torta quando o navio está derivando.</td></tr>
     <tr><td>Marola de proa</td><td>Cresce com a velocidade na água.</td></tr>
+    <tr><td>Carneirinhos</td><td>Riscos brancos na água correndo com o vento. Mais vento, mais riscos.</td></tr>
+    <tr><td>Abatimento</td><td>No quadro do GPS: quantos graus o caminho do navio foge da proa. É o vento e a corrente de través empurrando; compense governando para o lado contrário.</td></tr>
   </table></div></div>`;
 help.addEventListener('click', () => { help.hidden = true; });
 // ---------------------------------------------------------------- plano de viagem
@@ -129,13 +131,13 @@ const dec = (v: number, d = 1) => v.toFixed(d).replace('.', ',');
 function showPlan(briefing: boolean) {
   const pl = game.plan;
   const rows = pl.steps.map((st, i) => `<tr class="${st.turn ? 'turn' : ''}"><td class="n">${i + 1}</td><td>${st.title}</td>
-    <td class="num">${st.course !== undefined ? c3(st.course) : ''}</td><td class="num">${st.dist !== undefined ? Math.round(st.dist / 10) * 10 + ' m' : ''}</td>
+    <td class="num">${st.course !== undefined ? c3(st.course) : ''}</td><td class="num">${st.steer !== undefined ? `<b>${c3(st.steer)}</b>${Math.abs(st.set ?? 0) >= 1 ? `<br><small>abate ${Math.abs(st.set!).toFixed(0)}° ${st.set! > 0 ? 'BE' : 'BB'}</small>` : ''}` : ''}</td><td class="num">${st.dist !== undefined ? Math.round(st.dist / 10) * 10 + ' m' : ''}</td>
     <td>${st.tel !== undefined ? TELEGRAPH_LABELS[st.tel].toLowerCase() : ''}</td><td class="num">${st.sog !== undefined ? dec(st.sog / KN) + ' nós' : ''}</td>
     <td class="num">${st.min !== undefined ? Math.round(st.min) + ' min' : ''}</td><td class="act">${st.action}</td></tr>`).join('');
   const total = pl.steps.reduce((a, st) => a + (st.min ?? 0), 0);
   planEl.innerHTML = `<canvas width="360" height="588"></canvas><div class="body">
     <h2>${pl.title}</h2>
-    <table><tr><th>Nº</th><th>Perna</th><th>Rumo</th><th>Dist.</th><th>Máquina</th><th>No fundo</th><th>Tempo</th><th>Ao fim da perna</th></tr>${rows}</table>
+    <table><tr><th>Nº</th><th>Perna</th><th>Rumo</th><th>Governar</th><th>Dist.</th><th>Máquina</th><th>No fundo</th><th>Tempo</th><th>Ao fim da perna</th></tr>${rows}</table>
     ${total ? `<p>Tempo previsto até o berço: <b>${Math.round(total)} min</b>, sem contar a atracação. Na carta: a derrota a lápis e, em vermelho, onde começa cada guinada.</p>` : ''}
     ${pl.calls.length ? `<table><tr><th>Rádio: onde chamar</th><th>O quê</th><th>Por quê ali</th></tr>${pl.calls.map(c => `<tr><td>${c.where}</td><td class="act">${c.what}</td><td>${c.why}</td></tr>`).join('')}</table>` : ''}
     <ul>${pl.notes.map(n => `<li>${n}</li>`).join('')}</ul>
@@ -172,7 +174,7 @@ function drawPlanBox() {
     const left = (to: number) => Math.abs(((to - hdg + 540) % 360) - 180);
     const turning = t && n.s >= t.s - 5 && left(t.to) > 2;
     html = `<b>Plano · perna ${i + 1} de ${pl.steps.length} · ${st.title}</b>
-      <div class="steer">Governar ${c3(st.course!)} · ${TELEGRAPH_LABELS[st.tel!].toLowerCase()}</div>
+      <div class="steer">Governar ${c3(st.steer ?? st.course!)} · ${TELEGRAPH_LABELS[st.tel!].toLowerCase()}</div>${Math.abs(st.set ?? 0) >= 1 ? `<div>rumo do canal ${c3(st.course!)}; vento e corrente abatem ${Math.abs(st.set!).toFixed(0)}° para ${st.set! > 0 ? 'boreste' : 'bombordo'}</div>` : ''}
       <div>previsto ${dec(st.sog! / KN)} nós no fundo</div>`;
     if (turning) html += `<div><span class="now">GUINANDO para ${c3(t!.to)}</span> quebrar com leme contrário aos ${c3(t!.to - Math.sign(t!.helm) * t!.counter)}${left(t!.to) <= t!.counter + 1 ? ' — <b style="display:inline;color:#ffcf6a">AGORA</b>' : ''}</div>`;
     else html += `<div class="next">Depois: ${st.action}</div>`;
@@ -243,6 +245,8 @@ function menu() {
       </div>
       <div class="preset">Navio: ${(Object.keys(SHIPS) as ShipClass[]).map(k => `<button data-freeship="${k}" class="${game.freeShip === k ? 'on' : ''}">${SHIPS[k].label}</button>`).join('')}</div>
       <div class="preset">Berço: ${W.QUAYS.map(q => `<button data-berth="${q.id}" class="${game.freeBerth === q.id ? 'on' : ''}">${q.name} (${q.side > 0 ? 'bombordo' : 'boreste'})</button>`).join('')}<button data-headout="1" class="${game.freeHeadOut ? 'on' : ''}" ${game.freeBerth === 'cais' ? '' : 'disabled'}>Aproado ao mar (girar na bacia)</button></div>
+      <div class="preset">Vento: ${(Object.keys(WINDS) as WindKey[]).map(k => `<button data-wind="${k}" class="${game.freeWind === k ? 'on' : ''}">${WINDS[k].label}</button>`).join('')}</div>
+      <p class="dim" style="margin-top:0">${WINDS[game.freeWind].hint}</p>
       <div class="preset">Céu: ${(Object.keys(SKY) as Sky[]).map(k => `<button data-sky="${k}" class="${game.freeSky === k ? 'on' : ''}">${SKY[k].label}</button>`).join('')}<span class="dim">${SKY[game.freeSky].hint}</span></div>
       <div class="preset">Maré: ${(Object.keys(TIDE_PRESETS) as TidePreset[]).map(k => `<button data-tide="${k}" class="${game.tidePreset === k ? 'on' : ''}">${TIDE_PRESETS[k].label}</button>`).join('')}</div>
       <p class="dim" style="margin-top:0">${TIDE_PRESETS[game.tidePreset].hint} A maré corre 2× mais rápido que a real.</p>
@@ -262,7 +266,7 @@ function menu() {
   const body = portTab === 'contratos'
     ? `<div class="contracts">${list.map(ct => { const locked = ct.stars > stars; return `<button data-contract="${ct.id}" ${locked ? 'disabled' : ''}>
         <span class="stars">${'★'.repeat(ct.stars)}${'☆'.repeat(5 - ct.stars)}${locked ? ` · exige reputação ${repFor(ct.stars)}` : ''}</span><b>${ct.title}</b><span class="pay">${brl(ct.freight)}</span>
-        <small>${ct.cargo} · calado ${(SHIPS[c.ship].Tmin + (SHIPS[c.ship].Tmax - SHIPS[c.ship].Tmin) * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min${ct.blind ? ` · <b class="sky" style="color:#ff9a8a">À MODA ANTIGA +${Math.round((BLIND_BONUS - 1) * 100)}%</b>` : ''}${ct.berth === 'ilha' ? ' · <b class="sky">TERMINAL DA ILHA</b>' : ''}${ct.headOut ? ' · <b class="sky">GIRO NA BACIA</b>' : ''}${ct.sky && ct.sky !== 'dia' ? ` · <b class="sky">${SKY[ct.sky].label.toUpperCase()} +${Math.round((SKY[ct.sky].bonus - 1) * 100)}%</b>` : ''}<br>${ct.note}${ct.sky && ct.sky !== 'dia' ? ' ' + SKY[ct.sky].hint : ''}${ct.blind ? ' Instrumentos eletrônicos apagados: só agulha, odômetro, ecobatímetro e o plano de bordo.' : ''}</small></button>`; }).join('')}</div>
+        <small>${ct.cargo} · calado ${(SHIPS[c.ship].Tmin + (SHIPS[c.ship].Tmax - SHIPS[c.ship].Tmin) * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min${ct.wind && ct.wind !== 'sueste' ? ` · <b class="sky">${WINDS[ct.wind].label.toUpperCase()} +${Math.round((WINDS[ct.wind].bonus - 1) * 100)}%</b>` : ''}${ct.blind ? ` · <b class="sky" style="color:#ff9a8a">À MODA ANTIGA +${Math.round((BLIND_BONUS - 1) * 100)}%</b>` : ''}${ct.berth === 'ilha' ? ' · <b class="sky">TERMINAL DA ILHA</b>' : ''}${ct.headOut ? ' · <b class="sky">GIRO NA BACIA</b>' : ''}${ct.sky && ct.sky !== 'dia' ? ` · <b class="sky">${SKY[ct.sky].label.toUpperCase()} +${Math.round((SKY[ct.sky].bonus - 1) * 100)}%</b>` : ''}<br>${ct.note}${ct.sky && ct.sky !== 'dia' ? ' ' + SKY[ct.sky].hint : ''}${ct.blind ? ' Instrumentos eletrônicos apagados: só agulha, odômetro, ecobatímetro e o plano de bordo.' : ''}${ct.wind && ct.wind !== 'sueste' ? ' ' + WINDS[ct.wind].hint : ''}</small></button>`; }).join('')}</div>
        <p class="dim">As ofertas mudam a cada viagem. Entregar bem aumenta a reputação, que libera contratos com mais estrelas e navios maiores.</p>`
     : portTab === 'estaleiro' ? yard : shopRows(portTab === 'oficina' ? 'part' : 'crew');
   overlay.innerHTML = `<div class="card wide">${head}
@@ -309,6 +313,7 @@ overlay.addEventListener('click', e => {
   if (d.ship) { portMsg = buyShip(game.career, d.ship as ShipClass) ?? ''; saveCareer(game.career); return menu(); }
   if (d.freeship) { game.freeShip = d.freeship as ShipClass; return menu(); }
   if (d.sky) { game.freeSky = d.sky as Sky; return menu(); }
+  if (d.wind) { game.freeWind = d.wind as WindKey; return menu(); }
   if (d.berth) { game.freeBerth = d.berth; return menu(); }
   if (d.headout) { game.freeHeadOut = !game.freeHeadOut; return menu(); }
   if (d.again) return launch(game.scenario); // repete o mesmo contrato, com a mesma oferta

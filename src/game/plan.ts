@@ -3,6 +3,7 @@
 import { D2R, Env, KN, makeState, ShipParams, stepShip, TELEGRAPH_LABELS } from '../sim/ship';
 import * as W from '../world/santos';
 import { BERTH } from './game';
+import { WINDS } from './career';
 import type { Game } from './game';
 
 export interface PlanTurn {
@@ -19,6 +20,8 @@ export interface PlanStep {
   title: string;
   s: number;          // início da perna ao longo do canal (ou -1 fora do canal)
   course?: number; dist?: number; tel?: number; stw?: number; sog?: number; min?: number;
+  steer?: number;     // rumo a governar para ficar sobre o rumo do canal, compensando vento e corrente
+  set?: number;       // quanto o navio abate se governar o rumo do canal, em graus (+ para boreste)
   action: string;     // o que fazer ao chegar ao fim desta perna
   turn?: PlanTurn;
 }
@@ -105,7 +108,13 @@ export function makePlan(g: Game): Plan {
     const course = W.courseAt(mid), tel = telAt(mid), stw = steadySpeed(p, tel, depth);
     const [mx, my] = W.pointAt(mid, 0), [ce, cn] = g.env.current(mx, my);
     const sog = Math.max(0.2, stw + ce * Math.sin(course * D2R) + cn * Math.cos(course * D2R));
-    const step: PlanStep = { title: name, s: from, course, dist: to - from, tel, stw, sog, min: (to - from) / sog / 60, action: '' };
+    // abatimento: a corrente de través leva o navio inteiro; o vento de través o empurra de lado contra a água
+    const cr = course * D2R, curCross = ce * Math.cos(cr) - cn * Math.sin(cr);
+    const wTo = g.env.windFrom + Math.PI, wLat = g.env.windSpeed * Math.sin(wTo - cr);            // componente do vento para boreste
+    // 0,6: ajustado contra a simulação (leste de 18 nós dá 2,7° no costeiro carregado a devagar)
+    const lee = 0.6 * (0.5 * 1.225 * p.AL * 0.95 * wLat * Math.abs(wLat)) / (0.5 * 1025 * p.L * p.T * Math.abs(p.Yv) * Math.max(stw, 0.5));
+    const set = Math.atan2(curCross + lee, stw) / D2R;
+    const step: PlanStep = { title: name, s: from, course, dist: to - from, tel, stw, sog, min: (to - from) / sog / 60, action: '', set, steer: (course - set + 360) % 360 };
     if (!pt) {
       step.action = g.headOut ? 'Parar na bacia de evolução e girar por boreste até a proa apontar para o mar.'
         : `Chegar paralelo ao cais, que fica a ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}, em ângulo raso.`;
@@ -124,6 +133,7 @@ export function makePlan(g: Game): Plan {
   const notes = [
     `Navio: ${p.L} m, calado ${p.T.toFixed(1).replace('.', ',')} m, ${(p.mass / 1e6).toFixed(1).replace('.', ',')} mil t. Fundo do canal: ${depth.toFixed(1).replace('.', ',')} m com a maré de agora.`,
     `Parada: de muito devagar, pare a máquina a ${round10(stop.coast + stop.astern + 40)} m do meio do berço. Se ainda tiver mais de 1 nó a ${round10(stop.astern + 30)} m, devagar ré.`,
+    `Vento: ${WINDS[g.wind].label.toLowerCase()}. ${WINDS[g.wind].hint} A coluna "Governar" já compensa o vento e a corrente de través de cada perna.`,
     `As velocidades no fundo já descontam a corrente de agora (${g.tide.flow > 0.1 ? 'vazante, pela proa' : g.tide.flow < -0.1 ? 'enchente, pela popa' : 'quase parada'}); ela muda com a maré.`,
     'Os pontos de guinada valem para o leme e a máquina do plano. Mais rápido ou com menos leme, comece antes.',
     `Atracação, velocidade no fundo por distância ao meio do berço: ${BERTH.profile.slice(0, 4).map(([d, k]) => `a ${d} m, ${String(k).replace('.', ',')} nó`).join('; ')}; encostar de lado a menos de ${String(BERTH.soft / KN).slice(0, 3).replace('.', ',')} nó. Com a proa a ${BERTH.bowMax} m das defensas e menos de ${(BERTH.speedMax / KN).toFixed(1).replace('.', ',')} nó, passe as espias (M): os cabos trazem o navio.`,

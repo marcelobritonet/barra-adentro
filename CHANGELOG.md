@@ -2,6 +2,19 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.22.0 — Vento e corrente que se percebem
+
+Pergunta do teste: "ainda não consigo perceber a influência do vento e da corrente. Ela acontece?"
+
+Acontece, mas a viagem padrão escondia: o sueste de 7 nós entra pela popa e a vazante vem pela proa, os dois alinhados com a derrota. Medido no costeiro carregado: na baía a corrente de través tira o navio 79 a 88 m do rumo a cada 800 m; no canal ela só reduz a velocidade no fundo de 3,8 para 2,9 nós; parado a 60 m do cais, o vento abre a popa 34 m e gira o navio 16 a 20° em 5 minutos.
+
+- Vento por contrato: sueste 7 nós (padrão), leste 18, nordeste 16, sudoeste 22 e calmaria. Contratos de 2 estrelas ou mais podem vir com vento de través e pagam mais por isso. No modo livre há um seletor de vento.
+- Com vento acima de 20 nós a praticagem suspende o serviço; a barra segue aberta e a manobra é sua.
+- O GPS mostra o abatimento: "abatendo N° para BE/BB".
+- O plano de viagem ganhou a coluna "Governar": o rumo a levar na agulha para fazer o rumo da pernada, já com corrente e vento. Com leste de 18 nós no primeiro trecho do canal: governar 006 para fazer 003.
+- Carneirinhos na água, que correm com o vento e aumentam com a força dele.
+- Limite conhecido: o abatimento por vento no canal é pequeno com o navio carregado (2 a 3°, cerca de 7 m em 700 m segurando o rumo). Quem sofre mais é navio leve e navio devagar.
+
 ## v0.21.1 — Modo livre também começa equipado
 
 Pergunta do teste: "começar o jogo do zero ainda está com o navio sem nenhum equipamento?"
