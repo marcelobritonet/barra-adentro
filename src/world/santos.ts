@@ -71,6 +71,8 @@ export const QUAYS: Quay[] = [
 /** Berço de destino desta viagem. Os outros continuam existindo como cais. */
 export let QUAY: Quay = QUAYS[0];
 export let QUAY_S = QUAY.s;   // posição do berço de destino ao longo do canal
+/** Usa um "cais" que não é de pedra: o costado de um navio fundeado, para atracar a contrabordo. */
+export function useQuay(q: Quay) { QUAY = q; QUAY_S = q.s; }
 export function setQuay(id: string) { QUAY = QUAYS.find(q => q.id === id) ?? QUAYS[0]; QUAY_S = QUAY.s; }
 /** Coordenadas locais de um cais: a = ao longo, b = distância da face (b > 0 na água). */
 export function quayLocal(x: number, y: number, q: Quay = QUAY): [number, number] {

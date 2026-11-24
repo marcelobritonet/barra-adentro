@@ -2,6 +2,15 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.14.0 — Atracar a contrabordo
+
+- Terceiro tipo de manobra: atracar no costado de um navio fundeado (o Serra Azul), para um transbordo. Não há cais, VTS, prático nem rebocador.
+- O "cais" é o costado de boreste dele, com defensas, e acompanha o giro do navio na amarra. Você começa pela popa dele, chega paralelo e quase parado, encosta a proa e passa as espias (M).
+- O que vale é a velocidade em relação ao costado: encostar a mais de 0,3 nó custa caro, e esmagar as defensas ou bater fora delas é abalroamento.
+- Novo contrato de duas estrelas, "Transbordo a contrabordo", e um terceiro cenário no modo livre.
+- Os navios fundeados passaram a girar bem mais devagar (no máximo 3 graus por minuto), como navios de verdade na amarra.
+- 4 testes novos. A tela desta manobra não foi conferida no navegador nesta entrega.
+
 ## v0.13.0 — Terminal da Ilha: o fundo do canal
 
 - Segundo berço: o Terminal da Ilha, de granéis líquidos, na margem norte, 1 km além do Cais de Santos e depois de uma terceira curva.

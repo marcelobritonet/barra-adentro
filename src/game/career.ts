@@ -67,7 +67,7 @@ export const CREW: Record<CrewId, { label: string; levels: Level[] }> = {
 };
 
 export interface Contract {
-  id: string; title: string; cargo: string; scenario: 'entrada' | 'fundeio';
+  id: string; title: string; cargo: string; scenario: 'entrada' | 'fundeio' | 'contrabordo';
   load: number;          // 0 = em lastro, 1 = carregado: muda calado, massa e área de vento
   tide: TidePreset; freight: number; parMin: number; stars: number; note: string;
   sky?: Sky;
@@ -81,6 +81,7 @@ export const SKY: Record<Sky, { label: string; bonus: number; hint: string }> = 
 };
 export const CONTRACTS: Contract[] = [
   { id: 'fundeio', title: 'Aguardar berço', cargo: 'Em lastro', scenario: 'fundeio', load: 0.15, tide: 'vazante', freight: 3500, parMin: 40, stars: 1, note: 'Fundear entre os navios do fundeadouro. Navio leve: o vento manda.' },
+  { id: 'sts', title: 'Transbordo a contrabordo', cargo: 'Alívio de carga do Serra Azul', scenario: 'contrabordo', load: 0.3, tide: 'vazante', freight: 14000, parMin: 50, stars: 2, note: 'Atracar no costado de um navio fundeado, que gira com o vento. Sem cais, sem prático: só você e as defensas.' },
   { id: 'meia', title: 'Fertilizante, meia carga', cargo: '1.600 t de fertilizante', scenario: 'entrada', load: 0.55, tide: 'vazante', freight: 16000, parMin: 75, stars: 2, note: 'Calado de 4,5 m e vazante pela proa: a entrada mais tranquila.' },
   { id: 'cheia', title: 'Fertilizante, carga completa', cargo: '2.900 t de fertilizante', scenario: 'entrada', load: 1, tide: 'vazante', freight: 28000, parMin: 75, stars: 3, note: 'Calado de 5,2 m: mais pesado e com menos água sob a quilha.' },
   { id: 'acucar', title: 'Açúcar na preamar', cargo: '2.900 t de açúcar', scenario: 'entrada', load: 1, tide: 'preamar', freight: 34000, parMin: 80, stars: 4, note: 'Corrente parada: o navio não freia sozinho e custa a governar devagar.' },
@@ -162,7 +163,7 @@ export function offers(c: Career): Contract[] {
   const ship = SHIPS[c.ship];
   return CONTRACTS.map(t => {
     const swing = 0.9 + rnd() * 0.25, pool = t.berth === 'ilha' ? LIQUIDS : CARGOES, name = pool[Math.floor(rnd() * pool.length)];
-    if (t.scenario === 'fundeio') return { ...t, freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing / 100) * 100 };
+    if (t.scenario !== 'entrada') return { ...t, freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing / 100) * 100 };
     const tons = Math.round(t.load * ship.capacity / 100) * 100;
     // contratos de três estrelas ou mais podem cair à noite ou com nevoeiro, pagando mais
     const roll = rnd(), sky: Sky = t.stars >= 4 && roll < 0.3 ? 'nevoeiro' : t.stars >= 3 && roll < 0.6 ? 'noite' : 'dia';

@@ -212,11 +212,23 @@ Ideias ainda não feitas:
 - Rebocadores recebem ordens por rádio (empurrar/puxar, proa/popa, potência) e cobram por hora.
 - VHF por menu: pedir entrada, pedir a um navio que aguarde ou saia, avisar intenção.
 
+## Atracar a contrabordo
+
+| Tópico | Regra |
+|---|---|
+| Alvo | O Serra Azul, de 150 m, fundeado; atraca-se no costado de boreste dele |
+| Geometria | O costado funciona como um cais com defensas de 2,5 m, e acompanha o giro do navio na amarra |
+| Como concluir | Proa a até 8 m e popa a até 35 m das defensas, no meio do navio (±30 m), quase parado; depois, espias |
+| Toque | Medido em relação ao costado: até 0,3 nó, macio; 0,3 a 0,6, R$ 3.000; 0,6 a 1,2, R$ 15.000; acima, avaria grave nos dois |
+| Abalroamento | Bater fora da zona das defensas ou esmagá-las: R$ 120.000 |
+| Sem apoio | Não há VTS, prático nem rebocadores nessa manobra |
+| A fazer | Atracar a contrabordo de um navio atracado no cais; rebocador na manobra; transbordo com o navio em movimento |
+
 ## Tráfego
 
 | Tópico | Regra |
 |---|---|
-| Fundeados | Três navios de 120 a 150 m no fundeadouro; aproam a resultante de vento e corrente e giram quando a maré vira |
+| Fundeados | Três navios de 120 a 150 m no fundeadouro; aproam a resultante de vento e corrente e giram devagar (até 3°/min) quando a maré vira |
 | Folga para fundear | Cerca de 280 m do ferro de cada um; dentro do giro de outro o fundeio não é confirmado e a confiança cai |
 | Berço ocupado | Um navio de 180 m começa atracado no berço do jogador. Larga aos 30 min, ou 6 min depois de um pedido pelo rádio; leva 4 min para abrir do cais |
 | Navio saindo | Depois de largar, desce o canal a 6 nós (8 na baía) pelo lado dele e não desvia |

@@ -12,6 +12,7 @@ export interface Other {
   ax: number; ay: number; scope: number;          // fundeados: ferro e amarra
   s: number; spawnAt: number;                     // em movimento: posição ao longo do canal
   warned: boolean; near: boolean;
+  rate: number;                                   // guinada, rad/s (fundeados girando)
   /** Navio do berço: atracado, largando (4 min) ou já a caminho. */
   phase: 'berthed' | 'unberthing' | 'underway' | 'gone';
   departAt: number; asked: boolean;
@@ -20,7 +21,7 @@ const wrap = (a: number) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -
 const OUT_OFFSET = -55;   // o navio que sai mantém o boreste dele, que é o bombordo de quem entra
 
 function anchored(name: string, ax: number, ay: number, L: number, B: number, scope: number, color: number): Other {
-  return { name, kind: 'anchored', L, B, color, x: ax, y: ay, psi: 0, u: 0, active: true, ax, ay, scope, s: 0, spawnAt: 0, warned: false, near: false, phase: 'gone', departAt: 0, asked: false };
+  return { name, kind: 'anchored', L, B, color, x: ax, y: ay, psi: 0, u: 0, active: true, ax, ay, scope, s: 0, spawnAt: 0, warned: false, near: false, rate: 0, phase: 'gone', departAt: 0, asked: false };
 }
 export const UNBERTH_TIME = 240;          // segundos para largar e abrir do cais
 export const DEPART_DEFAULT = 30 * 60;    // sem ninguém pedir, o navio do berço só larga aos 30 min
@@ -33,7 +34,7 @@ export function makeTraffic(leaves = true): Other[] {
     anchored('Rio Itapanhaú', -2120, -3900, 135, 21, 90, 0x2f5a3a),
     // ocupa o nosso berço, aproado para o mar
     { name: 'Cabo Frio', kind: 'outbound', L: 180, B: 28, color: 0x1f1f1f, x: 0, y: 0, psi: 0, u: 0, active: true,
-      ax: 0, ay: 0, scope: 0, s: W.QUAY_S, spawnAt: 0, warned: false, near: false,
+      ax: 0, ay: 0, scope: 0, s: W.QUAY_S, spawnAt: 0, warned: false, near: false, rate: 0,
       phase: 'berthed', departAt: leaves ? DEPART_DEFAULT : Infinity, asked: false },
   ];
 }
@@ -49,13 +50,17 @@ export function updateTraffic(g: Game, dt: number) {
       const dx = ce + wx, dy = cn + wy, to = Math.atan2(dx, dy);        // para onde o navio é levado
       const first = o.psi === 0 && o.x === o.ax;
       const head = to + Math.PI;                                        // proa contra a resultante
-      o.psi = first ? head : o.psi + Math.max(-0.004 * dt, Math.min(0.004 * dt, wrap(head - o.psi)));
+      // um navio de 10 mil toneladas na amarra gira devagar: no máximo 3 graus por minuto
+      const step = first ? 0 : Math.max(-0.0009 * dt, Math.min(0.0009 * dt, wrap(head - o.psi) * 0.02 * dt));
+      o.rate = dt > 0 ? step / dt : 0;
+      o.psi = first ? head : o.psi + step;
       const r = o.scope + o.L / 2;
       o.x = o.ax - Math.sin(o.psi) * r; o.y = o.ay - Math.cos(o.psi) * r;
       continue;
     }
     if (o.phase === 'gone') continue;
-    const Q = W.QUAY, lane = 200 + OUT_OFFSET * Q.side, home = Q.fender + o.B / 2;
+    // na manobra a contrabordo o "cais" de destino é um navio; o navio do berço continua no Cais de Santos
+    const Q = g.sts ? W.QUAYS[0] : W.QUAY, lane = 200 + OUT_OFFSET * Q.side, home = Q.fender + o.B / 2;
     if (o.phase === 'berthed' || o.phase === 'unberthing') {
       if (o.phase === 'berthed' && g.time >= o.departAt) {
         o.phase = 'unberthing';
@@ -65,7 +70,7 @@ export function updateTraffic(g: Game, dt: number) {
       const p = o.phase === 'unberthing' ? Math.min(1, (g.time - o.departAt) / UNBERTH_TIME) : 0, e = p * p * (3 - 2 * p);
       const a = -60 * e, bq = home + (lane - home) * e;
       o.x = Q.cx + Q.tx * a + Q.nx * bq; o.y = Q.cy + Q.ty * a + Q.ny * bq;
-      o.psi = Math.atan2(-Q.tx, -Q.ty); o.u = p > 0 && p < 1 ? 0.4 : 0; o.s = W.QUAY_S + a;
+      o.psi = Math.atan2(-Q.tx, -Q.ty); o.u = p > 0 && p < 1 ? 0.4 : 0; o.s = Q.s + a;
       if (p >= 1) {
         o.phase = 'underway';
         g.say('Santos VTS', `Atenção, Maré Mansa: N/M ${o.name}, ${o.L} m, saindo pelo canal. Cruzamento bombordo com bombordo: mantenha-se a boreste do eixo. O berço está livre.`, 'warn');

@@ -49,6 +49,17 @@ function steps(): [string, boolean][] {
       ['Parar e passar as espias (M)', done || game.mooring > 0],
     ];
   }
+  if (game.scenario === 'contrabordo') {
+    const b = game.berth(), o = game.sts!, done = game.result?.ok === true || game.mooring > 0;
+    const dist = Math.hypot(o.x - s.x, o.y - s.y);
+    let dh = Math.abs(s.psi - o.psi); if (dh > Math.PI) dh = 2 * Math.PI - dh;
+    return [
+      [`Chegar ao N/M ${o.name}, pela popa dele`, done || dist < 450],
+      ['Emparelhar pelo boreste dele: paralelo, a menos de 40 m', done || (Math.abs(b.along) < 120 && Math.min(b.bow, b.stern) < 40 && dh < 0.3)],
+      ['Encostar a proa nas defensas, a meia-nau dele, quase parado', done || (Math.abs(b.along) <= W.QUAY.berthHalf && b.bow <= 8)],
+      ['Passar as espias (M)', done],
+    ];
+  }
   const a = game.anchor, inZone = Math.hypot(s.x - W.ANCHORAGE.x, s.y - W.ANCHORAGE.y) < W.ANCHORAGE.r, down = a.state === 'down';
   return [
     ['Chegar ao fundeadouro (círculo rosa, a noroeste)', inZone || down],
@@ -60,7 +71,7 @@ function steps(): [string, boolean][] {
 let missionHtml = '';
 function drawMission() {
   const st = steps(), cur = st.findIndex(x => !x[1]);
-  const html = `<b>${game.scenario === 'entrada' ? 'Entrada e atracação' : 'Fundeio'}</b>` + st.map(([t, d], i) => `<div class="${d ? 'done' : i === cur ? 'now' : ''}">${d ? '✓' : i === cur ? '▶' : '·'} ${t}</div>`).join('');
+  const html = `<b>${game.scenario === 'entrada' ? 'Entrada e atracação' : game.scenario === 'contrabordo' ? 'A contrabordo' : 'Fundeio'}</b>` + st.map(([t, d], i) => `<div class="${d ? 'done' : i === cur ? 'now' : ''}">${d ? '✓' : i === cur ? '▶' : '·'} ${t}</div>`).join('');
   if (html !== missionHtml) mission.innerHTML = missionHtml = html;
 }
 help.innerHTML = `<h2>AJUDA</h2><p>Clique ou aperte <kbd>H</kbd> para fechar.</p><div class="cols">
@@ -134,6 +145,7 @@ function menu() {
       <div class="choices">
         <button data-sc="entrada">▶ Entrada e atracação<small>VTS, prático opcional, berço ocupado por um navio que precisa sair, cruzamento no canal, duas curvas e atracação por bombordo.</small></button>
         <button data-sc="fundeio">▶ Fundeio<small>Fundear entre os navios do fundeadouro externo. Mais curto, bom para aprender.</small></button>
+        <button data-sc="contrabordo">▶ A contrabordo<small>Atracar no costado de um navio fundeado, que gira com o vento.</small></button>
       </div>
       <div class="preset">Navio: ${(Object.keys(SHIPS) as ShipClass[]).map(k => `<button data-freeship="${k}" class="${game.freeShip === k ? 'on' : ''}">${SHIPS[k].label}</button>`).join('')}</div>
       <div class="preset">Berço: ${W.QUAYS.map(q => `<button data-berth="${q.id}" class="${game.freeBerth === q.id ? 'on' : ''}">${q.name} (${q.side > 0 ? 'bombordo' : 'boreste'})</button>`).join('')}</div>

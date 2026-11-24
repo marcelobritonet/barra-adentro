@@ -251,7 +251,7 @@ export class Panel {
     document.querySelectorAll<HTMLButtonElement>('[data-mfdz]').forEach(b => { b.disabled = this.mfd === 'carta'; });
 
     // --- abas de operação
-    const bk = g.scenario === 'entrada' ? g.berth() : null;
+    const bk = g.scenario !== 'fundeio' ? g.berth() : null;
     const alert: Record<string, boolean> = {
       radio: g.scenario === 'entrada' && (g.vts === 'none' || (g.vts === 'ok' && !!berthShip(g) && berthShip(g)!.phase === 'berthed' && !berthShip(g)!.asked && g.time < 600) || (g.pilot.state === 'aboard' && (Math.round(s.rudderOrder / D2R) !== g.pilot.helm || s.telegraph !== g.pilot.tel))),
       tugs: g.tugs.some(t => t.state === 'waiting'),
@@ -311,12 +311,12 @@ export class Panel {
       : a.state === 'lost' ? '<span class="neg">FERRO PERDIDO</span>'
       : `${a.state === 'heaving' ? `Virando (${Math.floor(g.heaveLeft / 60)}:${String(Math.floor(g.heaveLeft % 60)).padStart(2, '0')})` : a.paid < a.target - 0.5 ? 'Arriando' : 'Fundeado'}: ${(a.paid / SHACKLE).toFixed(1)} quartéis<br>tensão ${(a.tension / 1000).toFixed(0)} kN ${a.dragging ? '<span class="neg">GARRANDO</span>' : ''}${g.scenario === 'fundeio' && g.holdTime > 0 ? `<br>confirmando: ${Math.max(0, 45 - g.holdTime).toFixed(0)} s` : ''}`;
     const bb = $('berthbox');
-    if (!entry) bb.innerHTML = 'não se aplica';
+    if (g.scenario === 'fundeio') bb.innerHTML = 'não se aplica';
     else if (g.mooring > 0) bb.innerHTML = 'Passando espias…';
     else {
       const b = g.berth(), near = Math.abs(b.along) < 400 && Math.min(b.bow, b.stern) < 150;
       bb.classList.toggle('off', !near);
-      bb.innerHTML = near ? `${W.QUAY.name}: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'passado' : 'a vante'}<br>por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}; proa ≤ 8 m, popa ≤ 35 m, parado` : `${W.QUAY.name}, por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}: ainda longe`;
+      bb.innerHTML = near ? `${W.QUAY.name}: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'passado' : 'a vante'}<br>por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}; proa ≤ 8 m, popa ≤ 35 m, parado` : `${W.QUAY.name}, por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'} seu: ainda longe`;
     }
 
     this.big.hidden = !this.bigChart;

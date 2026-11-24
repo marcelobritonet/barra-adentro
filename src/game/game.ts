@@ -10,7 +10,7 @@ import { bearingText, berthBusy, berthShip, DEPART_ON_REQUEST, hullDistance, mak
 import { Tide, tideAt, TidePreset, tideText } from '../world/tide';
 import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, reputation, salaries, saveCareer, Sky, wearFactor } from './career';
 
-export type Scenario = 'entrada' | 'fundeio';
+export type Scenario = 'entrada' | 'fundeio' | 'contrabordo';
 export interface Msg { t: number; text: string; level: 'info' | 'warn' | 'bad' | 'pilot'; who: string }
 export interface Result { ok: boolean; title: string; detail: string; lines: [string, number][]; total: number; trustBefore: number; trustAfter: number; left: boolean; rep: number }
 
@@ -20,7 +20,7 @@ function saveTrust(v: number) { try { localStorage.setItem(TRUST_KEY, String(Mat
 
 const DT = 0.05;
 const KQ = 4e5, CQ = 6e5, MU = 0.3;
-const PAR_MIN: Record<Scenario, number> = { entrada: 75, fundeio: 40 };
+const PAR_MIN: Record<Scenario, number> = { entrada: 75, fundeio: 40, contrabordo: 50 };
 
 export class Game {
   p = makeCoaster(1);
@@ -59,6 +59,18 @@ export class Game {
   ledger = { fuel: 0, speeding: 0, buoys: 0, contact: 0, anchor: 0, pilot: 0, vts: 0, tugs: 0 };
   tugs = makeTugs();
   traffic: Other[] = makeTraffic();
+  /** Atracação a contrabordo: o navio fundeado que serve de "cais". */
+  sts: Other | null = null;
+  private stsQuay: W.Quay = { id: 'sts', name: '', s: 0, side: 1, cx: 0, cy: 0, tx: 0, ty: 1, nx: 1, ny: 0, half: 60, berthHalf: 30, fender: 2.5 };
+  /** O costado de boreste do navio fundeado acompanha o giro dele. */
+  private syncSts() {
+    const o = this.sts; if (!o) return;
+    const q = this.stsQuay, tx = Math.sin(o.psi), ty = Math.cos(o.psi);
+    q.tx = tx; q.ty = ty; q.nx = ty; q.ny = -tx; q.cx = o.x + q.nx * o.B / 2; q.cy = o.y + q.ny * o.B / 2;
+    q.half = o.L / 2 - 15; q.name = `N/M ${o.name}`;
+  }
+  /** Onde o navio encosta: cais ou outro navio. */
+  get against() { return this.sts ? 'navio' : 'cais'; }
   pilot = new Pilot();
   /** Autorização de entrada do VTS. */
   vts: 'none' | 'asked' | 'ok' = 'none';
@@ -115,6 +127,14 @@ export class Game {
     this.ledger = { fuel: 0, speeding: 0, buoys: 0, contact: 0, anchor: 0, pilot: 0, vts: 0, tugs: 0 };
     this.tugs = makeTugs(this.geo.tug);
     this.traffic = makeTraffic(sc === 'entrada'); updateTraffic(this, 0);
+    this.sts = sc === 'contrabordo' ? this.traffic[0] : null;
+    if (this.sts) {
+      this.syncSts(); W.useQuay(this.stsQuay);
+      // começa pela popa do navio fundeado, um pouco aberto para o bordo de boreste dele
+      const o = this.sts, q = this.stsQuay;
+      this.s = makeState(o.x - q.tx * 950 + q.nx * 160, o.y - q.ty * 950 + q.ny * 160, o.psi / D2R, 4, 6);
+      this.s.air = this.p.airStarts;
+    }
     this.pilot = new Pilot(); this.vts = sc === 'entrada' ? 'none' : 'ok'; this.vtsTimer = 0;
     this.mooring = 0; this.holdTime = 0; this.anchorPhase = 'stowed'; this.berthSig = ''; this.berthAt = -99; this.said.clear(); this.lastContact = -99;
     this.status = 'running';
@@ -127,6 +147,9 @@ export class Game {
       if (this.sky === 'noite') this.say('Imediato', 'Noite sem lua. Encarnada a boreste, verde a bombordo: siga as luzes das boias.', 'info');
       this.say('Imediato', 'Precisamos da autorização do VTS antes da barra. Prático é opcional: chame pelo rádio se quiser.', 'info');
       this.say('Imediato', `Berço: ${W.QUAY.name}, ${W.QUAY.side > 0 ? 'por bombordo, depois da segunda curva' : 'por boreste, no fundo do canal'}. Calado ${this.p.T.toFixed(1).replace('.', ',')} m. Temos ar para ${this.p.airStarts} partidas de máquina.`, 'info');
+    } else if (sc === 'contrabordo') {
+      this.say('Capitania', `Atraque a contrabordo do N/M ${this.sts!.name}, fundeado, pelo boreste dele, para o transbordo.`, 'info');
+      this.say('Imediato', 'Ele está aproado ao vento e gira devagar. Chegue paralelo, quase parado, e encoste a proa nas defensas. Depois, espias (M).', 'info');
     } else {
       this.say('Capitania', 'Berço ocupado. Fundeie no fundeadouro a noroeste e aguarde.', 'info');
       this.say('Imediato', 'Há três navios fundeados. Precisamos de uns 280 m de folga do ferro de cada um.', 'info');
@@ -250,10 +273,10 @@ export class Game {
     return { along: ac, bow, stern };
   }
   moor() {
-    if (this.status !== 'running' || this.scenario !== 'entrada' || this.mooring > 0) return;
-    if (berthBusy(this)) return this.say('Imediato', `O berço ainda está ocupado pelo ${berthShip(this)!.name}.`, 'warn');
+    if (this.status !== 'running' || this.scenario === 'fundeio' || this.mooring > 0) return;
+    if (this.scenario === 'entrada' && berthBusy(this)) return this.say('Imediato', `O berço ainda está ocupado pelo ${berthShip(this)!.name}.`, 'warn');
     const b = this.berth();
-    if (Math.abs(b.along) > W.QUAY.berthHalf) return this.say('Imediato', `Fora da posição: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'avante' : 'a ré'} do berço.`, 'warn');
+    if (Math.abs(b.along) > W.QUAY.berthHalf) return this.say('Imediato', `Fora da posição: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'avante' : 'a ré'} do ${this.sts ? 'meio do navio' : 'berço'}.`, 'warn');
     // a proa precisa estar encostada; a popa pode vir depois, virada pelos cabos
     if (b.bow > 8 || b.stern > 35) return this.say('Imediato', `Longe demais para passar espias: proa ${Math.max(0, b.bow).toFixed(0)} m (máx. 8), popa ${Math.max(0, b.stern).toFixed(0)} m (máx. 35).`, 'warn');
     if (this.sog > 0.25) return this.say('Imediato', 'Ainda com seguimento. Pare o navio antes de amarrar.', 'warn');
@@ -317,12 +340,18 @@ export class Game {
 
     // --- outros navios: abalroamento encerra a viagem; passar raspando custa confiança
     updateTraffic(this, DT);
+    this.syncSts();
     for (const o of this.traffic) {
       if (!o.active) continue;
       if (Math.hypot(o.x - s.x, o.y - s.y) > o.L / 2 + 160) { o.near = false; continue; }
       if (o.phase === 'berthed' && this.mooring <= 0 && Math.hypot(o.x - s.x, o.y - s.y) > o.L / 2 + 60) continue;
       let dmin = 1e9;
-      for (const [xf, ys] of HULL) dmin = Math.min(dmin, hullDistance(o, ...bodyToWorld(s, xf, ys)));
+      for (const [xf, ys] of HULL) {
+        const [wx, wy] = bodyToWorld(s, xf, ys);
+        if (o === this.sts) { const [qa, qb] = W.quayLocal(wx, wy); if (Math.abs(qa) <= W.QUAY.half + 2 && qb > -4) continue; } // esse lado tem defensas
+        dmin = Math.min(dmin, hullDistance(o, wx, wy));
+      }
+      if (o === this.sts && dmin > 0.5) continue; // chegar perto dele é a manobra
       if (dmin <= 0.5) return this.finish(false, 'Abalroamento', `O Maré Mansa abalroou o N/M ${o.name}${o.kind === 'anchored' ? ', que estava fundeado' : ''}.`, 120000);
       const limit = o.kind === 'anchored' ? 25 : 35;
       if (dmin < limit && !o.near) {
@@ -346,8 +375,10 @@ export class Game {
       const [wx, wy] = bodyToWorld(s, xf, ys);
       const [a, b] = W.quayLocal(wx, wy);
       if (Math.abs(a) > Q.half + 2 || b >= Q.fender) continue;
-      if (b < -4) return this.finish(false, 'Colisão com o cais', 'O navio entrou cais adentro.', 60000);
-      const [vx, vy] = pointVelocity(s, xf, ys);
+      if (b < -4) return this.finish(false, this.sts ? 'Abalroamento' : 'Colisão com o cais', this.sts ? `O Maré Mansa esmagou as defensas e abalroou o N/M ${this.sts.name}.` : 'O navio entrou cais adentro.', this.sts ? 120000 : 60000);
+      let [vx, vy] = pointVelocity(s, xf, ys);
+      // a contrabordo, o que importa é a velocidade em relação ao costado do outro navio, que gira
+      if (this.sts) { vx -= this.sts.rate * (wy - this.sts.y); vy += this.sts.rate * (wx - this.sts.x); }
       const vn = vx * Q.nx + vy * Q.ny, vt = vx * Q.tx + vy * Q.ty;
       const F = Math.max(0, KQ * (Q.fender - b) - CQ * vn) * this.size;
       const fr = -MU * F * Math.tanh(vt / 0.05);
@@ -382,7 +413,7 @@ export class Game {
       this.mooring -= DT;
       const mb = this.berth();
       if (this.mooring <= 0) this.mooring = DT; // só termina com o navio encostado
-      if (this.mooring <= DT && mb.bow < 3.5 && mb.stern < 2.5) return this.finish(true, 'Navio atracado', 'Espias passadas, portaló arriado.');
+      if (this.mooring <= DT && mb.bow < 3.5 && mb.stern < 2.5) return this.finish(true, this.sts ? 'Navio a contrabordo' : 'Navio atracado', this.sts ? `Amarrado ao costado do N/M ${this.sts.name}. Mangotes conectados.` : 'Espias passadas, portaló arriado.');
     }
 
     // --- encalhe e margens
@@ -432,7 +463,7 @@ export class Game {
       this.say('Imediato', `Comandante, ${(this.sog / KN).toFixed(1)} nós. O limite é ${this.limitKn}.`, 'warn', 'prespeed', 60);
     }
 
-    if (this.scenario === 'entrada' && this.mooring <= 0) {
+    if (this.scenario !== 'fundeio' && this.mooring <= 0) {
       const b = this.berth();
       if (Math.min(b.bow, b.stern) < 120 && Math.abs(b.along) < 300) {
         const f = (v: number) => (v < 0.3 ? 'encostada' : `a ${v.toFixed(v < 10 ? 1 : 0)} m`);
@@ -441,7 +472,7 @@ export class Game {
         const sig = `${Math.round(b.bow / q)}/${Math.round(b.stern / q)}`;
         if (sig !== this.berthSig && this.time - this.berthAt >= (far ? 20 : 7) * cf * cf) {
           this.berthSig = sig; this.berthAt = this.time;
-          this.say('Proa', `Proa ${f(b.bow)}, popa ${f(b.stern)} do cais.`, 'info');
+          this.say('Proa', `Proa ${f(b.bow)}, popa ${f(b.stern)} do ${this.against}.`, 'info');
         }
       }
       if (this.trust > -20 && b.along > -700 && b.along < -150 && this.sog > 4 * KN) {
@@ -470,8 +501,8 @@ export class Game {
   private onImpact(v: number) {
     const kn = (v / KN).toFixed(1);
     this.emit('thud');
-    if (v > 0.6) return this.finish(false, 'Avaria grave no cais', `Tocou o cais a ${kn} nós.`, 60000);
-    if (v > 0.3) { this.ledger.contact += 15000; this.trustEvent(-18, 'pancada no cais'); this.say('Imediato', `Pancada forte no cais: ${kn} nós. Vai ter vistoria.`, 'bad'); }
+    if (v > 0.6) return this.finish(false, this.sts ? 'Avaria grave nos dois navios' : 'Avaria grave no cais', `Tocou o ${this.against} a ${kn} nós.`, this.sts ? 90000 : 60000);
+    if (v > 0.3) { this.ledger.contact += 15000; this.trustEvent(-18, 'pancada no cais'); this.say('Imediato', `Pancada forte no ${this.against}: ${kn} nós. Vai ter vistoria.`, 'bad'); }
     else if (v > 0.15) { this.ledger.contact += 3000; this.trustEvent(-6, 'encostou duro'); this.say('Imediato', `Encostou duro: ${kn} nós.`, 'warn'); }
     else { this.say('Imediato', this.tone(`Encostou macio, ${kn} nós.`), 'info'); this.trustEvent(8, 'atracação macia', 'soft', 600); }
   }
@@ -479,7 +510,7 @@ export class Game {
   private finish(ok: boolean, title: string, detail: string, penalty = 0) {
     const L = this.ledger, lines: [string, number][] = [];
     const ct = this.contract;
-    if (ok) lines.push(ct ? [`Frete: ${ct.cargo}`, ct.freight] : this.scenario === 'entrada' ? ['Frete: 2.900 t de fertilizante', 28000] : ['Fundeio dentro do prazo', 3500]);
+    if (ok) lines.push(ct ? [`Frete: ${ct.cargo}`, ct.freight] : this.scenario === 'entrada' ? ['Frete: 2.900 t de fertilizante', 28000] : this.scenario === 'contrabordo' ? ['Transbordo a contrabordo', 14000] : ['Fundeio dentro do prazo', 3500]);
     if (penalty) lines.push([title, -penalty]);
     lines.push(['Óleo combustível', -Math.round(L.fuel)]);
     if (L.pilot) lines.push([`Praticagem (${this.pilot.name.toLowerCase()})`, -L.pilot]);
