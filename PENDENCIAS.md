@@ -30,6 +30,8 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 24 | Vento e corrente se percebem? | Pergunta do teste: "ela acontece?". Respondido na v0.22.0 com vento por contrato, abatimento no GPS, rumo a governar no plano e carneirinhos | Falta confirmar jogando; se ainda for pouco, aumentar a corrente de través nas curvas (item 9) |
 | 25 | Tela de celular | Navio em tela cheia, barra de valores embaixo, botões semitransparentes que levantam cada equipamento. Feito na v0.23.0, só no navegador | Falta você testar num aparelho e dizer o que mudar: o que fica na barra, onde ficam os botões, tamanho das folhas |
 | 26 | Posição dos consoles na tela de mesa | Três arrumações na v0.24.0, trocadas pelo botão "Painel": console (ECDIS 472 px), flutuante e lado | Falta você escolher uma, ou pedir outra variação |
+| 27 | Vista desobstruída (v0.24.3) | Mensagens que somem sozinhas, botão "Msgs" e passos recolhidos | Falta você testar; confirmar também se as mensagens somem no tempo certo (14 s comuns, 24 s avisos) |
+| 31 | Recolher o quadro do plano para uma linha | Ele continua grande sobre a vista; recolher como foi feito com os passos | Falta você decidir, depois de testar a v0.24.3 |
 | 17 | Plano de bordo | Retorno do teste: "ficou absurdo de bom" | Aprovado |
 
 ## A fazer
