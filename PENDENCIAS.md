@@ -34,7 +34,6 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 5 | Mais tráfego | Navio entrando atrás de você, navio que recusa pedido, mais variedade a cada viagem |
 | 7 | Mais berços e manobras | Contrabordo de navio atracado, um terceiro berço, giro na bacia para o Terminal da Ilha |
 | 22 | Prático girar sem rebocadores | Hoje devolve o giro ao comandante; a tentativa com leme e máquina encalhou |
-| 21 | Conferir na tela a manobra a contrabordo | Testada só por script na v0.14.0 |
 | 8 | Mais progressão | Terceiro navio, tripulantes com nome, manutenção, contratos com validade |
 | 19 | Prático com o graneleiro | Atraca com dois rebocadores, mas abre demais na segunda curva e chega torto; sem rebocadores não foi testado |
 | 18 | Calibrar a economia jogando | Caixa inicial de R$ 8.000, preços e fretes são primeiro chute |
