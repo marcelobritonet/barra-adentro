@@ -158,7 +158,8 @@ Sem doppler, quem informa a distância ao cais é a proa, pelo rádio ("Proa a 1
 | Ordens do prático no rádio e num quadro do painel, em vermelho enquanto não cumpridas | Feito |
 | Amarração: basta a proa encostada (até 8 m) e a popa a até 35 m; os cabos trazem a popa | Feito |
 | Rebocadores de proa e de popa, chamados e comandados pelo rádio | Feito |
-| Pedir a navio que aguarde ou saia | A fazer |
+| Pedir ao navio do berço que adiante a largada | Feito |
+| Pedir a um navio que aguarde; navio que recusa ou cobra | A fazer |
 
 | Prático | Custo | Embarque | Diferença |
 |---|---|---|---|
@@ -189,12 +190,13 @@ Ideias ainda não feitas:
 |---|---|
 | Fundeados | Três navios de 120 a 150 m no fundeadouro; aproam a resultante de vento e corrente e giram quando a maré vira |
 | Folga para fundear | Cerca de 280 m do ferro de cada um; dentro do giro de outro o fundeio não é confirmado e a confiança cai |
-| Navio saindo | Um navio de 180 m larga aos 3 min, desce o canal a 6 nós (8 na baía) pelo lado dele e não desvia |
+| Berço ocupado | Um navio de 180 m começa atracado no berço do jogador. Larga aos 30 min, ou 6 min depois de um pedido pelo rádio; leva 4 min para abrir do cais |
+| Navio saindo | Depois de largar, desce o canal a 6 nós (8 na baía) pelo lado dele e não desvia |
 | Cruzamento | Bombordo com bombordo; quem entra fica a boreste do eixo |
 | Abalroamento | Fim da viagem, R$ 120.000 |
 | Passar raspando | Menos de 35 m de navio em movimento ou 25 m de fundeado: −6 de confiança e protesto pelo rádio |
 | Como ver | Na vista; eco no radar; alvo AIS no ECDIS com vetor, distância e velocidade |
-| A fazer | Interação hidrodinâmica entre navios, berço ocupado, pedir passagem pelo rádio, mais de um navio em movimento |
+| A fazer | Interação hidrodinâmica entre navios, navio que recusa ou negocia o pedido, mais de um navio em movimento, atracar a contrabordo |
 
 ## Economia
 

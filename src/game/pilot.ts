@@ -2,6 +2,7 @@
 import { D2R, KN } from '../sim/ship';
 import * as W from '../world/santos';
 import type { Game } from './game';
+import { berthBusy, berthShip, UNBERTH_TIME } from './traffic';
 
 export type PilotGrade = 'padrao' | 'senior';
 export const PILOTS = {
@@ -27,7 +28,7 @@ export class Pilot {
   private final = false; private kick = 0; private retry = false;
   /** Recusou atracar com corrente a favor; volta a orientar quando a maré virar. */
   declined = false;
-  private meetSaid = false;
+  private meetSaid = false; private waitSaid = false; private paceSaid = false;
 
   get name() { return PILOTS[this.grade].label; }
 
@@ -62,6 +63,27 @@ export class Pilot {
     };
     if (g.mooring > 0) return [0, 4];
 
+    // --- berço ocupado, ou o navio que largou ainda não passou por nós: segura o navio no canal, a boreste
+    const other = berthShip(g);
+    const busy = !this.final && berthBusy(g);
+    const blocked = busy || (!this.final && !!other && other.phase === 'underway' && other.s > n.s - 120);
+    if (busy && n.s > W.S_MOUTH + 1050) {
+      if (berthBusy(g) && !this.waitSaid) {
+        this.waitSaid = true;
+        g.say(this.name, `Berço ocupado pelo ${other!.name}. Vamos aguardar na reta, a boreste do canal${other!.asked ? '' : '; peça a ele pelo rádio que largue'}.`, 'warn');
+      }
+      const anchored = g.anchor.state === 'down' || g.anchor.state === 'heaving';
+      if (g.tide.flow < -0.1 || anchored) {
+        // com corrente a favor não dá para ficar parado no canal: só fundeando
+        if (!anchored) g.say(this.name, 'Com a corrente a favor não seguro o navio aqui. Tire o seguimento e largue o ferro.', 'warn', 'holdflood', 90);
+        return [0, anchored ? 4 : s.u > 0.25 ? 2 : 4];
+      }
+      // segura o navio aproado à vazante no meio da reta, longe das curvas
+      const left = W.S_MOUTH + 1500 - n.s, vT = Math.max(0, Math.min(1.2, left / 350));
+      const [hx, hy] = W.pointAt(n.s + P.look, 55);
+      return [steer(hx, hy, 25), g.sog > vT + 0.5 && s.u > 0 ? 2 : g.sog > vT + 0.12 && s.u > 0 ? 4 : 5];
+    }
+
     // --- com corrente a favor não se atraca: o navio não para nem governa. Espera a maré virar.
     if (ds < 1000 && !this.final && g.mooring <= 0) {
       if (g.tide.flow < -0.1 && !this.declined) {
@@ -80,8 +102,8 @@ export class Pilot {
       }
     }
 
-    // --- aproximação e atracação
-    if (ds < 800 || this.final) {
+    // --- aproximação e atracação (só depois que o navio que saiu passar por nós)
+    if ((ds < 800 && !blocked) || this.final) {
       // rota em coordenadas do cais (a = ao longo, b = distância da face ao centro do navio):
       // sai do eixo, converge em ângulo raso e fica paralela só na hora de encostar
       const end = Q.fender + 7.5;
@@ -146,12 +168,21 @@ export class Pilot {
 
     // --- canal: mira num ponto do eixo à frente e quebra a guinada antes
     // navio saindo pela frente: fica a boreste do eixo para cruzar bombordo com bombordo
-    const meeting = g.traffic.some(o => o.kind === 'outbound' && o.active && o.s > n.s - 150 && o.s - n.s < 3200);
+    const meeting = g.traffic.some(o => o.kind === 'outbound' && o.phase !== 'gone' && o.s > n.s - 150 && o.s - n.s < 3200);
     if (meeting && !this.meetSaid) { this.meetSaid = true; g.say(this.name, 'Navio saindo. Vamos pelo boreste do canal e cruzar bombordo com bombordo.', 'info'); }
     const [tx, ty] = W.pointAt(n.s + P.look, meeting ? 50 : 0);
     let tel = n.s < W.S_MOUTH - 500 ? 7 : 6;
     if (n.s >= W.S_MOUTH - 500 && g.sog > 6 * KN) tel = 5;       // folga do limite de 8 nós, mesmo com a corrente a favor
     if (ds < 1900 && g.sog > 1.6) tel = g.sog > 2.4 ? 2 : g.sog > 1.9 ? 4 : 5; // já vai tirando seguimento para o berço
+    // berço ocupado: regula a chegada à reta para a hora em que ele estiver livre, em vez de correr e ficar parado
+    if (busy && other && Number.isFinite(other.departAt)) {
+      const free = other.departAt + UNBERTH_TIME + 60 - g.time, dist = W.S_MOUTH + 1500 - n.s;
+      if (free > 0 && dist > 0) {
+        const cap = Math.max(0.45, dist / free);
+        if (g.sog > cap + 0.9) tel = Math.min(tel, 2); else if (g.sog > cap + 0.25) tel = Math.min(tel, 4); else if (g.sog > cap) tel = Math.min(tel, 5);
+        if (!this.paceSaid && cap < 2) { this.paceSaid = true; g.say(this.name, `O berço só fica livre em ${Math.round(free / 60)} min. Vamos devagar para chegar na hora${other.asked ? '' : '; ou peça ao ' + other.name + ' que largue antes'}.`, 'info'); }
+      }
+    }
     return [steer(tx, ty, 25), tel];
   }
 

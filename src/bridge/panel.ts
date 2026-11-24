@@ -2,6 +2,7 @@
 import { Game } from '../game/game';
 import { PILOTS, PilotGrade } from '../game/pilot';
 import { TUG_FEE, TUG_PER_MIN, TugMode } from '../game/tugs';
+import { berthShip } from '../game/traffic';
 import { SHACKLE } from '../sim/anchor';
 import { D2R, KN, TELEGRAPH, TELEGRAPH_LABELS, TELEGRAPH_STOP } from '../sim/ship';
 import * as W from '../world/santos';
@@ -87,6 +88,7 @@ export class Panel {
           <div class="tab" data-pane="radio">
             <div id="vhf">
               <button id="vts">Santos VTS: pedir entrada</button>
+              <button id="callship"></button>
               <button data-pilot="padrao">Prático · R$ ${PILOTS.padrao.fee.toLocaleString('pt-BR')} · ${Math.round(PILOTS.padrao.eta / 60)} min</button>
               <button data-pilot="senior">Prático sênior · R$ ${PILOTS.senior.fee.toLocaleString('pt-BR')} · ${Math.round(PILOTS.senior.eta / 60)} min</button>
             </div>
@@ -142,6 +144,7 @@ export class Panel {
       if (t.id === 'heave') g.heaveAnchor();
       if (t.id === 'moor') g.moor();
       if (t.id === 'vts') g.callVTS();
+      if (t.id === 'callship') g.callShip();
       if (t.dataset.pilot) g.callPilot(t.dataset.pilot as PilotGrade);
       const tugEl = t.closest<HTMLElement>('.tug');
       if (tugEl) {
@@ -246,7 +249,7 @@ export class Panel {
     // --- abas de operação
     const bk = g.scenario === 'entrada' ? g.berth() : null;
     const alert: Record<string, boolean> = {
-      radio: g.scenario === 'entrada' && (g.vts === 'none' || (g.pilot.state === 'aboard' && (Math.round(s.rudderOrder / D2R) !== g.pilot.helm || s.telegraph !== g.pilot.tel))),
+      radio: g.scenario === 'entrada' && (g.vts === 'none' || (g.vts === 'ok' && !!berthShip(g) && berthShip(g)!.phase === 'berthed' && !berthShip(g)!.asked && g.time < 600) || (g.pilot.state === 'aboard' && (Math.round(s.rudderOrder / D2R) !== g.pilot.helm || s.telegraph !== g.pilot.tel))),
       tugs: g.tugs.some(t => t.state === 'waiting'),
       deck: g.anchor.dragging || (!!bk && Math.abs(bk.along) < 60 && bk.bow < 10 && g.mooring <= 0),
       equip: false,
@@ -259,6 +262,14 @@ export class Panel {
     const vts = $<HTMLButtonElement>('vts');
     vts.disabled = g.vts !== 'none' || !entry; vts.classList.toggle('on', g.vts === 'ok' && entry);
     vts.textContent = !entry ? 'VTS: não se aplica' : g.vts === 'none' ? 'Santos VTS: pedir entrada' : g.vts === 'asked' ? 'VTS: aguardando resposta…' : 'VTS: entrada autorizada';
+    const bs = berthShip(g), cs = $<HTMLButtonElement>('callship');
+    cs.style.display = entry && bs ? '' : 'none';
+    if (entry && bs) {
+      cs.disabled = bs.phase !== 'berthed' || bs.asked; cs.classList.toggle('on', bs.phase === 'gone' || bs.phase === 'underway');
+      const left = Math.max(0, bs.departAt - g.time);
+      cs.textContent = bs.phase === 'berthed' ? (bs.asked ? `${bs.name}: larga em ${fmtTime(left).slice(3)}` : `${bs.name} no berço (larga em ${Math.ceil(left / 60)} min): pedir que largue`)
+        : bs.phase === 'unberthing' ? `${bs.name}: largando do cais` : bs.phase === 'underway' ? `${bs.name}: saindo pelo canal, berço livre` : 'Berço livre';
+    }
     document.querySelectorAll<HTMLButtonElement>('[data-pilot]').forEach(b => { b.disabled = pl.state !== 'none' || !entry; b.classList.toggle('on', pl.state !== 'none' && b.dataset.pilot === pl.grade); });
     const pb = $('pilotbox');
     pb.classList.toggle('off', pl.state === 'none');

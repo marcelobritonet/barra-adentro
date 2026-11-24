@@ -26,12 +26,12 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | # | Item | Observação |
 |---|---|---|
 | 1 | Jogar de novo e ajustar | Atrasos de ordem, ar de partida, desgaste e o berço depois das curvas são novos; valores são um primeiro chute |
-| 4 | Mais rádio | Pedir a navio que aguarde ou saia; hoje há VTS e praticagem |
+| 4 | Mais rádio | Pedir a um navio que aguarde, navio que recusa ou negocia; hoje há VTS, praticagem e pedir a largada |
 | 12 | Diferenciar melhor os dois práticos | Hoje o sênior só embarca antes e antecipa um pouco mais |
 | 13 | Prático no cenário de fundeio | Hoje só orienta a entrada |
 | 14 | Prático comandar os rebocadores | Hoje quem ordena é o comandante |
 | 15 | Calibrar rebocadores jogando | Empurrar a 25% por 45 s já encosta a 0,3 nó; ver se as potências fazem sentido |
-| 5 | Mais tráfego | Berço ocupado, atracar a contrabordo, sucção entre navios, mais de um navio em movimento |
+| 5 | Mais tráfego | Atracar a contrabordo, sucção entre navios, mais de um navio em movimento |
 | 7 | Resto do canal de Santos | O mapa já tem as curvas; faltam berços e missões |
 | 8 | Oficina, tripulação e contratos | Parâmetros do navio já estão isolados em `makeCoaster` |
 | 10 | Noite e nevoeiro | O radar já existe para isso |
@@ -61,3 +61,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.4.0: efeito de margem; prático refaz aproximação ruim |
 | v0.5.0: marés (altura, corrente que inverte, 4 condições), prático recusa atracar com corrente a favor |
 | v0.6.0: tráfego (fundeados, navio saindo, abalroamento, radar e AIS); correções do teclado e do molinete |
+| v0.7.0: berço ocupado, pedido de largada pelo rádio, prático regula a chegada; porta estável para testar |

@@ -6,7 +6,7 @@ import {
 import * as W from '../world/santos';
 import { Pilot, PilotGrade, PILOTS } from './pilot';
 import { makeTugs, TugMode } from './tugs';
-import { bearingText, hullDistance, makeTraffic, Other, swingRadius, updateTraffic } from './traffic';
+import { bearingText, berthBusy, berthShip, DEPART_ON_REQUEST, hullDistance, makeTraffic, Other, swingRadius, updateTraffic } from './traffic';
 import { Tide, tideAt, TidePreset, tideText } from '../world/tide';
 
 export type Scenario = 'entrada' | 'fundeio';
@@ -89,7 +89,7 @@ export class Game {
     this.msgs = []; this.result = null; this.hitBuoys.clear();
     this.ledger = { fuel: 0, speeding: 0, buoys: 0, contact: 0, anchor: 0, pilot: 0, vts: 0, tugs: 0 };
     this.tugs = makeTugs();
-    this.traffic = makeTraffic(); updateTraffic(this, 0);
+    this.traffic = makeTraffic(sc === 'entrada'); updateTraffic(this, 0);
     this.pilot = new Pilot(); this.vts = sc === 'entrada' ? 'none' : 'ok'; this.vtsTimer = 0;
     this.mooring = 0; this.holdTime = 0; this.anchorPhase = 'stowed'; this.berthSig = ''; this.berthAt = -99; this.said.clear(); this.lastContact = -99;
     this.status = 'running';
@@ -169,6 +169,16 @@ export class Game {
     this.pilot.call(this, grade);
   }
 
+  /** Pede pelo rádio que o navio do berço adiante a largada. */
+  callShip() {
+    const o = berthShip(this);
+    if (this.status !== 'running' || this.scenario !== 'entrada' || !o || o.phase !== 'berthed' || o.asked) return;
+    o.asked = true;
+    this.say('Maré Mansa', `${o.name}, Maré Mansa. Estou entrando para o seu berço. O senhor pode adiantar a largada?`, 'info');
+    const at = this.time + DEPART_ON_REQUEST;
+    if (at < o.departAt) { o.departAt = at; this.say(`N/M ${o.name}`, `Maré Mansa, ${o.name}. Afirmativo, largo em ${Math.round(DEPART_ON_REQUEST / 60)} minutos e saio pelo meu boreste.`, 'info'); }
+    else this.say(`N/M ${o.name}`, `Maré Mansa, ${o.name}. Já estou largando, aguarde.`, 'info');
+  }
   callTug(i: number) {
     if (this.status !== 'running' || this.scenario !== 'entrada' || this.tugs[i].state !== 'none') return;
     this.say('Maré Mansa', `Rebocadores, Maré Mansa. Solicito um rebocador na ${this.tugs[i].where}.`, 'info');
@@ -211,6 +221,7 @@ export class Game {
   }
   moor() {
     if (this.status !== 'running' || this.scenario !== 'entrada' || this.mooring > 0) return;
+    if (berthBusy(this)) return this.say('Imediato', `O berço ainda está ocupado pelo ${berthShip(this)!.name}.`, 'warn');
     const b = this.berth();
     if (Math.abs(b.along) > W.QUAY.berthHalf) return this.say('Imediato', `Fora da posição: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'avante' : 'a ré'} do berço.`, 'warn');
     // a proa precisa estar encostada; a popa pode vir depois, virada pelos cabos
@@ -242,7 +253,9 @@ export class Game {
 
     if (this.vts === 'asked' && (this.vtsTimer -= DT) <= 0) {
       this.vts = 'ok';
-      this.say('Santos VTS', `Maré Mansa, entrada autorizada. Canal livre, limite de ${W.SPEED_LIMIT_KN} nós da barra para dentro. Maré ${tideText(this.tide)}.`, 'info');
+      const o = berthShip(this), wait = o && o.phase === 'berthed' ? Math.max(0, Math.round((o.departAt - this.time) / 60)) : 0;
+      this.say('Santos VTS', `Maré Mansa, entrada autorizada, limite de ${W.SPEED_LIMIT_KN} nós da barra para dentro. Maré ${tideText(this.tide)}.`, 'info');
+      if (o && berthBusy(this)) this.say('Santos VTS', `Seu berço está ocupado pelo N/M ${o.name}, com largada prevista em ${wait} min. Regule a chegada ou combine com ele pelo rádio.`, 'warn');
     }
     this.pilot.update(this, DT);
 
@@ -276,6 +289,7 @@ export class Game {
     for (const o of this.traffic) {
       if (!o.active) continue;
       if (Math.hypot(o.x - s.x, o.y - s.y) > o.L / 2 + 160) { o.near = false; continue; }
+      if (o.phase === 'berthed' && this.mooring <= 0 && Math.hypot(o.x - s.x, o.y - s.y) > o.L / 2 + 60) continue;
       let dmin = 1e9;
       for (const [xf, ys] of HULL) dmin = Math.min(dmin, hullDistance(o, ...bodyToWorld(s, xf, ys)));
       if (dmin <= 0.5) return this.finish(false, 'Abalroamento', `O Maré Mansa abalroou o N/M ${o.name}${o.kind === 'anchored' ? ', que estava fundeado' : ''}.`, 120000);
@@ -289,7 +303,7 @@ export class Game {
       }
     }
     for (const o of this.traffic) {
-      if (o.kind !== 'outbound' || !o.active) continue;
+      if (o.kind !== 'outbound' || o.phase !== 'underway') continue;
       const d = Math.hypot(o.x - s.x, o.y - s.y);
       if (d < 1300) this.say('Imediato', `N/M ${o.name} ${bearingText(this, o)}, a ${(d / 1852).toFixed(1).replace('.', ',')} milha, vindo em sentido contrário.`, 'info', 'meet' + o.name, 90);
     }

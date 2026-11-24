@@ -6,9 +6,9 @@ import { PilotGrade } from './pilot';
 import { TidePreset } from '../world/tide';
 
 /** Comandante obediente: executa exatamente o que o prático manda. */
-function voyage(grade: PilotGrade, tide: TidePreset = 'vazante') {
+function voyage(grade: PilotGrade, tide: TidePreset = 'vazante', ask = true) {
   const g = new Game();
-  g.trust = 0; g.tidePreset = tide; g.start('entrada'); g.callVTS(); g.callPilot(grade);
+  g.trust = 0; g.tidePreset = tide; g.start('entrada'); g.callVTS(); g.callPilot(grade); if (ask) g.callShip();
   g.warp = 8;
   let maxOff = 0, orders = 0, moorAt = 0;
   for (let i = 0; i < 12000 && g.status === 'running'; i++) {
@@ -41,7 +41,7 @@ describe('prático', () => {
   });
   for (const tide of ['enchente', 'baixamar'] as TidePreset[]) {
     it(`com corrente a favor (${tide}) o prático recusa atracar e manda aguardar a maré`, () => {
-      const g = new Game(); g.trust = 0; g.tidePreset = tide; g.start('entrada'); g.callVTS(); g.callPilot('senior'); g.warp = 8;
+      const g = new Game(); g.trust = 0; g.tidePreset = tide; g.start('entrada'); g.callVTS(); g.callPilot('senior'); g.callShip(); g.warp = 8;
       for (let i = 0; i < 6000 && g.status === 'running' && !g.pilot.declined; i++) {
         const s = g.s, n = W.nearest(s.x, s.y);
         if (g.pilot.state === 'aboard') { g.setRudderDeg(g.pilot.helm); g.setTelegraph(g.pilot.tel); }
@@ -53,6 +53,11 @@ describe('prático', () => {
       expect(g.tide.flow).toBeLessThan(0);
     });
   }
+  it('sem pedir que o navio do berço largue, o prático regula a chegada e atraca depois dos 30 min', () => {
+    const { g } = voyage('senior', 'vazante', false);
+    expect(g.result?.ok).toBe(true);
+    expect(g.time / 60).toBeGreaterThan(34);
+  });
   it('padrão também chega, com mais desvio', () => {
     const { g } = voyage('padrao');
     expect(g.result?.ok).toBe(true);

@@ -8,27 +8,38 @@ const stopped = (g: Game, x: number, y: number, psiDeg = 0) => { const s = g.s; 
 const run = (g: Game, sec: number) => { g.warp = 8; for (let t = 0; t < sec && g.status === 'running'; t += 0.8) g.update(0.1); };
 
 describe('tráfego', () => {
-  it('o navio que sai segue o canal pelo lado dele, em água funda, e some na baía', () => {
-    const g = new Game(); g.start('fundeio'); stopped(g, -3000, -5000);
+  it('o navio do berço fica atracado até a hora, larga, segue o canal pelo lado dele em água funda e some na baía', () => {
+    const g = new Game(); g.start('entrada'); g.vts = 'ok'; stopped(g, -3000, -5000);
     const out = g.traffic.find(o => o.kind === 'outbound')!;
-    let seen = 0, minDepth = 99, maxOff = 0, wrongSide = 0;
-    for (let i = 0; i < 4000 && g.status === 'running'; i++) {
-      g.update(0.1); g.warp = 8;
-      if (!out.active) { if (seen) break; continue; }
-      seen++; const n = W.nearest(out.x, out.y);
+    expect(out.phase).toBe('berthed');
+    expect(Math.abs(W.quayLocal(out.x, out.y)[0])).toBeLessThan(1);
+    g.callShip();
+    expect(out.departAt).toBe(360);
+    let minDepth = 99, maxOff = 0, wrongSide = 0, phases = new Set<string>();
+    for (let i = 0; i < 5000 && out.phase !== 'gone'; i++) {
+      g.warp = 8; g.update(0.1); stopped(g, -3000, -5000); phases.add(out.phase);
+      if (out.phase !== 'underway') continue;
+      const n = W.nearest(out.x, out.y);
       minDepth = Math.min(minDepth, W.depth(out.x, out.y)); maxOff = Math.max(maxOff, n.d); if (n.side < 0) wrongSide++;
     }
-    expect(seen).toBeGreaterThan(100);
+    expect([...phases]).toEqual(expect.arrayContaining(['berthed', 'unberthing', 'underway']));
     expect(minDepth).toBeGreaterThan(10);
     expect(maxOff).toBeLessThan(80);
     expect(wrongSide).toBe(0);
     expect(out.active).toBe(false);
   });
+  it('não dá para passar espias com o berço ocupado; no fundeio o navio não sai', () => {
+    const g = new Game(); g.start('entrada'); g.moor();
+    expect(g.mooring).toBe(0);
+    expect(g.msgs.some(m => m.text.includes('ainda está ocupado'))).toBe(true);
+    const f = new Game(); f.start('fundeio');
+    expect(f.traffic.find(o => o.kind === 'outbound')!.departAt).toBe(Infinity);
+  });
   it('ficar no caminho do navio que sai termina em abalroamento', () => {
-    const g = new Game(); g.trust = 0; g.start('entrada');
+    const g = new Game(); g.trust = 0; g.start('entrada'); g.vts = 'ok';
     const out = g.traffic.find(o => o.kind === 'outbound')!;
-    stopped(g, -3000, -5000); g.vts = 'ok';
-    for (let i = 0; i < 400 && !out.active; i++) { g.warp = 8; g.update(0.1); stopped(g, -3000, -5000); }
+    stopped(g, -3000, -5000); g.callShip();
+    for (let i = 0; i < 2000 && out.phase !== 'underway'; i++) { g.warp = 8; g.update(0.1); stopped(g, -3000, -5000); }
     const [x, y] = W.pointAt(out.s - 300, -55); stopped(g, x, y, 300); // atravessado na frente dele
     run(g, 200);
     expect(g.result?.title).toBe('Abalroamento');

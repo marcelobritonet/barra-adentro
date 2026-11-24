@@ -10,6 +10,7 @@ function alongside(off: number) {
   s.u = 0; s.stw = 0; s.telegraph = s.telAck = 4; s.n = 0;
   g.env.windSpeed = 0; (g as any).windBase = 0; g.env.current = () => [0, 0];
   for (const t of g.tugs) { t.state = 'fast'; }
+  g.traffic = []; // berço livre para o teste
   g.warp = 8;
   const run = (sec: number) => { for (let t = 0; t < sec && g.status === 'running'; t += 0.8) g.update(0.1); };
   return { g, run };

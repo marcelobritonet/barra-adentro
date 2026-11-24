@@ -6,6 +6,7 @@ import { KN } from './sim/ship';
 import * as W from './world/santos';
 import { buildGrid } from './world/santos';
 import { TIDE_PRESETS, TidePreset } from './world/tide';
+import { berthBusy } from './game/traffic';
 
 const game = new Game();
 const grid = buildGrid();
@@ -30,8 +31,9 @@ function steps(): [string, boolean][] {
     const n = W.nearest(s.x, s.y), b = game.berth(), done = game.result?.ok === true;
     return [
       ['Pedir entrada ao VTS (aba Rádio)', game.vts === 'ok'],
+      ['Berço livre: aguardar ou pedir pelo rádio que o navio largue', !berthBusy(game)],
       ['Cruzar a barra; dali em diante, máximo de 8 nós', n.s > W.S_MOUTH],
-      ['Primeira curva a bombordo', n.s > W.TURNS[3].s + 150],
+      ['Primeira curva a bombordo; cruzar com o navio que sai, bombordo com bombordo', n.s > W.TURNS[3].s + 150],
       ['Segunda curva a bombordo', n.s > W.TURNS[4].s + 150],
       ['Encostar a proa no berço amarelo, por bombordo', done || game.mooring > 0 || (Math.abs(b.along) <= W.QUAY.berthHalf && b.bow <= 8)],
       ['Parar e passar as espias (M)', done || game.mooring > 0],
@@ -92,7 +94,7 @@ function menu() {
     <p>Protótipo de manobra de navios. Você comanda o <b>N/M Maré Mansa</b>, um costeiro de 90 m e 4.800 t carregado, chegando à barra de Santos.
     O navio demora a obedecer: dê a ordem antes de precisar dela.</p>
     <div class="choices">
-      <button data-sc="entrada">▶ Entrada e atracação<small>Autorização do VTS, prático opcional, barra, duas curvas com limite de 8 nós e corrente de vazante, atracação por bombordo. Frete R$ 28.000.</small></button>
+      <button data-sc="entrada">▶ Entrada e atracação<small>Autorização do VTS, prático opcional, barra, berço ocupado por um navio que precisa sair, cruzamento no canal, duas curvas e atracação por bombordo. Frete R$ 28.000.</small></button>
       <button data-sc="fundeio">▶ Fundeio<small>Berço ocupado: fundear no fundeadouro externo e aguardar. Mais curto, bom para aprender.</small></button>
     </div>
     <table>

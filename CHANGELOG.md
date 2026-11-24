@@ -2,6 +2,16 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.7.0 — Berço ocupado e rádio entre navios
+
+- O navio de 180 m agora começa atracado no seu berço. Sem ninguém pedir, larga aos 30 min; ele leva 4 min para abrir do cais e então sai pelo canal.
+- Novo no rádio: chamar o navio e pedir que adiante a largada. Ele larga 6 min depois do pedido. A hora em que você pede decide onde será o cruzamento.
+- O VTS informa o berço ocupado e a previsão de largada ao autorizar a entrada. Não dá para passar espias com o berço ocupado.
+- A lista de passos ganhou "berço livre", e a aba Rádio pisca enquanto o pedido não foi feito.
+- O prático regula a velocidade para chegar à reta do canal quando o berço estiver livre, em vez de correr e ficar parado; só abre para o berço depois que o navio que saiu passar. Com corrente a favor, manda fundear.
+- No cenário de fundeio o navio não sai: é por isso que você fundeia.
+- `scripts-estavel.sh` gera uma versão fechada a partir de uma tag, para testar numa porta que não recarrega durante o desenvolvimento.
+
 ## v0.6.0 — Tráfego
 
 - Três navios fundeados no fundeadouro, que giram com o vento e a corrente. Para fundear é preciso achar um lugar com cerca de 280 m de folga do ferro de cada um; fundear dentro do giro de outro não é aceito.
