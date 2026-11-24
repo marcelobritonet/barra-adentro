@@ -2,6 +2,20 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.23.0 — Tela de celular
+
+Pedido do teste: "tela principal mostra o navio; controles ao redor, semitransparentes; ao clicar, levanta aquele equipamento (pode ser mais de um); embaixo, como um menu, os valores que temos de acompanhar o tempo inteiro". Primeira das entregas de organização da tela.
+
+- Em janela estreita (até 820 px de largura ou 500 px de altura) o jogo entra sozinho na tela de celular. O botão "Tela" troca entre celular e mesa em qualquer tamanho e guarda a escolha; `?tela=celular` e `?tela=mesa` no endereço fazem o mesmo.
+- O navio ocupa a tela inteira.
+- Barra de baixo, sempre visível: rumo e guinada, velocidade e abatimento, leme (real e ordem), máquina, sonda. Tocar num valor levanta o equipamento dele.
+- Botões semitransparentes na borda: carta/ECDIS/radar, rádio, rebocadores, convés, impelidor, tempo e maré. Cada um levanta uma folha; várias podem ficar abertas; cada uma fecha no ✕.
+- ECDIS no celular: quadrado, na largura da tela (350 px num aparelho de 375 px), contra 236 px no painel de mesa.
+- Botões maiores para o dedo; arrastar a vista com um dedo e aproximar com dois.
+- Plano de viagem: o botão Zarpar fica preso embaixo da tela, e a roda do mouse agora rola o texto. Antes ela só dava zoom na vista, e em tela pequena não havia como chegar ao botão (travamento relatado em teste).
+- Telas do porto, contratos e ajuda cabem em tela estreita.
+- Não testado em aparelho de verdade: só no navegador, em 375×812 e 812×375.
+
 ## v0.22.0 — Vento e corrente que se percebem
 
 Pergunta do teste: "ainda não consigo perceber a influência do vento e da corrente. Ela acontece?"

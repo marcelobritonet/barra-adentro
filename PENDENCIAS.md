@@ -28,6 +28,8 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 21 | Atracação | Retorno do teste: "muito difícil controlar o vai e vem perto do cais, e precisa ser muito preciso"; depois, na v0.20.0: "ainda é difícil manter no ponto, é muito sensível" e "os equipamentos perdem o sentido" | Respondido na v0.20.0 e na v0.21.0; falta confirmar jogando |
 | 22 | Fundeio, contrabordo, giro, som | Ainda sem retorno do teste | Em aberto |
 | 24 | Vento e corrente se percebem? | Pergunta do teste: "ela acontece?". Respondido na v0.22.0 com vento por contrato, abatimento no GPS, rumo a governar no plano e carneirinhos | Falta confirmar jogando; se ainda for pouco, aumentar a corrente de través nas curvas (item 9) |
+| 25 | Tela de celular | Navio em tela cheia, barra de valores embaixo, botões semitransparentes que levantam cada equipamento. Feito na v0.23.0, só no navegador | Falta você testar num aparelho e dizer o que mudar: o que fica na barra, onde ficam os botões, tamanho das folhas |
+| 26 | Posição dos consoles na tela de mesa | Pedido: testar outras posições, com prints | A fazer; começa pelo ECDIS 2× maior |
 | 17 | Plano de bordo | Retorno do teste: "ficou absurdo de bom" | Aprovado |
 
 ## A fazer
@@ -51,6 +53,11 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 17 | Prazo da viagem conforme a maré | Hoje é fixo em 75 min; esperar a virada estoura o prazo |
 | 24 | Prático com vento forte | Com sudoeste de 22 nós o prático encalha, com e sem rebocadores; por isso a praticagem é suspensa acima de 20 nós. Com leste e nordeste ele atraca |
 | 25 | Corrente de través nas curvas | Tentada na v0.22.0 e retirada: quebrava o prático |
+| 26 | ECDIS maior na tela de mesa | Pedido do teste: "talvez 2× maior". Próxima entrega |
+| 27 | Variações de posição dos consoles | Gerar prints de alternativas para você escolher |
+| 28 | Potência dos rebocadores | Pedido do teste: a caixa de seleção "não ficou legal"; trocar por botões ou régua |
+| 29 | Resoluções menores na tela de mesa | Travamento do plano resolvido na v0.23.0; falta rever o painel de 500 px em janelas médias |
+| 30 | Celular em aparelho de verdade | v0.23.0 foi testada só no navegador; faltam toque real, áreas seguras e desempenho |
 | 11 | Ajustar o som de ouvido | Feito por cálculo na v0.12.0; ninguém ouviu ainda |
 
 ## Feito
@@ -92,4 +99,5 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.20.0: atracação que perdoa (defensas, tolerâncias, plano de atracação) e rebocadores para vante, ré e segurar |
 | v0.21.0: cabos correm o navio até o ponto; tela de atracação e painel que muda sozinho |
 | v0.21.1: modo livre começa equipado e guarda a própria escolha (defeito achado em teste) |
+| v0.23.0: tela de celular; plano de viagem destravado em tela pequena (pedidos do teste) |
 | v0.22.0: vento por contrato, abatimento no GPS, rumo a governar no plano, carneirinhos (pergunta do teste) |

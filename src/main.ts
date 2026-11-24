@@ -1,3 +1,4 @@
+import { Mobile } from './bridge/mobile';
 import { Sound } from './audio/sound';
 import { Panel } from './bridge/panel';
 import { BERTH, berthSpeedKn, Game, Scenario } from './game/game';
@@ -137,9 +138,9 @@ function showPlan(briefing: boolean) {
   const total = pl.steps.reduce((a, st) => a + (st.min ?? 0), 0);
   planEl.innerHTML = `<canvas width="360" height="588"></canvas><div class="body">
     <h2>${pl.title}</h2>
-    <table><tr><th>Nº</th><th>Perna</th><th>Rumo</th><th>Governar</th><th>Dist.</th><th>Máquina</th><th>No fundo</th><th>Tempo</th><th>Ao fim da perna</th></tr>${rows}</table>
+    <div class="scroll"><table><tr><th>Nº</th><th>Perna</th><th>Rumo</th><th>Governar</th><th>Dist.</th><th>Máquina</th><th>No fundo</th><th>Tempo</th><th>Ao fim da perna</th></tr>${rows}</table></div>
     ${total ? `<p>Tempo previsto até o berço: <b>${Math.round(total)} min</b>, sem contar a atracação. Na carta: a derrota a lápis e, em vermelho, onde começa cada guinada.</p>` : ''}
-    ${pl.calls.length ? `<table><tr><th>Rádio: onde chamar</th><th>O quê</th><th>Por quê ali</th></tr>${pl.calls.map(c => `<tr><td>${c.where}</td><td class="act">${c.what}</td><td>${c.why}</td></tr>`).join('')}</table>` : ''}
+    ${pl.calls.length ? `<div class="scroll"><table><tr><th>Rádio: onde chamar</th><th>O quê</th><th>Por quê ali</th></tr>${pl.calls.map(c => `<tr><td>${c.where}</td><td class="act">${c.what}</td><td>${c.why}</td></tr>`).join('')}</table></div>` : ''}
     <ul>${pl.notes.map(n => `<li>${n}</li>`).join('')}</ul>
     <div class="btns">${briefing ? '<button data-plan="go" class="on">⚓ Zarpar</button><button data-plan="back">Voltar ao porto</button>' : '<button data-plan="close" class="on">Fechar (O)</button>'}</div>
   </div>`;
@@ -201,6 +202,7 @@ document.getElementById('camctl')!.addEventListener('click', e => {
   if (c === 'chart') panel.bigChart = !panel.bigChart; if (c === 'help') help.hidden = !help.hidden;
   if (c === 'plan' && game.status === 'running') { if (planEl.hidden) showPlan(false); else planEl.hidden = true; }
   if (c === 'sound') { sound.toggle(); syncSound(); } if (c === 'horn') game.sound();
+  if (c === 'layout') mobile.flip();
   b.blur();
 });
 const money = (v: number) => `<span class="${v >= 0 ? 'pos' : 'neg'}">${v < 0 ? '−' : ''}R$ ${Math.abs(v).toLocaleString('pt-BR')}</span>`;
@@ -356,27 +358,40 @@ addEventListener('keydown', e => {
 {
   const worldEl = document.getElementById('world')!, centerBtn = document.querySelector<HTMLElement>('[data-cam="center"]')!;
   let dragging = false, lx = 0, ly = 0;
+  // dois dedos: afastar aproxima a vista, juntar afasta
+  const touches = new Map<number, [number, number]>(); let pinch = 0;
+  const spread = () => { const [a, b] = [...touches.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
   worldEl.addEventListener('pointerdown', e => {
     if ((e.target as HTMLElement).tagName !== 'CANVAS' || (e.target as HTMLElement).id === 'bigchart') return;
+    touches.set(e.pointerId, [e.clientX, e.clientY]); if (touches.size === 2) pinch = spread();
     dragging = true; lx = e.clientX; ly = e.clientY; worldEl.setPointerCapture(e.pointerId); worldEl.style.cursor = 'grabbing';
   });
-  worldEl.addEventListener('pointermove', e => { if (!dragging) return; view.drag(e.clientX - lx, e.clientY - ly); lx = e.clientX; ly = e.clientY; centerBtn.hidden = !view.panned; });
-  const end = () => { dragging = false; worldEl.style.cursor = ''; centerBtn.hidden = !view.panned; };
+  worldEl.addEventListener('pointermove', e => {
+    if (touches.has(e.pointerId)) touches.set(e.pointerId, [e.clientX, e.clientY]);
+    if (touches.size === 2 && pinch > 0) { const d = spread(); if (d > pinch * 1.3) { view.zoom(-1); pinch = d; } else if (d < pinch / 1.3) { view.zoom(1); pinch = d; } return; }
+    if (!dragging) return; view.drag(e.clientX - lx, e.clientY - ly); lx = e.clientX; ly = e.clientY; centerBtn.hidden = !view.panned;
+  });
+  const end = (e: PointerEvent) => { touches.delete(e.pointerId); dragging = false; worldEl.style.cursor = ''; centerBtn.hidden = !view.panned; };
   worldEl.addEventListener('pointerup', end); worldEl.addEventListener('pointercancel', end);
   worldEl.addEventListener('dblclick', e => { if ((e.target as HTMLElement).tagName === 'CANVAS') { view.recenter(); centerBtn.hidden = true; } });
 }
-document.getElementById('world')!.addEventListener('wheel', e => { view.zoom(e.deltaY > 0 ? 1 : -1); e.preventDefault(); }, { passive: false });
+document.getElementById('world')!.addEventListener('wheel', e => {
+  // sobre o plano e a ajuda a roda rola o texto; antes ela só dava zoom e o botão de zarpar ficava fora de alcance
+  if ((e.target as HTMLElement).closest('#plan, #help')) return;
+  view.zoom(e.deltaY > 0 ? 1 : -1); e.preventDefault(); }, { passive: false });
 
 // se o painel não couber na altura da janela, ele encolhe inteiro, sem rolagem
 const bridge = document.getElementById('bridge')!;
 function fit() {
   bridge.style.transform = ''; bridge.style.height = 'auto'; bridge.style.marginLeft = '';
+  if (document.body.classList.contains('mobile')) { bridge.style.height = ''; return; }
   const k = Math.min(1, innerHeight / bridge.scrollHeight);
   bridge.style.transform = k < 1 ? `scale(${k})` : '';
   bridge.style.height = `${100 / k}%`;
   bridge.style.marginLeft = k < 1 ? `${-500 * (1 - k)}px` : '';
 }
 addEventListener('resize', fit); fit(); setTimeout(fit, 300);
+const mobile = new Mobile(game, panel, fit);
 
 let last = performance.now(), shown = false;
 function frame(now: number) {
@@ -385,6 +400,7 @@ function frame(now: number) {
   view.render(game, dt);
   sound.update(game, dt);
   panel.update(dt);
+  mobile.update();
   north.style.transform = `rotate(${view.compassDeg}deg)`;
   if (game.status !== 'menu') drawMission();
   drawPlanBox();
@@ -409,4 +425,4 @@ menu(); syncSound();
 requestAnimationFrame(frame);
 
 // acesso para depuração e testes no navegador
-Object.assign(window, { game, view, panel, W });
+Object.assign(window, { game, view, panel, W, mobile });

@@ -199,3 +199,92 @@ table.shop button { padding: 5px 8px; font-size: 12px; }
 
 .lcd .drift { color: #ffcf6a; font-weight: 700; }
 #plan td small { color: #ffcf6a; }
+
+/* ---------- plano de viagem em telas pequenas: o botão de zarpar fica sempre à mão */
+#plan .btns { position: sticky; bottom: -18px; background: #060a0e; padding: 10px 0; margin-top: 8px; border-top: 1px solid #2c363f; z-index: 1; }
+#plan .scroll { overflow-x: auto; }
+@media (max-width: 1100px) {
+  #plan { flex-direction: column; gap: 10px; padding: 12px; }
+  #plan canvas { max-height: 46vh; width: auto; max-width: 100%; align-self: center; }
+  #plan .body { flex: none; }
+  #plan table { min-width: 620px; }
+}
+@media (max-width: 640px) {
+  .card { padding: 14px; } .card h1 { font-size: 20px; }
+  .contracts { grid-template-columns: 1fr !important; }
+  .card .choices { flex-direction: column; }
+  .card .tabs, .modes, .card .preset, .purse { flex-wrap: wrap; }
+  #help { padding: 14px; } #help .cols { gap: 10px; }
+}
+.card { max-height: 92dvh; }
+
+/* ---------- tela de celular */
+#mshell { display: none; }
+body.mobile { --bar: calc(56px + env(safe-area-inset-bottom, 0px)); overscroll-behavior: none; }
+body.mobile #app { height: 100dvh; }
+body.mobile #bridge { display: none; }
+body.mobile #world > canvas:not(#bigchart) { touch-action: none; }
+body.mobile #mshell { display: block; }
+body.mobile button { touch-action: manipulation; }
+#mbar { position: fixed; left: 0; right: 0; bottom: 0; height: var(--bar); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; display: flex; background: #10151af2; border-top: 2px solid #2c363f; z-index: 7; }
+#mbar button { flex: 1; min-width: 0; border: 0; border-right: 1px solid #2c363f; border-radius: 0; background: none; padding: 3px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+#mbar button.on { background: #2a333c; font-weight: 400; color: inherit; box-shadow: inset 0 3px 0 #ffd76a; }
+#mbar small { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #7f93a3; }
+#mbar b { font-size: 17px; color: #ffd76a; white-space: nowrap; }
+#mbar i { font-style: normal; font-size: 10px; color: #9fb0bd; white-space: nowrap; }
+#mbar .moving b, #mbar .warn b { color: #ffcf6a; } #mbar .moving i { color: #ffcf6a; }
+#mbar .ahead b { color: #7dffb0; } #mbar .astern b { color: #ff7a6a; } #mbar .bad b { color: #ff7a6a; } #mbar .bad { animation: blink 0.6s steps(2) infinite; }
+#mside { position: fixed; left: calc(6px + env(safe-area-inset-left, 0px)); top: 52px; display: flex; flex-direction: column; gap: 5px; z-index: 6; }
+#mside button, body.mobile #camctl button { background: #0b101699; border-color: #45525e99; min-width: 54px; min-height: 36px; padding: 4px 6px; font-size: 12px; }
+#mside button.on, body.mobile #camctl button.on { background: #b8860bcc; }
+#mside button.alert { border-color: #ffcf6a; color: #ffcf6a; animation: blink 0.8s steps(2) infinite; }
+#mside button[hidden] { display: none; }
+#mshell.idle #mside, #mshell.idle #mbar, #mshell.idle #msheets { display: none; }
+#msheets { position: fixed; left: 0; right: 0; bottom: var(--bar); max-height: calc(100dvh - var(--bar) - 6px); overflow-y: auto; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 6px; padding: 0 4px 4px; box-sizing: border-box; pointer-events: none; z-index: 6; }
+.sheet { pointer-events: auto; background: #1a2026ee; border: 2px solid #45525e; border-radius: 8px 8px 4px 4px; padding: 5px; max-width: 100%; box-sizing: border-box; box-shadow: 0 -4px 18px #0008; }
+.sheet[hidden] { display: none; }
+.sheethead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.sheethead b { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #7f93a3; padding-left: 4px; }
+.sheethead button { min-width: 40px; min-height: 30px; font-size: 14px; }
+.sheetbody { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+.sheetbody .inst { flex: 1 1 auto; }
+body.mobile #telegraph button { padding: 8px 10px; font-size: 13px; }
+body.mobile #helmrow button { padding: 9px 0; font-size: 12px; }
+body.mobile #helm { height: 34px; margin: 4px 0; }
+body.mobile #thrrow button { padding: 10px 0; font-size: 14px; min-width: 48px; }
+body.mobile .sheet .tabs button { padding: 8px 9px !important; font-size: 12px !important; }
+body.mobile #ops { width: min(430px, calc(100vw - 26px)); }
+body.mobile #ops button, body.mobile #ops select { padding: 8px 9px; font-size: 12.5px; }
+body.mobile #topbar { flex-wrap: wrap; } body.mobile #topbar button { padding: 8px 12px; } body.mobile #trustbox { flex-basis: 100%; margin: 4px 0 0; }
+body.mobile #cMfd { width: min(calc(100vw - 26px), calc(100dvh - var(--bar) - 96px)) !important; height: auto !important; aspect-ratio: 1; }
+/* o que fica sobre a vista */
+body.mobile #north { top: 6px; left: 6px; width: 36px; height: 36px; }
+body.mobile #north::after { top: 14px; height: 15px; }
+body.mobile #camctl { top: 6px; right: calc(6px + env(safe-area-inset-right, 0px)); display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+body.mobile #camctl button { min-width: 44px; min-height: 32px; font-size: 11px; padding: 3px 4px; }
+body.mobile #mission { top: 6px; left: 50px; right: 106px; max-width: none; padding: 4px 8px; font-size: 11px; }
+body.mobile #mission b, body.mobile #mission div:not(.now) { display: none; }
+body.mobile #mission .now { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.mobile #planbox { top: 34px; left: 68px; right: 106px; width: auto; font-size: 11px; padding: 4px 8px; }
+body.mobile #planbox .steer { font-size: 13px; }
+body.mobile #pilothud { top: auto !important; bottom: calc(var(--bar) + 74px); font-size: 14px; padding: 5px 9px; gap: 7px; max-width: 96vw; box-sizing: border-box; }
+body.mobile #pilothud small { display: none; }
+body.mobile #log { left: 6px; right: 6px; bottom: calc(var(--bar) + 6px); font-size: 12px; }
+body.mobile #log div:nth-last-child(n+3) { display: none; }
+body.mobile #log div:last-child { font-size: 13px; }
+body.mobile #warpflag { top: 212px; right: 6px; font-size: 12px; }
+body.mobile #skyflag { top: 240px; right: 6px; font-size: 11px; }
+body.mobile #bigchart { height: auto; max-height: calc(100dvh - var(--bar) - 20px); max-width: 94vw; top: calc(50% - var(--bar) / 2); }
+@media (orientation: landscape) and (max-height: 500px) {
+  body.mobile #mside { flex-direction: row; flex-wrap: wrap; top: 48px; max-width: 124px; }
+  body.mobile #camctl { grid-template-columns: repeat(4, 1fr); }
+  body.mobile #mission, body.mobile #planbox { right: 200px; } body.mobile #planbox { left: 136px; }
+  body.mobile #warpflag { top: 132px; } body.mobile #skyflag { top: 160px; }
+  body.mobile #pilothud { bottom: calc(var(--bar) + 50px); }
+}
+body.mobile #telegraph button { padding: 5px 10px; }
+.sheet[data-name="maq"] .inst:nth-child(2) { flex: none !important; }
+.sheetbody .inst { flex: 1 1 auto !important; }
+.sheet[data-name="nav"] .inst:nth-child(2) { order: 3; flex: 1 1 100% !important; display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 2px 6px; grid-auto-flow: column; grid-template-rows: auto auto; }
+.sheet[data-name="nav"] .inst:nth-child(2) h4 { margin: 0; }
+body.mobile #plan, body.mobile #help { background: #060a0efa; }

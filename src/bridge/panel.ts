@@ -37,6 +37,8 @@ export class Panel {
   mfd: MfdMode = 'carta'; tab = 'radio';
   private wasBerthing = false; private before: { mfd: MfdMode; tab: string } = { mfd: 'carta', tab: 'radio' };
   bigChart = false;
+  /** Cliques nos comandos. Na tela de celular os instrumentos saem do painel, e quem os recebe escuta com esta mesma função. */
+  onClick: (e: Event) => void = () => {};
 
   constructor(private g: Game, private grid: Float32Array, private chartBase: HTMLCanvasElement) {
     this.ecdis = new Ecdis(grid, g.p.T + 1.5);
@@ -136,7 +138,7 @@ export class Panel {
     this.big = $<HTMLCanvasElement>('bigchart'); this.big.width = 600; this.big.height = 980;
 
     const br = $('bridge');
-    br.addEventListener('click', e => {
+    this.onClick = e => {
       const t = (e.target as HTMLElement).closest('button'); if (!t) return;
       if (t.dataset.tel) g.setTelegraph(+t.dataset.tel);
       if (t.dataset.helm) g.setRudderDeg(+t.dataset.helm);
@@ -161,7 +163,8 @@ export class Panel {
         if (t.dataset.tmode) g.tugOrder(i, t.dataset.tmode as TugMode, +tugEl.querySelector<HTMLSelectElement>('select')!.value);
       }
       t.blur();
-    });
+    };
+    br.addEventListener('click', this.onClick);
     $<HTMLInputElement>('helm').addEventListener('input', e => g.setRudderDeg(+(e.target as HTMLInputElement).value));
     br.querySelectorAll<HTMLSelectElement>('[data-tpow]').forEach(sel => sel.addEventListener('change', () => {
       const i = +sel.closest<HTMLElement>('.tug')!.dataset.tug!, t = g.tugs[i];
