@@ -2,6 +2,13 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.11.0 — Noite e nevoeiro
+
+- Noite: a vista escurece e só se veem as luzes. As boias piscam na cor delas, os navios e rebocadores mostram luzes de navegação (mastro, bordos encarnado e verde, alcançado), a cidade e o cais se acendem.
+- Nevoeiro: visibilidade de 300 m em volta do navio e limite de 6 nós no canal. Sem radar é quase às cegas.
+- Contratos de três estrelas ou mais podem cair à noite (+15% de frete) e os de quatro ou mais, com nevoeiro (+30% e 10 min a mais de prazo). No modo livre o céu é escolhido no menu.
+- Correção: os rebocadores passavam por dentro do navio ao chegar e ao trocar de posição. Agora contornam o casco, com um teste que garante isso.
+
 ## v0.10.0 — Navio maior, reputação e ofertas que mudam
 
 - Segundo navio: graneleiro de 130 m, 15.000 t carregado e 7,4 m de calado. Leva 214 s para ir de parado a 3 nós (o costeiro, 136 s) e 1.290 m para parar com toda força ré (o costeiro, 630 m). Custa R$ 150.000 e exige reputação 25.

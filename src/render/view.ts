@@ -17,6 +17,13 @@ export class View {
   private chain: THREE.Line;
   private mark = box(5, 5, 5, 0xffd21a);
   private shipKey = '';
+  private amb = new THREE.AmbientLight(0xffffff, 1.5);
+  private sun = new THREE.DirectionalLight(0xfff2d8, 2.2);
+  private water!: THREE.Mesh;
+  private sky = '';
+  get mpp() { return ZOOMS[this.zoomI]; }
+  /** Achatamento vertical de um círculo no chão, visto pela câmera. */
+  get squash() { return this.top ? 1 : Math.sin(ELEV); }
   private tugs: { mesh: THREE.Group; line: THREE.Line }[] = [];
   private others: { mesh: THREE.Group; line: THREE.Line }[] = [];
   private wake: THREE.Mesh[] = [];
@@ -30,12 +37,9 @@ export class View {
     this.renderer.setClearColor(0x16304f);
     el.appendChild(this.renderer.domElement);
     this.renderer.domElement.style.imageRendering = 'pixelated';
-    this.scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-    const sun = new THREE.DirectionalLight(0xfff2d8, 2.2);
-    sun.position.set(-0.6, 1, 0.35);
-    this.scene.add(sun);
-
-    this.scene.add(makeWater(grid), makeLand(grid), makeTown(), makeQuay(), makeZones());
+    this.sun.position.set(-0.6, 1, 0.35);
+    this.water = makeWater(grid);
+    this.scene.add(this.amb, this.sun, this.water, makeLand(grid), makeTown(), makeQuay(), makeZones());
     for (const b of W.BUOYS) { const m = makeBuoy(b.kind); m.position.set(b.x, 0, -b.y); this.buoys.push(m); this.scene.add(m); }
     this.ship.add(makeShip(p)); this.shipKey = `${p.L}/${p.T.toFixed(1)}`;
     this.scene.add(this.ship);
@@ -62,6 +66,17 @@ export class View {
     this.resize();
   }
 
+  /** Dia, noite ou nevoeiro: muda a luz e acende ou apaga o que só se vê à noite. */
+  private applySky(sky: string) {
+    this.sky = sky;
+    const night = sky === 'noite', fog = sky === 'nevoeiro';
+    this.amb.color.set(night ? 0x7f95d0 : fog ? 0xdfe6ea : 0xffffff); this.amb.intensity = night ? 0.32 : fog ? 1.7 : 1.5;
+    this.sun.intensity = night ? 0.18 : fog ? 0.7 : 2.2;
+    (this.water.material as THREE.MeshBasicMaterial).color.set(night ? 0x232c48 : fog ? 0xb9c6cc : 0xffffff);
+    this.renderer.setClearColor(night ? 0x05080f : fog ? 0xaeb9bf : 0x16304f);
+    this.scene.traverse(o => { if (o.name === 'nightonly') o.visible = night; });
+  }
+
   private resize() {
     const w = Math.max(80, Math.floor(this.el.clientWidth / PX)), h = Math.max(60, Math.floor(this.el.clientHeight / PX));
     this.renderer.setSize(w, h, false);
@@ -78,10 +93,15 @@ export class View {
     const key = `${g.p.L}/${g.p.T.toFixed(1)}`;
     if (key !== this.shipKey) { this.shipKey = key; this.ship.clear(); this.ship.add(makeShip(g.p, 0x1d2733, g.p.L / 90)); }
     this.bob += dt;
+    if (g.sky !== this.sky) this.applySky(g.sky);
+    const night = g.sky === 'noite';
+    this.scene.traverse(o => { if (o.name === 'nav') o.visible = night; });
     this.ship.position.set(s.x, -0.4 * s.squat, -s.y);
     this.ship.rotation.y = -s.psi;
     this.ship.rotation.z = Math.max(-0.08, Math.min(0.08, -s.r * s.u * 0.25)); // banda na guinada
     this.buoys.forEach((b, i) => {
+      // à noite as boias piscam, cada uma no seu ritmo
+      b.children[2].visible = night && !g.hitBuoys.has(i) && (this.bob * 0.5 + i * 0.37) % 1 < 0.35;
       b.rotation.z = g.hitBuoys.has(i) ? 1.2 : 0.08 * Math.sin(this.bob * 1.3 + i);
     });
 
@@ -248,7 +268,12 @@ function makeTown() {
     m.makeScale(w, h, 22 + (1 - r) * 20).setPosition(x, 2.5 + h / 2, -y);
     mesh.setMatrixAt(i, m); mesh.setColorAt(i, new THREE.Color(palette[Math.floor(r * palette.length)]));
   });
-  return mesh;
+  // janelas acesas: uma por prédio, só à noite
+  const lights = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffd98a }), spots.length);
+  spots.forEach(([x, y, h, r], i) => { m.makeScale(5, 4, 5).setPosition(x + (r - 0.5) * 12, 2.5 + h * (0.4 + r * 0.5), -y + 11 + (1 - r) * 10); lights.setMatrixAt(i, m); });
+  lights.name = 'nightonly'; lights.visible = false;
+  const town = new THREE.Group(); town.add(mesh, lights);
+  return town;
 }
 
 function box(w: number, h: number, d: number, color: number, x = 0, y = 0, z = 0) {
@@ -267,6 +292,10 @@ function makeQuay() {
     g.add(box(6, 28, 6, 0xe0a020, -9, 17, z), box(34, 3, 4, 0xe0a020, 2, 30, z), box(8, 6, 8, 0xf2f2f2, -9, 33, z));
   }
   for (let z = -Q.half + 10; z < Q.half; z += 32) g.add(box(1.4, 1.4, 1.4, 0x2b2b2b, -2.5, 3.9, z)); // cabeços
+  // refletores do cais, à noite
+  const lamps = new THREE.Group(); lamps.name = 'nightonly'; lamps.visible = false;
+  for (let z = -Q.half + 20; z < Q.half; z += 45) { const l = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), new THREE.MeshBasicMaterial({ color: 0xfff1c0 })); l.position.set(-6, 20, z); lamps.add(l); }
+  g.add(lamps);
   // marcação do berço
   const pts = [[2, 55], [18, 55], [18, -55], [2, -55]].map(([x, z]) => new THREE.Vector3(x, 0.3, z));
   const loop = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xffe14a }));
@@ -290,11 +319,25 @@ function makeBuoy(kind: string) {
     ? new THREE.Mesh(new THREE.ConeGeometry(3.5, 9, 6), new THREE.MeshLambertMaterial({ color: col }))       // cônica
     : new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 8, 6), new THREE.MeshLambertMaterial({ color: kind === 'green' ? col : 0xe23b3b })); // cilíndrica
   top.position.y = 6.5; g.add(top);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(4.5, 6, 4), new THREE.MeshBasicMaterial({ color: kind === 'red' ? 0xff3b30 : kind === 'green' ? 0x35ff7a : 0xffffff }));
+  lamp.position.y = 13; lamp.visible = false; g.add(lamp);
+  return g;
+}
+
+/** Luzes de navegação: mastro branco, bordos encarnado e verde, alcançado branco. Só aparecem à noite. */
+function navLights(L: number, B: number, h: number) {
+  const g = new THREE.Group(); g.name = 'nav'; g.visible = false;
+  const lamp = (c: number, x: number, y: number, z: number, sz = 2.6) => { const m = new THREE.Mesh(new THREE.BoxGeometry(sz, sz, sz), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); g.add(m); };
+  lamp(0xffffff, 0, h + 14, L * 0.3, 3); lamp(0xffffff, 0, h + 9, -L * 0.3);
+  lamp(0xff3b30, -B / 2, h + 5, L * 0.28); lamp(0x35ff7a, B / 2, h + 5, L * 0.28);
+  lamp(0xffffff, 0, h + 2, L / 2);
+  for (let z = -L * 0.3; z < L * 0.2; z += 16) lamp(0xffe9b0, 0, h + 1.5, z, 1.6); // luzes de convés
   return g;
 }
 
 function makeTug() {
   const g = new THREE.Group();
+  g.add(navLights(22, 8, 4));
   g.add(box(8, 3, 22, 0x1c1f24, 0, 0.9, 0), box(7, 0.4, 20, 0xa63a2e, 0, 2.5, 0));   // casco e convés
   g.add(box(6, 1.6, 2, 0x111111, 0, 1.6, -11.5));                                     // defensa de proa
   g.add(box(5.5, 4, 7, 0xf1f1ea, 0, 4.6, -3), box(5.7, 1.2, 7.2, 0x2a3d55, 0, 5.6, -3)); // casaria
@@ -326,6 +369,7 @@ function makeShip(p: ShipParams, hullColor = 0x1d2733, k = 1) {
   g.add(box(p.B - 2, 6 * k, 10, 0xf1f1ea, 0, free + 3 * k, aft), box(p.B, 2.6, 7, 0xf1f1ea, 0, free + 6 * k + 1.3, aft - 1.5)); // superestrutura + passadiço
   g.add(box(p.B - 3, 0.5, 4.5, 0x2a3d55, 0, free + 6 * k + 1.6, aft - 4.8));                                         // vidros
   g.add(box(3.2, 5, 3.2, 0xd9622b, 0, free + 6 * k + 3.5, aft + 4), box(3.4, 1, 3.4, 0x1a1a1a, 0, free + 6 * k + 6.4, aft + 4)); // chaminé
-  g.add(box(0.6, 6, 0.6, 0xf1f1ea, 0, free + 6 * k + 5.5, aft - 2));                                                 // mastro
+  g.add(box(0.6, 6, 0.6, 0xf1f1ea, 0, free + 6 * k + 5.5, aft - 2));
+  g.add(navLights(p.L, p.B, free + 4));                                                 // mastro
   return g;
 }

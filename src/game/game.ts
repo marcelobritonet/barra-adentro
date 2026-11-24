@@ -8,7 +8,7 @@ import { Pilot, PilotGrade, PILOTS } from './pilot';
 import { makeTugs, TugMode } from './tugs';
 import { bearingText, berthBusy, berthShip, DEPART_ON_REQUEST, hullDistance, makeTraffic, Other, swingRadius, updateTraffic } from './traffic';
 import { Tide, tideAt, TidePreset, tideText } from '../world/tide';
-import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, reputation, salaries, saveCareer, wearFactor } from './career';
+import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, reputation, salaries, saveCareer, Sky, wearFactor } from './career';
 
 export type Scenario = 'entrada' | 'fundeio';
 export interface Msg { t: number; text: string; level: 'info' | 'warn' | 'bad' | 'pilot'; who: string }
@@ -37,6 +37,12 @@ export class Game {
   career: Career = newCareer();
   free = false;
   freeShip: ShipClass = 'coaster';
+  /** Céu desta viagem: muda o que se vê da ponte, não a física. */
+  sky: Sky = 'dia'; freeSky: Sky = 'dia';
+  /** Limite de velocidade no canal: 8 nós, 6 com nevoeiro. */
+  get limitKn() { return this.sky === 'nevoeiro' ? 6 : W.SPEED_LIMIT_KN; }
+  /** Alcance visual, em metros. */
+  get visibility() { return this.sky === 'nevoeiro' ? 300 : this.sky === 'noite' ? 2500 : 20000; }
   contract: Contract | null = null;
   tidePreset: TidePreset = 'vazante';
   tide: Tide = tideAt(0, 'vazante');
@@ -86,6 +92,7 @@ export class Game {
     this.p = makeShipParams(cls, ct ? ct.load : 1);
     this.geo = shipGeo(this.p); this.size = this.p.mass / makeCoaster(1).mass;
     if (ct) this.tidePreset = ct.tide;
+    this.sky = ct ? ct.sky ?? 'dia' : this.free ? this.freeSky : 'dia';
     if (!this.free) { applyCareer(this.p, this.career); this.equip = equipOf(this.career); }
     if (sc === 'entrada') {
       const [x, y] = W.pointAt(W.S_MOUTH - 1500);
@@ -109,6 +116,8 @@ export class Game {
     this.baseAck = this.p.ackDelay; this.baseHelm = this.p.helmDelay;
     if (sc === 'entrada') {
       this.say('Imediato', `Vento sueste. Maré: ${tideText(this.tide)}.`, 'info');
+      if (this.sky === 'nevoeiro') this.say('Imediato', 'Nevoeiro fechado, uns 300 metros de visibilidade. Limite de 6 nós no canal; navegamos pelo radar e pelas boias.', 'warn');
+      if (this.sky === 'noite') this.say('Imediato', 'Noite sem lua. Encarnada a boreste, verde a bombordo: siga as luzes das boias.', 'info');
       this.say('Imediato', 'Precisamos da autorização do VTS antes da barra. Prático é opcional: chame pelo rádio se quiser.', 'info');
       this.say('Imediato', `Berço no cais de bombordo, depois da segunda curva. Calado ${this.p.T.toFixed(1).replace('.', ',')} m. Temos ar para ${this.p.airStarts} partidas de máquina.`, 'info');
     } else {
@@ -266,7 +275,7 @@ export class Game {
     if (this.vts === 'asked' && (this.vtsTimer -= DT) <= 0) {
       this.vts = 'ok';
       const o = berthShip(this), wait = o && o.phase === 'berthed' ? Math.max(0, Math.round((o.departAt - this.time) / 60)) : 0;
-      this.say('Santos VTS', `Maré Mansa, entrada autorizada, limite de ${W.SPEED_LIMIT_KN} nós da barra para dentro. Maré ${tideText(this.tide)}.`, 'info');
+      this.say('Santos VTS', `Maré Mansa, entrada autorizada, limite de ${this.limitKn} nós da barra para dentro. Maré ${tideText(this.tide)}.`, 'info');
       if (o && berthBusy(this)) this.say('Santos VTS', `Seu berço está ocupado pelo N/M ${o.name}, com largada prevista em ${wait} min. Regule a chegada ou combine com ele pelo rádio.`, 'warn');
     }
     this.pilot.update(this, DT);
@@ -400,17 +409,17 @@ export class Game {
       this.ledger.vts = 8000; this.trustEvent(-6, 'entrou sem autorização');
       this.say('Santos VTS', 'Maré Mansa, o senhor cruzou a barra sem autorização. Será autuado.', 'bad');
     }
-    if (near.s > W.S_MOUTH - 300 && this.sog > W.SPEED_LIMIT_KN * KN) {
+    if (near.s > W.S_MOUTH - 300 && this.sog > this.limitKn * KN) {
       this.ledger.speeding += 40 * DT; this.trustEvent(-2, 'excesso de velocidade', 'speed', 45);
-      this.say('Capitania', `Acima de ${W.SPEED_LIMIT_KN} nós no canal. Multa correndo.`, 'bad', 'speed', 30);
+      this.say('Capitania', `Acima de ${this.limitKn} nós no canal. Multa correndo.`, 'bad', 'speed', 30);
     }
     this.ledger.fuel += Math.abs(s.n) ** 3 * 3 * DT;
     // imediato confiante avisa cedo; desconfiado só fala em cima da hora
     const lead = this.free ? 0 : mateLead(this.career);
     if (ukcMin < 1.5 + lead + this.trust / 100) this.say('Imediato', `Pouca água: ${Math.max(0, ukcMin).toFixed(1)} m sob o casco!`, 'warn', 'ukc', 12);
     if (ukcMin < 1) this.trustEvent(-3, 'pouca água sob a quilha', 'ukc', 45);
-    if ((this.trust > 20 || lead > 0) && near.s > W.S_MOUTH - 600 && this.sog > (W.SPEED_LIMIT_KN - 0.7) * KN && this.sog <= W.SPEED_LIMIT_KN * KN) {
-      this.say('Imediato', `Comandante, ${(this.sog / KN).toFixed(1)} nós. O limite é ${W.SPEED_LIMIT_KN}.`, 'warn', 'prespeed', 60);
+    if ((this.trust > 20 || lead > 0) && near.s > W.S_MOUTH - 600 && this.sog > (this.limitKn - 0.7) * KN && this.sog <= this.limitKn * KN) {
+      this.say('Imediato', `Comandante, ${(this.sog / KN).toFixed(1)} nós. O limite é ${this.limitKn}.`, 'warn', 'prespeed', 60);
     }
 
     if (this.scenario === 'entrada' && this.mooring <= 0) {

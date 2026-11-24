@@ -148,3 +148,10 @@ table.shop button { padding: 5px 8px; font-size: 12px; }
 
 .contracts button:disabled { opacity: 0.45; }
 .purse span b { font-size: 14px; color: #ffd76a; }
+
+/* nevoeiro: tudo além do alcance visual some, em volta do navio */
+#fog { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+#skyflag { position: absolute; top: 52px; right: 120px; background: #0b1016d9; border: 1px solid #45525e; color: #9fd0e8; padding: 3px 10px; font-size: 12px; }
+#skyflag[hidden] { display: none; }
+
+.contracts .sky { color: #9fd0e8; }

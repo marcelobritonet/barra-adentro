@@ -7,6 +7,7 @@ import * as W from './world/santos';
 import { buildGrid } from './world/santos';
 import { TIDE_PRESETS, TidePreset } from './world/tide';
 import { berthBusy } from './game/traffic';
+import { Sky, SKY } from './game/career';
 import { buy, buyShip, CREW, CrewId, Level, loadCareer, maxStars, newCareer, offers, PARTS, PartId, repFor, salaries, saveCareer, shipCost, SHIP_REP } from './game/career';
 import { ShipClass, SHIPS } from './sim/ship';
 
@@ -18,6 +19,8 @@ const overlay = document.getElementById('overlay')!;
 const mission = document.getElementById('mission')!;
 const help = document.getElementById('help')!;
 const warpflag = document.getElementById('warpflag')!;
+const fogEl = document.getElementById('fog')!, skyflag = document.getElementById('skyflag')!;
+let fogCss = '';
 
 // equipamentos ligados ficam guardados entre partidas
 const EQ_KEY = 'barra-adentro.equip';
@@ -125,6 +128,7 @@ function menu() {
         <button data-sc="fundeio">▶ Fundeio<small>Fundear entre os navios do fundeadouro externo. Mais curto, bom para aprender.</small></button>
       </div>
       <div class="preset">Navio: ${(Object.keys(SHIPS) as ShipClass[]).map(k => `<button data-freeship="${k}" class="${game.freeShip === k ? 'on' : ''}">${SHIPS[k].label}</button>`).join('')}</div>
+      <div class="preset">Céu: ${(Object.keys(SKY) as Sky[]).map(k => `<button data-sky="${k}" class="${game.freeSky === k ? 'on' : ''}">${SKY[k].label}</button>`).join('')}<span class="dim">${SKY[game.freeSky].hint}</span></div>
       <div class="preset">Maré: ${(Object.keys(TIDE_PRESETS) as TidePreset[]).map(k => `<button data-tide="${k}" class="${game.tidePreset === k ? 'on' : ''}">${TIDE_PRESETS[k].label}</button>`).join('')}</div>
       <p class="dim" style="margin-top:0">${TIDE_PRESETS[game.tidePreset].hint} A maré corre 2× mais rápido que a real.</p>
       <div class="preset">Equipamentos: <button data-eq="off" class="${Object.values(game.equip).some(Boolean) ? '' : 'on'}">Navio básico</button><button data-eq="on" class="${Object.values(game.equip).every(Boolean) ? 'on' : ''}">Tudo ligado</button><span class="dim">(ou um a um, na aba Equip. do painel)</span></div>
@@ -142,7 +146,7 @@ function menu() {
   const body = portTab === 'contratos'
     ? `<div class="contracts">${list.map(ct => { const locked = ct.stars > stars; return `<button data-contract="${ct.id}" ${locked ? 'disabled' : ''}>
         <span class="stars">${'★'.repeat(ct.stars)}${'☆'.repeat(5 - ct.stars)}${locked ? ` · exige reputação ${repFor(ct.stars)}` : ''}</span><b>${ct.title}</b><span class="pay">${brl(ct.freight)}</span>
-        <small>${ct.cargo} · calado ${(SHIPS[c.ship].Tmin + (SHIPS[c.ship].Tmax - SHIPS[c.ship].Tmin) * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min<br>${ct.note}</small></button>`; }).join('')}</div>
+        <small>${ct.cargo} · calado ${(SHIPS[c.ship].Tmin + (SHIPS[c.ship].Tmax - SHIPS[c.ship].Tmin) * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min${ct.sky && ct.sky !== 'dia' ? ` · <b class="sky">${SKY[ct.sky].label.toUpperCase()} +${Math.round((SKY[ct.sky].bonus - 1) * 100)}%</b>` : ''}<br>${ct.note}${ct.sky && ct.sky !== 'dia' ? ' ' + SKY[ct.sky].hint : ''}</small></button>`; }).join('')}</div>
        <p class="dim">As ofertas mudam a cada viagem. Entregar bem aumenta a reputação, que libera contratos com mais estrelas e navios maiores.</p>`
     : portTab === 'estaleiro' ? yard : shopRows(portTab === 'oficina' ? 'part' : 'crew');
   overlay.innerHTML = `<div class="card wide">${head}
@@ -186,6 +190,7 @@ overlay.addEventListener('click', e => {
   if (d.contract) { const ct = offers(game.career).find(x => x.id === d.contract)!; game.contract = ct; return launch(ct.scenario); }
   if (d.ship) { portMsg = buyShip(game.career, d.ship as ShipClass) ?? ''; saveCareer(game.career); return menu(); }
   if (d.freeship) { game.freeShip = d.freeship as ShipClass; return menu(); }
+  if (d.sky) { game.freeSky = d.sky as Sky; return menu(); }
   if (d.again) return launch(game.scenario); // repete o mesmo contrato, com a mesma oferta
   if (d.sc) { game.contract = null; return launch(d.sc as Scenario); }
 });
@@ -241,6 +246,15 @@ function frame(now: number) {
   if (game.status !== 'menu') drawMission();
   const flag = game.status === 'running' ? (game.paused ? 'PAUSA' : game.warp > 1 ? `TEMPO ${game.warp}×` : '') : '';
   warpflag.hidden = !flag; if (flag && warpflag.textContent !== flag) warpflag.textContent = flag;
+  // nevoeiro: elipse de visibilidade em volta do navio, que fica sempre no centro da vista
+  let css = '';
+  if (game.sky === 'nevoeiro' && game.status !== 'menu') {
+    const r = game.visibility / view.mpp * 3;
+    css = `radial-gradient(ellipse ${r.toFixed(0)}px ${(r * view.squash).toFixed(0)}px at center, rgba(196,206,212,0.18) 35%, rgba(196,206,212,0.97) 100%)`;
+  }
+  if (css !== fogCss) fogEl.style.background = fogCss = css;
+  const skyTxt = game.status === 'menu' || game.sky === 'dia' ? '' : game.sky === 'noite' ? 'NOITE' : `NEVOEIRO · limite ${game.limitKn} nós`;
+  skyflag.hidden = !skyTxt; if (skyTxt && skyflag.textContent !== skyTxt) skyflag.textContent = skyTxt;
   const eq = JSON.stringify(game.equip);
   if (eq !== eqSaved) { eqSaved = eq; try { localStorage.setItem(EQ_KEY, eq); } catch { /* sem armazenamento */ } }
   if (game.status === 'done' && !shown) { shown = true; showResult(); }

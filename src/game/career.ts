@@ -70,7 +70,14 @@ export interface Contract {
   id: string; title: string; cargo: string; scenario: 'entrada' | 'fundeio';
   load: number;          // 0 = em lastro, 1 = carregado: muda calado, massa e área de vento
   tide: TidePreset; freight: number; parMin: number; stars: number; note: string;
+  sky?: Sky;
 }
+export type Sky = 'dia' | 'noite' | 'nevoeiro';
+export const SKY: Record<Sky, { label: string; bonus: number; hint: string }> = {
+  dia: { label: 'Dia claro', bonus: 1, hint: '' },
+  noite: { label: 'Noite', bonus: 1.15, hint: 'Só se veem as luzes: boias piscando, luzes de navegação e a cidade.' },
+  nevoeiro: { label: 'Nevoeiro', bonus: 1.3, hint: 'Visibilidade de 300 m e limite de 6 nós. Sem radar é quase às cegas.' },
+};
 export const CONTRACTS: Contract[] = [
   { id: 'fundeio', title: 'Aguardar berço', cargo: 'Em lastro', scenario: 'fundeio', load: 0.15, tide: 'vazante', freight: 3500, parMin: 40, stars: 1, note: 'Fundear entre os navios do fundeadouro. Navio leve: o vento manda.' },
   { id: 'meia', title: 'Fertilizante, meia carga', cargo: '1.600 t de fertilizante', scenario: 'entrada', load: 0.55, tide: 'vazante', freight: 16000, parMin: 75, stars: 2, note: 'Calado de 4,5 m e vazante pela proa: a entrada mais tranquila.' },
@@ -154,11 +161,13 @@ export function offers(c: Career): Contract[] {
     const swing = 0.9 + rnd() * 0.25, name = CARGOES[Math.floor(rnd() * CARGOES.length)];
     if (t.scenario === 'fundeio') return { ...t, freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing / 100) * 100 };
     const tons = Math.round(t.load * ship.capacity / 100) * 100;
+    // contratos de três estrelas ou mais podem cair à noite ou com nevoeiro, pagando mais
+    const roll = rnd(), sky: Sky = t.stars >= 4 && roll < 0.3 ? 'nevoeiro' : t.stars >= 3 && roll < 0.6 ? 'noite' : 'dia';
     return {
-      ...t, cargo: `${tons.toLocaleString('pt-BR')} t de ${name}`,
+      ...t, sky, cargo: `${tons.toLocaleString('pt-BR')} t de ${name}`,
       title: t.title.replace(/^(Fertilizante|Açúcar|Trigo)/, name[0].toUpperCase() + name.slice(1)),
-      freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing / 100) * 100,
-      parMin: t.parMin + (c.ship === 'handy' ? 15 : 0),
+      freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing * SKY[sky].bonus / 100) * 100,
+      parMin: t.parMin + (c.ship === 'handy' ? 15 : 0) + (sky === 'nevoeiro' ? 10 : 0),
     };
   });
 }

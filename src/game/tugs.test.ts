@@ -60,4 +60,18 @@ describe('rebocadores', () => {
     const g = new Game(); g.start('entrada'); g.callTug(0);
     expect(g.ledger.tugs).toBe(1800);
   });
+
+  it('o rebocador nunca passa por dentro do navio, nem chegando nem trocando de posição', () => {
+    const { g, run } = alongside(120);
+    for (const t of g.tugs) t.state = 'none';
+    g.callTug(0); g.callTug(1);
+    let inside = 0;
+    const check = () => { for (const t of g.tugs) { if (t.state === 'none') continue; const dx = t.x - g.s.x, dy = t.y - g.s.y, sn = Math.sin(g.s.psi), cs = Math.cos(g.s.psi); if (Math.abs(dx * sn + dy * cs) < g.p.L / 2 + 2 && Math.abs(dx * cs - dy * sn) < g.p.B / 2 + 2) inside++; } };
+    for (let i = 0; i < 400; i++) { g.update(0.1); check(); }
+    expect(g.tugs.every(t => t.state === 'fast')).toBe(true);
+    g.tugOrder(1, 'brake', 0.5); for (let i = 0; i < 60; i++) { g.update(0.1); check(); }
+    g.tugOrder(1, 'pull', 0.25); g.tugOrder(0, 'pull', 0.25); for (let i = 0; i < 80; i++) { g.update(0.1); check(); }
+    expect(inside).toBe(0);
+    void run;
+  });
 });

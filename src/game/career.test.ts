@@ -84,4 +84,15 @@ describe('carreira', () => {
     const g = new Game(); g.career = c; g.start('entrada');
     expect(g.p.L).toBe(130); expect(g.geo.hull[0][0]).toBe(65); expect(g.tugs[0].xf).toBe(52);
   });
+
+  it('nevoeiro baixa o limite para 6 nós e a visibilidade para 300 m; noite e nevoeiro pagam mais', () => {
+    const g = new Game(); g.free = true; g.freeSky = 'nevoeiro'; g.start('entrada');
+    expect(g.limitKn).toBe(6); expect(g.visibility).toBe(300);
+    g.freeSky = 'noite'; g.start('entrada'); expect(g.limitKn).toBe(8); expect(g.visibility).toBe(2500);
+    g.freeSky = 'dia'; g.start('entrada'); expect(g.visibility).toBeGreaterThan(10000);
+    const c = newCareer(); let night = 0, fog = 0, low = 0;
+    for (let v = 0; v < 40; v++) { c.voyages = v; for (const o of offers(c)) { if (o.sky === 'noite') night++; if (o.sky === 'nevoeiro') fog++; if (o.stars < 3 && o.sky !== 'dia' && o.sky !== undefined) low++; } }
+    expect(night).toBeGreaterThan(5); expect(fog).toBeGreaterThan(3); expect(low).toBe(0);
+    const k = new Game(); k.contract = { ...offers(c)[2], sky: 'nevoeiro' }; k.start('entrada'); expect(k.sky).toBe('nevoeiro');
+  });
 });

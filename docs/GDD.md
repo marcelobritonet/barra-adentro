@@ -114,6 +114,16 @@ Estado do prático por maré, com comandante obediente (teste automático):
 | Enchente e baixa-mar | Leva o navio inteiro até perto do berço e recusa atracar |
 | Qualquer maré, com os dois rebocadores | Atraca em cerca de 50 min, com resultado de uns R$ 9.000 (os rebocadores custam perto de R$ 7.500) |
 
+## Céu: dia, noite e nevoeiro
+
+| Céu | O que muda | Frete |
+|---|---|---|
+| Dia claro | Nada | tabela |
+| Noite | Só as luzes: boias piscando, luzes de navegação, cidade e cais | +15% |
+| Nevoeiro | 300 m de visibilidade, limite de 6 nós, 10 min a mais de prazo | +30% |
+
+O céu não muda a física, só o que se vê da ponte; por isso radar, ECDIS e GPS passam a valer o que custam. A fazer: sinais sonoros de nevoeiro, noite com nevoeiro, chuva.
+
 ## Confiança da tripulação
 
 Uma medida só, de −100 a +100, que começa em 0 e persiste entre viagens. O comandante ganha e perde.

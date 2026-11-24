@@ -46,7 +46,10 @@ export class Tug {
     if (this.state === 'called') {
       this.eta -= dt;
       const k = Math.max(0, Math.min(1, 1 - this.eta / ETA)), [tx, ty] = toWorld(this.xf, 60);
-      const nx = this.x0 + (tx - this.x0) * k, ny = this.y0 + (ty - this.y0) * k;
+      let nx = this.x0 + (tx - this.x0) * k, ny = this.y0 + (ty - this.y0) * k;
+      // contorna o navio em vez de atravessá-lo
+      const dx = nx - s.x, dy = ny - s.y, [cf, cs] = clearOfHull(dx * sin + dy * cos, dx * cos - dy * sin, g.p.L, g.p.B);
+      [nx, ny] = toWorld(cf, cs);
       if (Math.hypot(nx - this.x, ny - this.y) > 0.01) this.psi = Math.atan2(nx - this.x, ny - this.y);
       this.x = nx; this.y = ny;
       if (this.eta <= 0) { this.state = 'waiting'; this.bx = this.xf; this.by = 60; this.bh = 0; }
@@ -92,6 +95,8 @@ export class Tug {
       : d === 'brake' ? [this.xf - 45, 3, 0] : [this.xf, hb + 13, 0];
     const k = Math.min(1, dt * 0.25);
     this.bx += (gx - this.bx) * k; this.by += (gy - this.by) * k; this.bh += (gh - this.bh) * k;
+    // empurrando o rebocador encosta a proa no costado; fora isso, guarda distância do casco
+    if (d !== 'push') [this.bx, this.by] = clearOfHull(this.bx, this.by, g.p.L, g.p.B);
     [this.x, this.y] = toWorld(this.bx, this.by); this.psi = s.psi + this.bh;
     this.line = this.state === 'fast';
   }
@@ -103,6 +108,13 @@ export class Tug {
     if (this.repos > 0) return 'trocando de posição';
     return this.doing === 'stop' ? 'cabo passado, parado' : `${MODE_TEXT[this.doing]} ${Math.round(Math.abs(this.doing === 'brake' ? this.brake / BRAKE_MAX : this.force / FMAX) * 100)}%`;
   }
+}
+/** Tira um ponto (xf, ys) de dentro da faixa em volta do casco, pelo lado mais próximo. */
+export function clearOfHull(xf: number, ys: number, L: number, B: number): [number, number] {
+  const hl = L / 2 + 14, hb = B / 2 + 9;
+  if (Math.abs(xf) >= hl || Math.abs(ys) >= hb) return [xf, ys];
+  const outF = hl - Math.abs(xf), outS = hb - Math.abs(ys);
+  return outS <= outF ? [xf, (ys >= 0 ? 1 : -1) * hb] : [(xf >= 0 ? 1 : -1) * hl, ys];
 }
 export const makeTugs = (xf = 36) => [new Tug('Tupi', 'proa', xf), new Tug('Guará', 'popa', -xf)];
 export type { ShipState };
