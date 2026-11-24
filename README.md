@@ -4,6 +4,8 @@ Protótipo de um jogo de manobra de navios em pixel art 3D isométrico: entrar p
 
 A carta do jogo é estilizada e **não serve para navegação**.
 
+Jogar: https://marcelobritonet.github.io/barra-adentro/
+
 ## Rodar
 
 ```bash

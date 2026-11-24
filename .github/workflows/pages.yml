@@ -1,9 +1,10 @@
-# Publica o jogo no GitHub Pages a cada versão (tag vX.Y.Z).
+# Publica o jogo no GitHub Pages a cada envio ao main, que é onde chega cada entrega.
+# (O ambiente do Pages só aceita publicar a partir do main, não de tags.)
 name: Publicar
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
   workflow_dispatch:
 
 permissions:

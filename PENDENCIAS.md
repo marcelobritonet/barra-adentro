@@ -20,7 +20,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 12 | Validar a interface jogando | Passada feita na v0.3.0; falta a sua revisão: o que está pequeno, escondido ou confuso | Em aberto |
 | 15 | ECDIS forte demais? | Dividir em dois níveis (carta e posição; depois preditor, próxima curva e AIS), ruído no preditor abaixo de 2 nós, horizonte ajustável | Decidido em 2026-11-23: fica como está por enquanto. "Meio arcade, mas gostei" |
 | 13 | Onde publicar as releases | github.com/marcelobritonet/barra-adentro (público) | Decidido; v0.1.0 a v0.5.0 publicadas |
-| 14 | Publicar o jogo em produção | GitHub Pages, a cada tag, depois dos testes | Decidido; fluxo em `.github/workflows/pages.yml` |
+| 14 | Publicar o jogo em produção | GitHub Pages, a cada envio ao `main`, depois dos testes | Decidido; fluxo em `.github/workflows/pages.yml`. Endereço: https://marcelobritonet.github.io/barra-adentro/ |
 | 16 | Progressão invertida | Retorno do teste (v0.17.1): "navio sem nada é praticamente impossível". Opção A escolhida: começar equipado; a dificuldade vem do navio e do contrato | Feito na v0.18.0 |
 | 18 | Preditor do ECDIS como "sombra" sobre o navio na vista | Ideia do teste; receio de ficar arcade demais. Ligado à observação de que hoje se joga nos instrumentos e o navio é "só para ver" | Em aberto, pensando |
 | 17 | Plano de bordo | Retorno do teste: "ficou absurdo de bom" | Aprovado |
