@@ -115,6 +115,20 @@ Estado do prático por maré, com comandante obediente (teste automático):
 | Enchente e baixa-mar | Leva o navio inteiro até perto do berço e recusa atracar |
 | Qualquer maré, com os dois rebocadores | Atraca em cerca de 50 min, com resultado de uns R$ 9.000 (os rebocadores custam perto de R$ 7.500) |
 
+## O que a janela mostra
+
+Princípio (teste da v0.18.0): a vista do navio não pode ser enfeite. Ela tem de dar informação que nenhum instrumento dá, do jeito que se lê num navio de verdade, sem sobrepor instrumento ao mundo.
+
+| Dica | O que diz | Como é no mar |
+|---|---|---|
+| Farol de alinhamento de setores | De que lado do eixo o navio está: branco no eixo, encarnado a boreste dele, verde a bombordo | Luzes de setor e alinhamentos existem em todo canal |
+| Boia deitada e com rastro | Direção e força da corrente no local | É como se lê a corrente a olho |
+| Fumaça | Vento verdadeiro; e se a máquina está respondendo (sai preta ao ganhar rotação) | Idem |
+| Esteira | O caminho da popa: guinada e deriva | Idem |
+| Marola de proa | Velocidade na água | Idem |
+
+A fazer: bandeira e biruta no cais, marola quebrando nos bancos rasos, cor da água mudando no raso com o sol, sombra do navio no fundo em água clara.
+
 ## Plano de viagem
 
 Nasceu do teste: sem plano, manobra antecipada vira tentativa e erro. Código em `src/game/plan.ts`.

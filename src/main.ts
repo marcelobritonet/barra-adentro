@@ -107,6 +107,13 @@ help.innerHTML = `<h2>AJUDA</h2><p>Clique ou aperte <kbd>H</kbd> para fechar.</p
     <tr><td>Rebocadores</td><td>Só passam o cabo abaixo de 5 nós. Empurrar leva para bombordo, que é o lado do cais.</td></tr>
     <tr><td>Atracar</td><td>Chegue em ângulo raso, encoste a proa a menos de 0,3 nó e passe as espias; os cabos trazem a popa.</td></tr>
     <tr><td>Confiança</td><td>Erros e sustos derrubam; manobras limpas levantam. Ela muda a rapidez das ordens e os avisos.</td></tr>
+  </table></div>
+  <div><h3>O que a janela mostra</h3><table>
+    <tr><td>Farol de alinhamento</td><td>Torre listrada no fim de cada reta. Luz branca: você está no eixo. Encarnada: abriu para boreste, o lado das boias encarnadas. Verde: abriu para bombordo.</td></tr>
+    <tr><td>Boias</td><td>Deitam para onde a corrente corre e deixam um rastro a jusante. Quanto mais deitadas, mais corrente.</td></tr>
+    <tr><td>Fumaça</td><td>Vai com o vento verdadeiro. Sai preta quando a máquina está ganhando rotação.</td></tr>
+    <tr><td>Esteira</td><td>Mostra o caminho que a popa fez: curva na guinada, torta quando o navio está derivando.</td></tr>
+    <tr><td>Marola de proa</td><td>Cresce com a velocidade na água.</td></tr>
   </table></div></div>`;
 help.addEventListener('click', () => { help.hidden = true; });
 // ---------------------------------------------------------------- plano de viagem

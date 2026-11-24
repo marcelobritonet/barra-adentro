@@ -22,7 +22,8 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 13 | Onde publicar as releases | github.com/marcelobritonet/barra-adentro (público) | Decidido; v0.1.0 a v0.5.0 publicadas |
 | 14 | Publicar o jogo em produção | GitHub Pages, a cada envio ao `main`, depois dos testes | Decidido; fluxo em `.github/workflows/pages.yml`. Endereço: https://marcelobritonet.github.io/barra-adentro/ |
 | 16 | Progressão invertida | Retorno do teste (v0.17.1): "navio sem nada é praticamente impossível". Opção A escolhida: começar equipado; a dificuldade vem do navio e do contrato | Feito na v0.18.0 |
-| 18 | Preditor do ECDIS como "sombra" sobre o navio na vista | Ideia do teste; receio de ficar arcade demais. Ligado à observação de que hoje se joga nos instrumentos e o navio é "só para ver" | Em aberto, pensando |
+| 18 | Preditor do ECDIS como "sombra" sobre o navio na vista | Decidido em teste: não fazer. Em vez disso, dicas visuais realistas na vista | Feito de outro jeito na v0.19.0 |
+| 19 | As dicas visuais bastam? | Faróis de setores, boias com corrente, fumaça, esteira, marola | Implementado; ver jogando se dá para navegar olhando o navio |
 | 17 | Plano de bordo | Retorno do teste: "ficou absurdo de bom" | Aprovado |
 
 ## A fazer
@@ -81,3 +82,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.17.0: plano de viagem com pontos de guinada simulados; arrastar a vista (pedidos em teste) |
 | v0.17.1: ponto de chamada, linha de espera e onde fazer cada chamado de rádio (pedido em teste) |
 | v0.18.0: progressão invertida, contrato "à moda antiga", publicação no GitHub Pages |
+| v0.19.0: dicas visuais na vista (faróis de setores, corrente nas boias, fumaça, esteira, marola) |

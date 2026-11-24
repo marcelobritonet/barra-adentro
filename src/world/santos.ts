@@ -195,3 +195,34 @@ export function depthColor(d: number): [number, number, number] {
   return [22, 74, 134];
 }
 export const DEPTH_BANDS = [2, 5, 8, 11, 13.5];
+
+// ------------------------------------------------------------------ faróis de alinhamento
+
+/** Farol de setores no fim de uma pernada reta do canal: a cor da luz diz de que lado do eixo o navio está. */
+export interface Beacon { x: number; y: number; tx: number; ty: number; leg: number }
+export const BEACONS: Beacon[] = (() => {
+  const out: Beacon[] = [];
+  for (let i = 1; i < SEG.length; i++) {
+    const g = SEG[i], ex = g.ax + g.tx * g.len, ey = g.ay + g.ty * g.len;
+    // segue o prolongamento da pernada até achar terra, e põe o farol um pouco para dentro
+    for (let d = 60; d <= 1600; d += 10) {
+      if (depth(ex + g.tx * d, ey + g.ty * d) <= 0) { out.push({ x: ex + g.tx * (d + 45), y: ey + g.ty * (d + 45), tx: g.tx, ty: g.ty, leg: i }); break; }
+    }
+  }
+  return out;
+})();
+export type Sector = 'white' | 'red' | 'green' | 'off';
+/**
+ * Cor que o navio vê no farol. Branco: no eixo. Encarnado: desviado para boreste, o lado das boias encarnadas.
+ * Verde: desviado para bombordo. Apagado: fora do setor ou longe demais.
+ */
+export function sector(b: Beacon, x: number, y: number): Sector {
+  const rx = x - b.x, ry = y - b.y;
+  const along = -(rx * b.tx + ry * b.ty), side = rx * b.ty - ry * b.tx;   // side > 0: navio a boreste do eixo
+  if (along < 80 || along > 3200 || Math.abs(side) > along * 0.3) return 'off';
+  // cada farol só vale na pernada dele: senão dois acenderiam com cores diferentes perto de uma curva
+  const g = SEG[b.leg], at = nearest(x, y).s;
+  if (at < g.s0 - 30 || at > g.s0 + g.len + 20) return 'off';
+  const half = 10 + along * 0.012;                                         // o setor branco abre com a distância
+  return Math.abs(side) <= half ? 'white' : side > 0 ? 'red' : 'green';
+}

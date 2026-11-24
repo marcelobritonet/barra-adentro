@@ -2,6 +2,18 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.19.0 — O que a janela mostra
+
+Observação do teste: "só trabalhamos os equipamentos e o navio é só para ver". Em vez de pôr o ECDIS sobre o navio, a vista passou a dar informação própria, do jeito que se lê num navio de verdade.
+
+- Faróis de alinhamento: uma torre listrada em terra no fim de cada reta do canal. A lanterna é de setores: branca com o navio no eixo, encarnada se ele abriu para boreste (o lado das boias encarnadas), verde se abriu para bombordo. Só o farol da reta em que você está fica aceso.
+- Boias que mostram a corrente: deitam para onde ela corre e deixam um rastro a jusante; quanto mais forte, mais deitadas e mais longo o rastro. Mudam quando a maré vira.
+- Fumaça da chaminé: vai com o vento verdadeiro, e sai mais preta quando a máquina está ganhando rotação, o que deixa visível o atraso entre a ordem e a resposta.
+- Esteira mais longa e mais fina: mostra o caminho que a popa fez, curva na guinada e torta quando o navio deriva.
+- Marola de proa que cresce com a velocidade na água.
+- A ajuda (tecla H) ganhou a seção "O que a janela mostra".
+- 4 testes novos dos faróis.
+
 ## v0.18.0 — Progressão do lado certo e publicação
 
 Retorno do teste: "navio sem nada é praticamente impossível; em vez de navio iniciante tem cara de avançado".

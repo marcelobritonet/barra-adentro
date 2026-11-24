@@ -42,6 +42,12 @@ export class View {
   private others: { mesh: THREE.Group; line: THREE.Line }[] = [];
   private wake: THREE.Mesh[] = [];
   private wakeI = 0; private wakeT = 0;
+  // dicas visuais: o que a janela mostra e nenhum instrumento dá
+  private beacons: THREE.MeshBasicMaterial[] = [];
+  private tails: THREE.Mesh[] = [];
+  private flow: [number, number][] = []; private flowT = 0;
+  private smoke: THREE.Mesh[] = []; private smokeI = 0; private smokeT = 0; private lastN = 0;
+  private bowWave: THREE.Mesh[] = [];
   private buoys: THREE.Group[] = [];
   private bob = 0;
   quarter = 0; zoomI = 2; top = false;
@@ -72,9 +78,31 @@ export class View {
       this.tugs.push({ mesh, line }); this.scene.add(mesh, line);
     }
     const wg = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 150; i++) {
       const m = new THREE.Mesh(wg, new THREE.MeshBasicMaterial({ color: 0xe8f6ff, transparent: true, opacity: 0, depthWrite: false }));
       m.position.y = 0.15; this.wake.push(m); this.scene.add(m);
+    }
+    // faróis de alinhamento: torre listrada com uma lanterna que muda de cor
+    for (const b of W.BEACONS) {
+      const g = new THREE.Group(), lamp = new THREE.MeshBasicMaterial({ color: 0x333333 });
+      g.add(box(5, 10, 5, 0xf1f1ea, 0, 5, 0), box(5, 8, 5, 0xc23b2e, 0, 14, 0), box(5, 8, 5, 0xf1f1ea, 0, 22, 0));
+      const l = new THREE.Mesh(new THREE.BoxGeometry(9, 7, 9), lamp); l.position.y = 30; g.add(l);
+      g.position.set(b.x, 2, -b.y); this.beacons.push(lamp); this.scene.add(g);
+    }
+    // rastro de corrente a jusante de cada boia
+    const tg = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5);
+    for (let i = 0; i < W.BUOYS.length; i++) {
+      const t = new THREE.Mesh(tg, new THREE.MeshBasicMaterial({ color: 0xe8f6ff, transparent: true, opacity: 0.55, depthWrite: false }));
+      t.position.set(W.BUOYS[i].x, 0.12, -W.BUOYS[i].y); this.tails.push(t); this.scene.add(t); this.flow.push([0, 0]);
+    }
+    // fumaça da chaminé e marola de proa
+    for (let i = 0; i < 40; i++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x8a8f96, transparent: true, opacity: 0, depthWrite: false }));
+      this.smoke.push(m); this.scene.add(m);
+    }
+    for (const sd of [-1, 1]) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xf4fbff, transparent: true, opacity: 0, depthWrite: false }));
+      m.userData.side = sd; this.bowWave.push(m); this.scene.add(m);
     }
     new ResizeObserver(() => this.resize()).observe(el);
     this.resize();
@@ -116,21 +144,57 @@ export class View {
     this.buoys.forEach((b, i) => {
       // à noite as boias piscam, cada uma no seu ritmo
       b.children[2].visible = night && !g.hitBuoys.has(i) && (this.bob * 0.5 + i * 0.37) % 1 < 0.35;
-      b.rotation.z = g.hitBuoys.has(i) ? 1.2 : 0.08 * Math.sin(this.bob * 1.3 + i);
+      // a boia deita para onde a corrente corre, e deixa um rastro a jusante
+      const [ce, cn] = this.flow[i], sp = Math.hypot(ce, cn), tilt = Math.min(0.55, sp * 0.8), bobb = 0.06 * Math.sin(this.bob * 1.3 + i);
+      if (g.hitBuoys.has(i)) b.rotation.set(0, 0, 1.2);
+      else b.rotation.set(sp > 0.02 ? tilt * (-cn / sp) + bobb : bobb, 0, sp > 0.02 ? -tilt * (ce / sp) : 0);
+      const t = this.tails[i]; t.visible = sp > 0.08 && !g.hitBuoys.has(i);
+      if (t.visible) { t.rotation.y = Math.atan2(ce, -cn); t.scale.set(3.5, 1, 10 + sp * 55); (t.material as THREE.MeshBasicMaterial).opacity = 0.3 + 0.25 * Math.sin(this.bob * 2 + i) ** 2; }
+    });
+    // a corrente muda devagar com a maré: relê a cada dois segundos
+    if ((this.flowT -= dt) <= 0) { this.flowT = 2; W.BUOYS.forEach((b, i) => { this.flow[i] = g.env.current(b.x, b.y); }); }
+    // faróis de alinhamento
+    W.BEACONS.forEach((b, i) => {
+      const sc = W.sector(b, s.x, s.y), blink = night ? (this.bob * 0.7 + i * 0.3) % 1 < 0.75 : true;
+      this.beacons[i].color.set(sc === 'off' || !blink ? 0x2a2e33 : sc === 'white' ? 0xffffff : sc === 'red' ? 0xff3b30 : 0x35ff7a);
     });
 
     // esteira
     this.wakeT -= dt * g.warp;
     if (this.wakeT <= 0 && Math.abs(s.u) > 0.4 && g.status === 'running' && !g.paused) {
-      this.wakeT = 9 / Math.max(1, Math.abs(s.u));
+      this.wakeT = 5 / Math.max(1, Math.abs(s.u));   // um pedaço de esteira a cada 5 m: dá para ver a curva e a deriva
       const m = this.wake[this.wakeI = (this.wakeI + 1) % this.wake.length];
       const [wx, wy] = bodyToWorld(s, (s.u > 0 ? -1 : 1) * (g.p.L / 2 + 1), 0);
       m.position.set(wx, 0.15, -wy); m.rotation.y = -s.psi;
-      m.scale.set(8 + 10 * Math.abs(s.n), 1, 5); (m.material as THREE.MeshBasicMaterial).opacity = 0.75;
+      m.scale.set(g.p.B * 0.5 + 8 * Math.abs(s.n), 1, 6); (m.material as THREE.MeshBasicMaterial).opacity = 0.7;
     }
     for (const m of this.wake) {
       const mat = m.material as THREE.MeshBasicMaterial;
-      if (mat.opacity > 0 && !g.paused) { mat.opacity = Math.max(0, mat.opacity - dt * g.warp * 0.02); m.scale.x += dt * g.warp * 0.35; }
+      if (mat.opacity > 0 && !g.paused) { mat.opacity = Math.max(0, mat.opacity - dt * g.warp * 0.0085); m.scale.x += dt * g.warp * 0.25; }
+    }
+
+    // fumaça: sai da chaminé e vai com o vento verdadeiro, mostrando de onde ele sopra e quanto o navio anda
+    const live = g.status === 'running' && !g.paused, wd = dt * g.warp;
+    const ax = -Math.sin(g.env.windFrom) * g.env.windSpeed, ay = -Math.cos(g.env.windFrom) * g.env.windSpeed;
+    if (live && (this.smokeT -= wd) <= 0 && Math.abs(s.n) > 0.02) {
+      this.smokeT = 1.6 - Math.abs(s.n);
+      const m = this.smoke[this.smokeI = (this.smokeI + 1) % this.smoke.length], [fx, fy] = bodyToWorld(s, -(g.p.L / 2 - 8), 0);
+      const push = Math.abs(s.n) - Math.abs(this.lastN) > 0.004;   // dando máquina, a fumaça sai mais preta
+      m.position.set(fx, (g.p.L > 100 ? 11 : 8) - g.p.T + 16, -fy); m.scale.setScalar(4);
+      const mat = m.material as THREE.MeshBasicMaterial; mat.opacity = 0.55 + 0.3 * Math.abs(s.n); mat.color.set(push ? 0x2b2d31 : night ? 0x55595f : 0x8a8f96);
+    }
+    this.lastN = s.n;
+    for (const m of this.smoke) {
+      const mat = m.material as THREE.MeshBasicMaterial; if (mat.opacity <= 0 || !live) continue;
+      m.position.x += ax * wd; m.position.z -= ay * wd; m.position.y += 0.9 * wd;
+      m.scale.addScalar(0.9 * wd); mat.opacity = Math.max(0, mat.opacity - 0.03 * wd);
+    }
+    // marola de proa: cresce com a velocidade na água
+    for (const m of this.bowWave) {
+      const v = Math.abs(s.stw), sd = m.userData.side as number, [bx, by] = bodyToWorld(s, g.p.L / 2 - 6 - v * 2, sd * (g.p.B * 0.42 + v));
+      m.visible = v > 0.6 && g.status === 'running';
+      m.position.set(bx, 0.2, -by); m.rotation.y = -s.psi - sd * 0.5; m.scale.set(2 + v * 1.2, 1, 5 + v * 4.5);
+      (m.material as THREE.MeshBasicMaterial).opacity = Math.min(0.85, 0.15 + v * 0.14);
     }
 
     // outros navios
