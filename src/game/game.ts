@@ -12,6 +12,20 @@ import { makePlan, Plan } from './plan';
 import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, reputation, salaries, saveCareer, Sky, wearFactor } from './career';
 
 export type Scenario = 'entrada' | 'fundeio' | 'contrabordo';
+
+/** Regras de atracação, num lugar só. Distâncias em metros, velocidades em m/s. */
+export const BERTH = {
+  bowMax: 15,        // proa a esta distância das defensas: dá para lançar a retinida
+  sternMax: 45,      // a popa vem depois, virada nos cabos
+  speedMax: 0.4,     // até 0,8 nó ainda se passa a primeira espia
+  soft: 0.2,         // toque de até 0,4 nó é macio
+  hard: 0.45,        // acima de 0,9 nó a pancada é forte
+  wreck: 0.8,        // acima de 1,6 nó é avaria grave
+  /** Velocidade no fundo que o plano pede a cada distância do meio do berço. */
+  profile: [[400, 2.0], [250, 1.5], [120, 1.0], [50, 0.5], [0, 0.3]] as [number, number][],
+};
+/** Velocidade (nós) que o plano pede a `d` metros do meio do berço. */
+export function berthSpeedKn(d: number) { for (const [dist, kn] of BERTH.profile) if (d >= dist) return kn; return 0.3; }
 export interface Msg { t: number; text: string; level: 'info' | 'warn' | 'bad' | 'pilot'; who: string }
 export interface Result { ok: boolean; title: string; detail: string; lines: [string, number][]; total: number; trustBefore: number; trustAfter: number; left: boolean; rep: number }
 
@@ -78,7 +92,7 @@ export class Game {
   traffic: Other[] = makeTraffic();
   /** Atracação a contrabordo: o navio fundeado que serve de "cais". */
   sts: Other | null = null;
-  private stsQuay: W.Quay = { id: 'sts', name: '', s: 0, side: 1, cx: 0, cy: 0, tx: 0, ty: 1, nx: 1, ny: 0, half: 60, berthHalf: 30, fender: 2.5 };
+  private stsQuay: W.Quay = { id: 'sts', name: '', s: 0, side: 1, cx: 0, cy: 0, tx: 0, ty: 1, nx: 1, ny: 0, half: 60, berthHalf: 40, fender: 2.5 };
   /** O costado de boreste do navio fundeado acompanha o giro dele. */
   private syncSts() {
     const o = this.sts; if (!o) return;
@@ -310,8 +324,8 @@ export class Game {
     const b = this.berth();
     if (Math.abs(b.along) > W.QUAY.berthHalf) return this.say('Imediato', `Fora da posição: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'avante' : 'a ré'} do ${this.sts ? 'meio do navio' : 'berço'}.`, 'warn');
     // a proa precisa estar encostada; a popa pode vir depois, virada pelos cabos
-    if (b.bow > 8 || b.stern > 35) return this.say('Imediato', `Longe demais para passar espias: proa ${Math.max(0, b.bow).toFixed(0)} m (máx. 8), popa ${Math.max(0, b.stern).toFixed(0)} m (máx. 35).`, 'warn');
-    if (this.sog > 0.25) return this.say('Imediato', 'Ainda com seguimento. Pare o navio antes de amarrar.', 'warn');
+    if (b.bow > BERTH.bowMax || b.stern > BERTH.sternMax) return this.say('Imediato', `Longe demais para passar espias: proa ${Math.max(0, b.bow).toFixed(0)} m (máx. ${BERTH.bowMax}), popa ${Math.max(0, b.stern).toFixed(0)} m (máx. ${BERTH.sternMax}).`, 'warn');
+    if (this.sog > BERTH.speedMax) return this.say('Imediato', `Ainda com ${(this.sog / KN).toFixed(1)} nó. Abaixo de ${(BERTH.speedMax / KN).toFixed(1)} nó dá para passar a primeira espia.`, 'warn');
     this.mooring = 40 * this.crewFactor * (!this.free && this.career.crew.mate >= 2 ? 0.5 : 1);
     this.setTelegraph(4); this.emit('lines');
     this.say('Imediato', b.stern > 8 ? 'Lançante de proa em terra. Virando a popa nos cabos.' : 'Passando espias. Lançante e espringue em terra.', 'info');
@@ -432,7 +446,8 @@ export class Game {
       // a contrabordo, o que importa é a velocidade em relação ao costado do outro navio, que gira
       if (this.sts) { vx -= this.sts.rate * (wy - this.sts.y); vy += this.sts.rate * (wx - this.sts.x); }
       const vn = vx * Q.nx + vy * Q.ny, vt = vx * Q.tx + vy * Q.ty;
-      const F = Math.max(0, KQ * (Q.fender - b) - CQ * vn) * this.size;
+      // defensa de borracha: resiste ao ser comprimida e devolve só uma parte ao soltar, senão o navio quica
+      const F = Math.max(0, KQ * (Q.fender - b) * (vn > 0 ? 0.03 : 1) - CQ * Math.min(vn, 0)) * this.size;
       const fr = -MU * F * Math.tanh(vt / 0.05);
       worldForceAt(s, F * Q.nx + fr * Q.tx, F * Q.ny + fr * Q.ty, xf, ys, ext);
       contact = true; impact = Math.max(impact, -vn);
@@ -443,7 +458,8 @@ export class Game {
         const ys = y0 * Q.side;
         const gap = W.quayLocal(...bodyToWorld(s, xf, ys))[1] - Q.fender;
         const [vx, vy] = pointVelocity(s, xf, ys);
-        const F = (Math.max(0, Math.min(60e3, 8e3 * gap)) + 4e5 * (vx * Q.nx + vy * Q.ny)) * this.size;
+        // cabos nos guinchos: puxam com força constante até encostar, freando a chegada
+        const F = (Math.max(0, Math.min(90e3, 14e3 * gap)) + 5e5 * (vx * Q.nx + vy * Q.ny)) * this.size;
         worldForceAt(s, -F * Q.nx, -F * Q.ny, xf, ys, ext);
       }
     }
@@ -461,7 +477,7 @@ export class Game {
     else if (s.air < 2 && s.n === 0) this.say('Máquinas', `Ar de partida baixo: só ${Math.floor(s.air)} partida${s.air >= 2 ? 's' : ''}.`, 'warn', 'airlow', 60);
 
     if (this.mooring > 0) {
-      s.u *= 0.97;
+      s.u *= 0.96; // os espringues seguram o navio ao longo do cais
       this.mooring -= DT;
       const mb = this.berth();
       if (this.mooring <= 0) this.mooring = DT; // só termina com o navio encostado
@@ -521,6 +537,13 @@ export class Game {
 
     if (this.scenario !== 'fundeio' && this.mooring <= 0) {
       const b = this.berth();
+      // o imediato confere a velocidade contra o plano de atracação
+      const dB = Math.abs(b.along), want = berthSpeedKn(dB) * KN;
+      if (dB < 420 && Math.min(b.bow, b.stern) < 220 && this.sog > want * 1.25 + 0.05) {
+        this.say('Imediato', `${(this.sog / KN).toFixed(1)} nó a ${dB.toFixed(0)} m do berço: o plano pede ${berthSpeedKn(dB).toFixed(1).replace('.', ',')}. Tire seguimento.`, 'warn', 'berthfast', 18);
+      }
+      const [vx, vy] = pointVelocity(s, ...this.geo.berthBow), closing = -(vx * W.QUAY.nx + vy * W.QUAY.ny);
+      if (b.bow < 30 && closing > BERTH.soft) this.say('Proa', `Fechando rápido: ${(closing / KN).toFixed(1)} nó de lado, a ${Math.max(0, b.bow).toFixed(0)} m. Macio é até ${(BERTH.soft / KN).toFixed(1)}.`, 'warn', 'closing', 10);
       if (Math.min(b.bow, b.stern) < 120 && Math.abs(b.along) < 300) {
         const f = (v: number) => (v < 0.3 ? 'encostada' : `a ${v.toFixed(v < 10 ? 1 : 0)} m`);
         // só informa quando a distância muda de verdade, e mais espaçado quando ainda está longe
@@ -557,9 +580,9 @@ export class Game {
   private onImpact(v: number) {
     const kn = (v / KN).toFixed(1);
     this.emit('thud');
-    if (v > 0.6) return this.finish(false, this.sts ? 'Avaria grave nos dois navios' : 'Avaria grave no cais', `Tocou o ${this.against} a ${kn} nós.`, this.sts ? 90000 : 60000);
-    if (v > 0.3) { this.ledger.contact += 15000; this.trustEvent(-18, 'pancada no cais'); this.say('Imediato', `Pancada forte no ${this.against}: ${kn} nós. Vai ter vistoria.`, 'bad'); }
-    else if (v > 0.15) { this.ledger.contact += 3000; this.trustEvent(-6, 'encostou duro'); this.say('Imediato', `Encostou duro: ${kn} nós.`, 'warn'); }
+    if (v > BERTH.wreck) return this.finish(false, this.sts ? 'Avaria grave nos dois navios' : 'Avaria grave no cais', `Tocou o ${this.against} a ${kn} nós.`, this.sts ? 90000 : 60000);
+    if (v > BERTH.hard) { this.ledger.contact += 15000; this.trustEvent(-18, 'pancada no cais'); this.say('Imediato', `Pancada forte no ${this.against}: ${kn} nós. Vai ter vistoria.`, 'bad'); }
+    else if (v > BERTH.soft) { this.ledger.contact += 3000; this.trustEvent(-6, 'encostou duro'); this.say('Imediato', `Encostou duro: ${kn} nós.`, 'warn'); }
     else { this.say('Imediato', this.tone(`Encostou macio, ${kn} nós.`), 'info'); this.trustEvent(8, 'atracação macia', 'soft', 600); }
   }
 

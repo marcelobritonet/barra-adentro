@@ -97,11 +97,12 @@ export class Panel {
             <div class="unit" id="radionote">O VTS autoriza a entrada. O prático é opcional e só dá ordens.</div>
           </div>
           <div class="tab" data-pane="tugs" style="display:none">
-            <div class="unit">Saída R$ ${TUG_FEE.toLocaleString('pt-BR')} + R$ ${TUG_PER_MIN}/min com cabo. Empurrar leva o navio para bombordo.</div>
+            <div class="unit">Saída R$ ${TUG_FEE.toLocaleString('pt-BR')} + R$ ${TUG_PER_MIN}/min com cabo. Empurrar e puxar: de lado, para o cais ou para fora. Vante, ré e segurar: ao longo do navio.</div>
             ${g.tugs.map((t, i) => `<div class="tug" data-tug="${i}">
               <div class="tugname"><b>${t.name}</b> · ${t.where} <span class="tugst"></span></div>
               <button data-tcall="1">Chamar</button>
-              <button data-tmode="push">◀ Empurrar</button><button data-tmode="stop">Parar</button><button data-tmode="pull">Puxar ▶</button>${i === 1 ? '<button data-tmode="brake">Segurar</button>' : ''}
+              <button data-tmode="push" title="Empurra o navio para o cais">Empurrar</button><button data-tmode="pull" title="Puxa o navio para longe do cais">Puxar</button><button data-tmode="stop">Parar</button>
+              <button data-tmode="ahead" title="Reboca o navio para vante">▲ Vante</button><button data-tmode="astern" title="Reboca o navio para ré">▼ Ré</button><button data-tmode="brake" title="Segura o navio no lugar: opõe-se ao vai e vem para vante e para ré">Segurar</button>
               <select data-tpow="1">${[10, 25, 50, 100].map(p => `<option value="${p / 100}" ${p === 25 ? 'selected' : ''}>${p}%</option>`).join('')}</select>
             </div>`).join('')}
           </div>
@@ -257,7 +258,7 @@ export class Panel {
     const alert: Record<string, boolean> = {
       radio: g.scenario === 'entrada' && (g.vts === 'none' || (g.vts === 'ok' && !!berthShip(g) && berthShip(g)!.phase === 'berthed' && !berthShip(g)!.asked && g.time < 600) || (g.pilot.state === 'aboard' && (Math.round(s.rudderOrder / D2R) !== g.pilot.helm || s.telegraph !== g.pilot.tel))),
       tugs: g.tugs.some(t => t.state === 'waiting'),
-      deck: g.anchor.dragging || (!!bk && Math.abs(bk.along) < 60 && bk.bow < 10 && g.mooring <= 0),
+      deck: g.anchor.dragging || (!!bk && Math.abs(bk.along) <= W.QUAY.berthHalf && bk.bow <= 15 && g.mooring <= 0),
       equip: false,
     };
     document.querySelectorAll<HTMLElement>('[data-tab]').forEach(b => { b.classList.toggle('on', b.dataset.tab === this.tab); b.classList.toggle('alert', alert[b.dataset.tab!] && b.dataset.tab !== this.tab); });
@@ -328,7 +329,7 @@ export class Panel {
     else {
       const b = g.berth(), near = Math.abs(b.along) < 400 && Math.min(b.bow, b.stern) < 150;
       bb.classList.toggle('off', !near);
-      bb.innerHTML = near ? `${W.QUAY.name}: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'passado' : 'a vante'}<br>por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}; proa ≤ 8 m, popa ≤ 35 m, parado` : `${W.QUAY.name}, por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'} seu: ainda longe`;
+      bb.innerHTML = near ? `${W.QUAY.name}: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'passado' : 'a vante'}<br>por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}; proa ≤ 15 m, popa ≤ 45 m, até 0,8 nó` : `${W.QUAY.name}, por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'} seu: ainda longe`;
     }
 
     this.big.hidden = !this.bigChart;

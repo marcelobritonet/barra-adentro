@@ -2,6 +2,7 @@
 // e quando quebrá-la. Os números saem de simular este navio, com a carga desta viagem.
 import { D2R, Env, KN, makeState, ShipParams, stepShip, TELEGRAPH_LABELS } from '../sim/ship';
 import * as W from '../world/santos';
+import { BERTH } from './game';
 import type { Game } from './game';
 
 export interface PlanTurn {
@@ -125,6 +126,7 @@ export function makePlan(g: Game): Plan {
     `Parada: de muito devagar, pare a máquina a ${round10(stop.coast + stop.astern + 40)} m do meio do berço. Se ainda tiver mais de 1 nó a ${round10(stop.astern + 30)} m, devagar ré.`,
     `As velocidades no fundo já descontam a corrente de agora (${g.tide.flow > 0.1 ? 'vazante, pela proa' : g.tide.flow < -0.1 ? 'enchente, pela popa' : 'quase parada'}); ela muda com a maré.`,
     'Os pontos de guinada valem para o leme e a máquina do plano. Mais rápido ou com menos leme, comece antes.',
+    `Atracação, velocidade no fundo por distância ao meio do berço: ${BERTH.profile.slice(0, 4).map(([d, k]) => `a ${d} m, ${String(k).replace('.', ',')} nó`).join('; ')}; encostar de lado a menos de ${String(BERTH.soft / KN).slice(0, 3).replace('.', ',')} nó. Com a proa a ${BERTH.bowMax} m das defensas e menos de ${(BERTH.speedMax / KN).toFixed(1).replace('.', ',')} nó, passe as espias (M): os cabos trazem o navio.`,
   ];
   // chamados de rádio: onde fazer cada um, e por quê ali
   const minsTo = (target: number) => { let m = 0; for (const st of steps) { const a = st.s, b = st.s + (st.dist ?? 0); if (target <= a) break; m += (st.min ?? 0) * Math.min(1, (target - a) / Math.max(1, b - a)); } return m; };
@@ -150,7 +152,7 @@ function sidePlan(g: Game): Plan {
   const steps: PlanStep[] = g.sts ? [
     { title: 'Aproximação', s: -1, course: g.sts.psi / D2R, dist, tel: 6, stw, sog: stw, min: dist / stw / 60, action: `Vir pela popa do ${g.sts.name}, no mesmo rumo dele (${fmtCourse(g.sts.psi / D2R)}), abrindo 40 m para o boreste dele.` },
     { title: 'Emparelhar', s: -1, tel: 5, action: `Reduzir para muito devagar a ${round10(stop.coast + 150)} m da popa dele. Parar a máquina ao passar a popa.` },
-    { title: 'Encostar', s: -1, tel: 4, action: 'Fechar devagar, com a proa um pouco para dentro. Tocar as defensas a menos de 0,3 nó e passar as espias na hora.' },
+    { title: 'Encostar', s: -1, tel: 4, action: 'Fechar devagar, com a proa um pouco para dentro. Tocar as defensas a menos de 0,4 nó; com a proa a 15 m já dá para passar as espias.' },
   ] : [
     { title: 'Rumo ao fundeadouro', s: -1, course: brg, dist, tel: 6, stw, sog: stw, min: dist / stw / 60, action: 'Ponto sugerido: a parte norte do círculo, a mais de 280 m do ferro de cada navio.' },
     { title: 'Aproar ao vento', s: -1, course: wind, tel: 5, action: `Chegar ao ponto com a proa em ${fmtCourse(wind)}, de onde vem o vento. O navio para mais fácil e o ferro unha melhor.` },

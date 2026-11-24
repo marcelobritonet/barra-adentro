@@ -93,4 +93,33 @@ describe('rebocadores', () => {
     expect(dx * Math.cos(s.psi) - dy * Math.sin(s.psi)).toBeLessThan(0); // rebocador a bombordo do navio
     W.setQuay('cais');
   });
+
+  it('segurar: os dois rebocadores param o vai e vem ao longo do cais, mesmo com corrente', () => {
+    const free = alongside(30), held = alongside(30);
+    for (const x of [free, held]) { x.g.env.current = () => [-W.QUAY.tx * 0.4, -W.QUAY.ty * 0.4]; x.g.s.u = 0.5; }   // corrente pela proa e seguimento a vante
+    held.g.tugOrder(0, 'brake', 1); held.g.tugOrder(1, 'brake', 1);
+    const a0 = free.g.berth().along;
+    free.run(240); held.run(240);
+    const dFree = Math.abs(free.g.berth().along - a0), dHeld = Math.abs(held.g.berth().along - a0);
+    console.log('em 4 min ao longo do cais: solto', dFree.toFixed(0), 'm; com os dois segurando', dHeld.toFixed(0), 'm; seguimento', held.g.s.u.toFixed(2), 'm/s');
+    expect(dHeld).toBeLessThan(dFree * 0.5);
+    expect(Math.abs(held.g.s.u)).toBeLessThan(0.12);
+  });
+  it('vante e ré: o rebocador reboca o navio ao longo do comprimento, sem girá-lo', () => {
+    const fwd = alongside(60), aft = alongside(60);
+    fwd.g.tugOrder(0, 'ahead', 0.5); aft.g.tugOrder(1, 'astern', 0.5);
+    fwd.run(90); aft.run(90);
+    expect(fwd.g.s.u).toBeGreaterThan(0.15); expect(aft.g.s.u).toBeLessThan(-0.15);
+    expect(fwd.g.tugs[0].tow).toBeGreaterThan(0); expect(aft.g.tugs[1].tow).toBeLessThan(0);
+    expect(Math.abs(fwd.g.s.r)).toBeLessThan(0.002);
+    expect(fwd.g.tugs[0].status()).toMatch(/rebocando para vante 50%/);
+  });
+  it('passar de empurrar para segurar exige reposicionar', () => {
+    const { g, run } = alongside(60);
+    g.tugOrder(0, 'push', 0.5); run(20);
+    g.tugOrder(0, 'brake', 1); run(8);
+    expect(g.tugs[0].status()).toBe('trocando de posição');
+    run(40);
+    expect(g.tugs[0].status()).toMatch(/segurando/);
+  });
 });

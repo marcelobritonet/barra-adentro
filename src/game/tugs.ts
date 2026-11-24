@@ -4,18 +4,22 @@ import { BodyForce, KN, ShipState } from '../sim/ship';
 import * as W from '../world/santos';
 import type { Game } from './game';
 
-export type TugMode = 'stop' | 'push' | 'pull' | 'brake';
+export type TugMode = 'stop' | 'push' | 'pull' | 'brake' | 'ahead' | 'astern';
 export const TUG_FEE = 1800;        // saída do rebocador
 export const TUG_PER_MIN = 60;      // com cabo passado
 const FMAX = 120e3, BRAKE_MAX = 80e3, RAMP = 0.12, ETA = 240, REPOSITION = 15, ACK = 4;
-const MODE_TEXT: Record<TugMode, string> = { stop: 'parado, aguardando', push: 'empurrando', pull: 'puxando', brake: 'segurando por ante a ré' };
+const TOW_MAX = 100e3;
+const MODE_TEXT: Record<TugMode, string> = { stop: 'parado, aguardando', push: 'empurrando', pull: 'puxando', brake: 'segurando o navio no lugar', ahead: 'rebocando para vante', astern: 'rebocando para ré' };
+/** Ordens que pedem a mesma posição do rebocador; mudar de grupo exige reposicionar. */
+const GROUP: Record<TugMode, string> = { stop: '', push: 'empurra', pull: 'puxa', brake: 'segura', ahead: 'vante', astern: 're' };
 
 export class Tug {
   state: 'none' | 'called' | 'waiting' | 'fast' = 'none';
   mode: TugMode = 'stop'; power = 0.25;
   eta = 0;
   force = 0;       // lateral aplicada, N (+ boreste)
-  brake = 0;       // força de frenagem aplicada, N
+  brake = 0;       // força de segurar aplicada, N (sempre contra o movimento ao longo do navio)
+  tow = 0;         // reboque ao longo do navio, N (+ para vante)
   // posição para o desenho, no referencial do navio (xf, ys, rumo relativo) ou no mundo enquanto vem
   x = 0; y = 0; psi = 0; line = false;
   private bx = 0; private by = 60; private bh = 0;
@@ -63,37 +67,41 @@ export class Tug {
     } else {
       g.ledger.tugs += TUG_PER_MIN / 60 * dt;
       if (Math.abs(s.stw) > 6.5 * KN) {
-        this.state = 'waiting'; this.force = this.brake = 0; this.mode = this.doing = 'stop';
+        this.state = 'waiting'; this.force = this.brake = this.tow = 0; this.mode = this.doing = 'stop';
         g.say(`Rebocador ${this.name}`, 'Seguimento demais, larguei o cabo!', 'bad');
       }
     }
     // a ordem leva um tempo para ser cumprida
     if (this.ack > 0 && (this.ack -= dt) <= 0) {
-      const flip = (this.doing === 'push' && this.mode === 'pull') || (this.doing === 'pull' && this.mode === 'push') || (this.doing === 'brake') !== (this.mode === 'brake');
-      if (flip && this.doing !== 'stop') this.repos = REPOSITION; // trocar de posição leva tempo
+      if (this.doing !== 'stop' && this.mode !== 'stop' && GROUP[this.doing] !== GROUP[this.mode]) this.repos = REPOSITION; // trocar de posição leva tempo
       this.doing = this.mode; this.doingPower = this.power;
       g.say(`Rebocador ${this.name}`, this.mode === 'stop' ? 'Parando.' : `${MODE_TEXT[this.mode][0].toUpperCase()}${MODE_TEXT[this.mode].slice(1)} a ${Math.round(this.power * 100)}%.`, 'info');
     }
-    let wantF = 0, wantB = 0;
+    let wantF = 0, wantB = 0, wantT = 0;
     if (this.state === 'fast') {
       if (this.repos > 0) this.repos -= dt;
       else if (this.doing === 'push') wantF = -FMAX * this.doingPower * W.QUAY.side;   // empurrar é sempre para o cais
       else if (this.doing === 'pull') wantF = FMAX * this.doingPower * W.QUAY.side;
       else if (this.doing === 'brake') wantB = BRAKE_MAX * this.doingPower;
+      else if (this.doing === 'ahead') wantT = TOW_MAX * this.doingPower;
+      else if (this.doing === 'astern') wantT = -TOW_MAX * this.doingPower;
     }
     const step = (v: number, t: number, max: number) => (v < t ? Math.min(t, v + max * RAMP * dt) : Math.max(t, v - max * RAMP * dt));
-    this.force = step(this.force, wantF, FMAX); this.brake = step(this.brake, wantB, BRAKE_MAX);
+    this.force = step(this.force, wantF, FMAX); this.brake = step(this.brake, wantB, BRAKE_MAX); this.tow = step(this.tow, wantT, TOW_MAX);
     // rebocador só rende com o navio devagar
     const eff = Math.max(0, Math.min(1, 1 - (Math.abs(s.stw) - 1.5) / 1.5));
     ext.Y += this.force * eff; ext.N += this.xf * this.force * eff;
-    if (Math.abs(s.u) > 0.03) ext.X -= this.brake * eff * Math.sign(s.u);
+    // segurar: opõe-se ao movimento para vante ou para ré, com toda a força acima de 0,3 nó e proporcional abaixo, para não oscilar
+    ext.X -= this.brake * eff * Math.max(-1, Math.min(1, s.u / 0.15));
+    ext.X += this.tow * eff;
 
     // --- posição para o desenho
     const d = this.state === 'fast' ? this.doing : 'stop', hb = g.p.B / 2;
     const sd = W.QUAY.side; // trabalham no bordo oposto ao cais
     const [gx, gy, gh] = this.state !== 'fast' ? [this.xf, 45 * sd, 0]
       : d === 'push' ? [this.xf, (hb + 10) * sd, -Math.PI / 2 * sd] : d === 'pull' ? [this.xf, (hb + 41) * sd, Math.PI / 2 * sd]
-      : d === 'brake' ? [this.xf - 45, 3 * sd, 0] : [this.xf, (hb + 13) * sd, 0];
+      : d === 'brake' ? [this.xf + (this.xf > 0 ? 42 : -42), 3 * sd, 0] : d === 'ahead' ? [this.xf + 44, (hb + 5) * sd, 0] : d === 'astern' ? [this.xf - 44, (hb + 5) * sd, Math.PI]
+      : [this.xf, (hb + 13) * sd, 0];
     const k = Math.min(1, dt * 0.25);
     this.bx += (gx - this.bx) * k; this.by += (gy - this.by) * k; this.bh += (gh - this.bh) * k;
     // empurrando o rebocador encosta a proa no costado; fora isso, guarda distância do casco
@@ -107,7 +115,8 @@ export class Tug {
     if (this.state === 'called') return `a caminho, ${Math.floor(this.eta / 60)}:${String(Math.floor(this.eta % 60)).padStart(2, '0')}`;
     if (this.state === 'waiting') return 'ao lado, sem cabo';
     if (this.repos > 0) return 'trocando de posição';
-    return this.doing === 'stop' ? 'cabo passado, parado' : `${MODE_TEXT[this.doing]} ${Math.round(Math.abs(this.doing === 'brake' ? this.brake / BRAKE_MAX : this.force / FMAX) * 100)}%`;
+    const pct = this.doing === 'brake' ? this.brake / BRAKE_MAX : this.doing === 'ahead' || this.doing === 'astern' ? this.tow / TOW_MAX : this.force / FMAX;
+    return this.doing === 'stop' ? 'cabo passado, parado' : `${MODE_TEXT[this.doing]} ${Math.round(Math.abs(pct) * 100)}%`;
   }
 }
 /** Tira um ponto (xf, ys) de dentro da faixa em volta do casco, pelo lado mais próximo. */

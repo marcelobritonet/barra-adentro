@@ -69,7 +69,7 @@ export interface Quay {
 }
 function mkQuay(id: string, name: string, seg: typeof SEG[number], along: number, side: 1 | -1): Quay {
   const s = seg.s0 + along, [cx, cy] = pointAt(s, -200 * side);
-  return { id, name, s, side, cx, cy, tx: seg.tx, ty: seg.ty, nx: seg.ty * side, ny: -seg.tx * side, half: 170, berthHalf: 40, fender: 1.2 };
+  return { id, name, s, side, cx, cy, tx: seg.tx, ty: seg.ty, nx: seg.ty * side, ny: -seg.tx * side, half: 170, berthHalf: 60, fender: 1.2 };
 }
 export const QUAYS: Quay[] = [
   mkQuay('cais', 'Cais de Santos', SEG[5], 550, 1),        // depois da segunda curva, margem de Santos

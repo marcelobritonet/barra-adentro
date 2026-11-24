@@ -2,6 +2,18 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.20.0 — Atracação que perdoa
+
+Retorno do teste: "atracar ainda é um problema: muito difícil controlar o vai e vem do navio próximo ao cais, e precisa ser muito preciso" e "os rebocadores só puxam e empurram; não seguram para não ir para vante e para ré".
+
+- Defensas que absorvem a pancada. Antes eram mola pura: o navio encostava e era devolvido até 17 m. Agora devolvem só uma fração; depois de um toque macio o navio afasta no máximo 3 m.
+- Amarração mais tolerante, como na prática: a primeira espia passa com a proa a até 15 m das defensas (antes 8), a popa a até 45 m (antes 35), posição ao longo do cais de ±60 m (antes ±40) e até 0,8 nó de seguimento (antes 0,5). Os cabos nos guinchos puxam com mais força e seguram o navio ao longo do cais.
+- Toque menos punitivo: macio até 0,4 nó (antes 0,3), duro até 0,9, pancada até 1,6; acima disso, avaria grave.
+- Plano de atracação: a velocidade no fundo para cada distância do berço (2 nós a 400 m, 1,5 a 250 m, 1 a 120 m, 0,5 a 50 m). O quadro do plano mostra o pedido e a sua velocidade, e avisa "pode passar as espias" quando dá.
+- O imediato cobra quando você está rápido para a distância, e a proa avisa quando o navio está fechando de lado rápido demais.
+- Rebocadores no sentido do comprimento: os dois agora rebocam para vante, para ré e seguram o navio no lugar. Com os dois segurando, uma corrente que levaria o navio 95 m em 4 minutos leva 8 m.
+- 8 testes novos; todas as viagens com prático continuam atracando.
+
 ## v0.19.0 — O que a janela mostra
 
 Observação do teste: "só trabalhamos os equipamentos e o navio é só para ver". Em vez de pôr o ECDIS sobre o navio, a vista passou a dar informação própria, do jeito que se lê num navio de verdade.

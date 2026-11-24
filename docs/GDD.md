@@ -218,7 +218,9 @@ Sem doppler, quem informa a distância ao cais é a proa, pelo rádio ("Proa a 1
 | VTS: pedir entrada antes da barra (resposta em 20 s; cruzar sem autorização custa R$ 8.000 e confiança) | Feito |
 | Prático opcional, em dois níveis, que embarca depois de um tempo e só com o navio a até 7 nós | Feito |
 | Ordens do prático no rádio e num quadro do painel, em vermelho enquanto não cumpridas | Feito |
-| Amarração: basta a proa encostada (até 8 m) e a popa a até 35 m; os cabos trazem a popa | Feito |
+| Amarração: proa a até 15 m das defensas, popa a até 45 m, ±60 m ao longo do cais e até 0,8 nó; os cabos trazem o navio | Feito |
+| Defensas absorvem a pancada: o navio encosta e fica, em vez de quicar | Feito |
+| Plano de atracação: velocidade por distância do berço, cobrada pelo imediato | Feito |
 | Rebocadores de proa e de popa, chamados e comandados pelo rádio | Feito |
 | Pedir ao navio do berço que adiante a largada | Feito |
 | Pedir passagem ao navio lento à frente | Feito |
@@ -233,8 +235,8 @@ Sem doppler, quem informa a distância ao cais é a proa, pelo rádio ("Proa a 1
 |---|---|
 | Chamada | Um na proa (Tupi) e um na popa (Guará); R$ 1.800 de saída cada, mais R$ 60/min com cabo passado |
 | Chegada | 4 min; só operam da barra para dentro e só passam o cabo com o navio a até 5 nós; largam o cabo acima de 6,5 nós |
-| Ordens | Empurrar (leva para bombordo, para o cais), puxar (para boreste), parar; o de popa também segura o seguimento. Potência de 10, 25, 50 ou 100% |
-| Força | 120 kN cada (80 kN segurando); rendem menos com o navio andando e nada acima de 6 nós |
+| Ordens | De lado: empurrar (para o cais) e puxar (para fora). Ao longo do navio: rebocar para vante, para ré e segurar no lugar. Parar. Potência de 10, 25, 50 ou 100% |
+| Força | 120 kN de lado, 100 kN rebocando e 80 kN segurando, cada um; rendem menos com o navio andando e nada acima de 6 nós |
 | Atraso | 4 s para cumprir, a força sobe aos poucos, e trocar entre empurrar e puxar leva 15 s de reposicionamento |
 | Com prático a bordo | É ele quem dá as ordens aos rebocadores: o de popa segura o seguimento na chegada e os dois encostam o navio de lado |
 
@@ -286,7 +288,7 @@ Ideias ainda não feitas:
 | Demora | R$ 300/min além de 75 min (entrada) ou 40 min (fundeio) | Janela de maré e de berço |
 | Excesso de velocidade | R$ 40/s acima de 8 nós no canal | Limites por trecho |
 | Boia abalroada | R$ 2.500 | Idem |
-| Toque no cais | 0,3–0,6 nó: R$ 3.000; 0,6–1,2 nó: R$ 15.000; acima: fim de jogo | Avaria por zona do casco |
+| Toque no cais | Até 0,4 nó, macio; 0,4–0,9 nó: R$ 3.000; 0,9–1,6 nó: R$ 15.000; acima: fim de jogo | Avaria por zona do casco |
 | Ferro perdido | R$ 25.000 (largar acima de 3 nós) | Idem |
 | Encalhe / margem | R$ 45.000 / R$ 60.000, fim de jogo | Salvamento, vistoria, tempo parado |
 | Praticagem | R$ 2.500 ou R$ 5.500 | Por porte do navio |
