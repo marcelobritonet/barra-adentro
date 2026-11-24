@@ -71,6 +71,7 @@ export interface Contract {
   load: number;          // 0 = em lastro, 1 = carregado: muda calado, massa e área de vento
   tide: TidePreset; freight: number; parMin: number; stars: number; note: string;
   sky?: Sky;
+  berth?: string;         // berço de destino; sem isso, o Cais de Santos
 }
 export type Sky = 'dia' | 'noite' | 'nevoeiro';
 export const SKY: Record<Sky, { label: string; bonus: number; hint: string }> = {
@@ -83,6 +84,7 @@ export const CONTRACTS: Contract[] = [
   { id: 'meia', title: 'Fertilizante, meia carga', cargo: '1.600 t de fertilizante', scenario: 'entrada', load: 0.55, tide: 'vazante', freight: 16000, parMin: 75, stars: 2, note: 'Calado de 4,5 m e vazante pela proa: a entrada mais tranquila.' },
   { id: 'cheia', title: 'Fertilizante, carga completa', cargo: '2.900 t de fertilizante', scenario: 'entrada', load: 1, tide: 'vazante', freight: 28000, parMin: 75, stars: 3, note: 'Calado de 5,2 m: mais pesado e com menos água sob a quilha.' },
   { id: 'acucar', title: 'Açúcar na preamar', cargo: '2.900 t de açúcar', scenario: 'entrada', load: 1, tide: 'preamar', freight: 34000, parMin: 80, stars: 4, note: 'Corrente parada: o navio não freia sozinho e custa a governar devagar.' },
+  { id: 'ilha', title: 'Granel líquido no Terminal da Ilha', cargo: '2.900 t de etanol', scenario: 'entrada', load: 1, tide: 'vazante', freight: 38000, parMin: 100, stars: 4, berth: 'ilha', note: 'Mais 1 km de canal e uma terceira curva. Atracação por boreste: em ré, a popa foge do cais.' },
   { id: 'trigo', title: 'Trigo na baixa-mar', cargo: '2.900 t de trigo', scenario: 'entrada', load: 1, tide: 'baixamar', freight: 40000, parMin: 90, stars: 5, note: 'Pouca água nos bancos, e a maré vira para enchente no meio da viagem.' },
   { id: 'urgente', title: 'Carga urgente na enchente', cargo: '2.900 t de peças', scenario: 'entrada', load: 1, tide: 'enchente', freight: 48000, parMin: 70, stars: 5, note: 'Corrente a favor no berço. Sem rebocadores, é para poucos.' },
 ];
@@ -152,20 +154,21 @@ export const maxStars = (c: Career) => Math.min(5, 2 + Math.floor(c.rep / 10));
 export const repFor = (stars: number) => Math.max(0, (stars - 2) * 10);
 
 const CARGOES = ['fertilizante', 'açúcar', 'trigo', 'sal', 'soja', 'bobinas de aço', 'celulose'];
+const LIQUIDS = ['etanol', 'óleo vegetal', 'suco de laranja', 'gasolina'];
 /** Contratos oferecidos neste porto: mudam de carga e de frete a cada viagem, e dependem do navio. */
 export function offers(c: Career): Contract[] {
   let seed = (c.voyages + 1) * 9973 + (c.ship === 'handy' ? 17 : 3);
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const ship = SHIPS[c.ship];
   return CONTRACTS.map(t => {
-    const swing = 0.9 + rnd() * 0.25, name = CARGOES[Math.floor(rnd() * CARGOES.length)];
+    const swing = 0.9 + rnd() * 0.25, pool = t.berth === 'ilha' ? LIQUIDS : CARGOES, name = pool[Math.floor(rnd() * pool.length)];
     if (t.scenario === 'fundeio') return { ...t, freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing / 100) * 100 };
     const tons = Math.round(t.load * ship.capacity / 100) * 100;
     // contratos de três estrelas ou mais podem cair à noite ou com nevoeiro, pagando mais
     const roll = rnd(), sky: Sky = t.stars >= 4 && roll < 0.3 ? 'nevoeiro' : t.stars >= 3 && roll < 0.6 ? 'noite' : 'dia';
     return {
       ...t, sky, cargo: `${tons.toLocaleString('pt-BR')} t de ${name}`,
-      title: t.title.replace(/^(Fertilizante|Açúcar|Trigo)/, name[0].toUpperCase() + name.slice(1)),
+      title: t.title.replace(/^(Fertilizante|Açúcar|Trigo|Granel líquido)/, name[0].toUpperCase() + name.slice(1)),
       freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing * SKY[sky].bonus / 100) * 100,
       parMin: t.parMin + (c.ship === 'handy' ? 15 : 0) + (sky === 'nevoeiro' ? 10 : 0),
     };

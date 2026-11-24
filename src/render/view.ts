@@ -39,7 +39,7 @@ export class View {
     this.renderer.domElement.style.imageRendering = 'pixelated';
     this.sun.position.set(-0.6, 1, 0.35);
     this.water = makeWater(grid);
-    this.scene.add(this.amb, this.sun, this.water, makeLand(grid), makeTown(), makeQuay(), makeZones());
+    this.scene.add(this.amb, this.sun, this.water, makeLand(grid), makeTown(), ...W.QUAYS.map(makeQuay), makeZones());
     for (const b of W.BUOYS) { const m = makeBuoy(b.kind); m.position.set(b.x, 0, -b.y); this.buoys.push(m); this.scene.add(m); }
     this.ship.add(makeShip(p)); this.shipKey = `${p.L}/${p.T.toFixed(1)}`;
     this.scene.add(this.ship);
@@ -95,7 +95,7 @@ export class View {
     this.bob += dt;
     if (g.sky !== this.sky) this.applySky(g.sky);
     const night = g.sky === 'noite';
-    this.scene.traverse(o => { if (o.name === 'nav') o.visible = night; });
+    this.scene.traverse(o => { if (o.name === 'nav') o.visible = night; else if (o.name === 'berthmark') o.visible = o.userData.id === W.QUAY.id && g.scenario === 'entrada'; });
     this.ship.position.set(s.x, -0.4 * s.squat, -s.y);
     this.ship.rotation.y = -s.psi;
     this.ship.rotation.z = Math.max(-0.08, Math.min(0.08, -s.r * s.u * 0.25)); // banda na guinada
@@ -143,7 +143,7 @@ export class View {
       v.mesh.visible = t.state !== 'none' && g.scenario === 'entrada'; v.line.visible = v.mesh.visible && t.line;
       v.mesh.position.set(t.x, 0, -t.y); v.mesh.rotation.y = -t.psi;
       if (v.line.visible) {
-        const [ax, ay] = bodyToWorld(s, t.xf, g.p.B / 2 - 0.5), pos = v.line.geometry.attributes.position as THREE.BufferAttribute;
+        const [ax, ay] = bodyToWorld(s, t.xf, (g.p.B / 2 - 0.5) * W.QUAY.side), pos = v.line.geometry.attributes.position as THREE.BufferAttribute;
         pos.setXYZ(0, t.x, 3, -t.y); pos.setXYZ(1, ax, 3.5, -ay); pos.needsUpdate = true;
       }
     });
@@ -253,8 +253,7 @@ function makeTown() {
   for (let x = W.BOUNDS.x0 + 40; x < W.BOUNDS.x1; x += 70) for (let y = W.BOUNDS.y0 + 40; y < W.BOUNDS.y1; y += 70) {
     const d = W.depth(x, y), jx = x + (rnd() - 0.5) * 30, jy = y + (rnd() - 0.5) * 30, pick = rnd(), tall = rnd();
     if (d > -2 || d < -6) continue;                 // só em terra plana
-    const [qa, qb] = W.quayLocal(x, y);
-    if (Math.abs(qa) < W.QUAY.half + 60 && qb > -130) continue; // área do cais
+    if (W.QUAYS.some(q => { const [qa, qb] = W.quayLocal(x, y, q); return Math.abs(qa) < q.half + 60 && qb > -130; })) continue; // área dos cais
     if (W.depth(x + 60, y) > 0 || W.depth(x - 60, y) > 0 || W.depth(x, y + 60) > 0 || W.depth(x, y - 60) > 0) continue;
     const santos = x < 150 && y < 2600;
     if (pick > (santos ? 0.7 : 0.22)) continue;
@@ -281,15 +280,23 @@ function box(w: number, h: number, d: number, color: number, x = 0, y = 0, z = 0
   m.position.set(x, y, z); return m;
 }
 
-function makeQuay() {
-  const Q = W.QUAY, g = new THREE.Group();
+function makeQuay(Q: W.Quay) {
+  const g = new THREE.Group();
   g.position.set(Q.cx, 0, -Q.cy);
-  g.rotation.y = -Math.atan2(Q.tx, Q.ty); // -Z local = ao longo do cais; +X local = para a água
+  g.rotation.y = -Math.atan2(Q.tx, Q.ty) + (Q.side < 0 ? Math.PI : 0); // +X local = para a água
   g.add(box(70, 3.2, Q.half * 2, 0x8f9499, -35, 1.6, 0));           // plataforma
   g.add(box(1.2, 2.4, Q.half * 2, 0x23262b, 0.6, 1.8, 0));           // defensas
-  for (const z of [-110, 0, 110]) g.add(box(34, 13, 80, 0xb9a48a, -50, 9.5, z), box(36, 2, 82, 0x7c4a3a, -50, 17, z));
-  for (const z of [-60, 55]) {                                        // guindastes
-    g.add(box(6, 28, 6, 0xe0a020, -9, 17, z), box(34, 3, 4, 0xe0a020, 2, 30, z), box(8, 6, 8, 0xf2f2f2, -9, 33, z));
+  if (Q.id === 'ilha') {                                              // terminal de granéis líquidos: tanques e braços de carga
+    for (const z of [-120, -60, 0, 60, 120]) for (const x of [-45, -95]) {
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(22, 22, 18, 10), new THREE.MeshLambertMaterial({ color: x < -60 ? 0xd9dde0 : 0xeceff1 }));
+      t.position.set(x, 12, z); g.add(t);
+    }
+    for (const z of [-25, 25]) g.add(box(3, 16, 3, 0xc23b2e, -6, 11, z), box(16, 2, 2, 0xc23b2e, 0, 18, z));
+  } else {
+    for (const z of [-110, 0, 110]) g.add(box(34, 13, 80, 0xb9a48a, -50, 9.5, z), box(36, 2, 82, 0x7c4a3a, -50, 17, z));
+    for (const z of [-60, 55]) {                                      // guindastes
+      g.add(box(6, 28, 6, 0xe0a020, -9, 17, z), box(34, 3, 4, 0xe0a020, 2, 30, z), box(8, 6, 8, 0xf2f2f2, -9, 33, z));
+    }
   }
   for (let z = -Q.half + 10; z < Q.half; z += 32) g.add(box(1.4, 1.4, 1.4, 0x2b2b2b, -2.5, 3.9, z)); // cabeços
   // refletores do cais, à noite
@@ -299,6 +306,7 @@ function makeQuay() {
   // marcação do berço
   const pts = [[2, 55], [18, 55], [18, -55], [2, -55]].map(([x, z]) => new THREE.Vector3(x, 0.3, z));
   const loop = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xffe14a }));
+  loop.name = 'berthmark'; loop.userData.id = Q.id;
   g.add(loop);
   return g;
 }

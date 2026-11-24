@@ -74,4 +74,23 @@ describe('rebocadores', () => {
     expect(inside).toBe(0);
     void run;
   });
+
+  it('no cais a boreste os rebocadores trabalham por bombordo e empurram para boreste', () => {
+    const g = new Game(); g.free = true; g.freeBerth = 'ilha'; g.trust = 0; g.start('entrada'); g.vts = 'ok'; g.traffic = [];
+    const Q = W.QUAY, s = g.s;
+    expect(Q.id).toBe('ilha'); expect(Q.side).toBe(-1);
+    s.x = Q.cx + Q.nx * (Q.fender + 7 + 40); s.y = Q.cy + Q.ny * (Q.fender + 7 + 40); s.psi = Math.atan2(Q.tx, Q.ty);
+    s.u = 0; s.stw = 0; s.telegraph = s.telAck = 4; s.n = 0;
+    (g as any).windBase = 0; g.env.current = () => [0, 0];
+    for (const t of g.tugs) t.state = 'fast';
+    const b0 = g.berth().bow;
+    g.tugOrder(0, 'push', 0.5); g.tugOrder(1, 'push', 0.5); g.warp = 8;
+    for (let i = 0; i < 100; i++) g.update(0.1);
+    expect(g.tugs[0].force).toBeGreaterThan(0);          // para boreste, onde está o cais
+    expect(g.s.v).toBeGreaterThan(0);
+    expect(g.berth().bow).toBeLessThan(b0 - 5);
+    const dx = g.tugs[0].x - s.x, dy = g.tugs[0].y - s.y;
+    expect(dx * Math.cos(s.psi) - dy * Math.sin(s.psi)).toBeLessThan(0); // rebocador a bombordo do navio
+    W.setQuay('cais');
+  });
 });

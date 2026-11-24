@@ -2,6 +2,15 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.13.0 — Terminal da Ilha: o fundo do canal
+
+- Segundo berço: o Terminal da Ilha, de granéis líquidos, na margem norte, 1 km além do Cais de Santos e depois de uma terceira curva.
+- A atracação é por boreste. Com hélice de passo direito, dar máquina a ré joga a popa para bombordo, para longe do cais: o truque que ajuda no Cais de Santos aqui atrapalha.
+- Novo contrato de quatro estrelas para o terminal, com cargas líquidas (etanol, óleo vegetal, suco de laranja, gasolina). No modo livre o berço é escolhido no menu.
+- O navio que ocupa o berço, os rebocadores e o prático acompanham o berço de destino. Os rebocadores trabalham no bordo oposto ao cais, e o prático faz a aproximação espelhada.
+- Todos os cais aparecem na vista, na carta e no ECDIS; o de destino fica em amarelo.
+- O mundo passou a aceitar vários berços (`QUAYS` em `src/world/santos.ts`), o que abre caminho para os próximos.
+
 ## v0.12.0 — Som
 
 - Todo o som é sintetizado no navegador, sem arquivos de áudio.

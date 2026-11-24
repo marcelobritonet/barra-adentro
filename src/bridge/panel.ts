@@ -316,7 +316,7 @@ export class Panel {
     else {
       const b = g.berth(), near = Math.abs(b.along) < 400 && Math.min(b.bow, b.stern) < 150;
       bb.classList.toggle('off', !near);
-      bb.innerHTML = near ? `berço: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'passado' : 'a vante'}<br>precisa: proa ≤ 8 m, popa ≤ 35 m, parado` : 'longe do berço';
+      bb.innerHTML = near ? `${W.QUAY.name}: ${Math.abs(b.along).toFixed(0)} m ${b.along > 0 ? 'passado' : 'a vante'}<br>por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}; proa ≤ 8 m, popa ≤ 35 m, parado` : `${W.QUAY.name}, por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}: ainda longe`;
     }
 
     this.big.hidden = !this.bigChart;
@@ -429,7 +429,11 @@ export class Panel {
     W.CENTER.forEach(([x, y], i) => (i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y)))); c.stroke(); c.setLineDash([]);
     // fundeadouro e berço
     c.strokeStyle = '#c42fa0'; c.setLineDash([3, 3]); c.beginPath(); c.arc(X(W.ANCHORAGE.x), Y(W.ANCHORAGE.y), W.ANCHORAGE.r * sx, 0, TAU); c.stroke(); c.setLineDash([]);
-    c.fillStyle = '#ffe14a'; c.fillRect(X(W.QUAY.cx) - 2, Y(W.QUAY.cy + W.QUAY.half), 4, W.QUAY.half * 2 * sy);
+    for (const q of W.QUAYS) {
+      c.strokeStyle = q.id === W.QUAY.id && g.scenario === 'entrada' ? '#ffe14a' : '#6b5a3a'; c.lineWidth = big ? 5 : 3;
+      c.beginPath(); c.moveTo(X(q.cx - q.tx * q.half), Y(q.cy - q.ty * q.half)); c.lineTo(X(q.cx + q.tx * q.half), Y(q.cy + q.ty * q.half)); c.stroke();
+    }
+    c.lineWidth = 1;
     for (const b of W.BUOYS) {
       c.fillStyle = b.kind === 'red' ? '#e23b3b' : b.kind === 'green' ? '#18a04a' : '#111';
       c.fillRect(X(b.x) - (big ? 3 : 1.5), Y(b.y) - (big ? 3 : 1.5), big ? 6 : 3, big ? 6 : 3);
@@ -445,6 +449,8 @@ export class Panel {
       c.font = 'bold 13px ui-monospace, monospace';
       c.fillText('SANTOS', X(-1900), Y(900)); c.fillText('GUARUJÁ', X(1500), Y(200)); c.fillText('BAÍA DE SANTOS', X(-1500), Y(-2600));
       c.fillStyle = '#7a1f7a'; c.fillText('FUNDEADOURO', X(W.ANCHORAGE.x), Y(W.ANCHORAGE.y));
+      c.fillStyle = '#3a2a1a'; c.font = '10px ui-monospace, monospace';
+      for (const q of W.QUAYS) c.fillText(q.name, X(q.cx - q.nx * 260), Y(q.cy - q.ny * 260));
       c.fillStyle = '#3a2a1a'; c.font = '10px ui-monospace, monospace'; c.textAlign = 'left';
       c.fillText('Carta estilizada: NÃO USAR PARA NAVEGAÇÃO. Sondagens em metros.', 8, h - 8);
     }

@@ -50,22 +50,32 @@ export function pointAt(s: number, offset = 0): [number, number] {
   return [g.ax + a * g.tx + offset * g.ty, g.ay + a * g.ty - offset * g.tx];
 }
 
-// --- Cais (margem de Santos, depois da segunda curva do canal): atracação por bombordo
-const QSEG = SEG[5];
-export const QUAY_S = QSEG.s0 + 550;   // posição do berço ao longo do canal
-const qa = pointAt(QUAY_S, -200);
-export const QUAY = {
-  cx: qa[0], cy: qa[1],
-  tx: QSEG.tx, ty: QSEG.ty,           // ao longo do cais, sentido de quem entra
-  nx: QSEG.ty, ny: -QSEG.tx,          // normal apontando para a água
-  half: 170,                          // meia extensão do cais
-  berthHalf: 40,                      // tolerância de posição ao longo do cais
-  fender: 1.2,
-};
-/** Coordenadas locais do cais: a = ao longo, b = distância da face (b > 0 na água). */
-export function quayLocal(x: number, y: number): [number, number] {
-  const px = x - QUAY.cx, py = y - QUAY.cy;
-  return [px * QUAY.tx + py * QUAY.ty, px * QUAY.nx + py * QUAY.ny];
+// --- Berços. side = +1: cais a bombordo de quem entra (atraca por bombordo); -1: a boreste.
+export interface Quay {
+  id: string; name: string; s: number; side: 1 | -1;
+  cx: number; cy: number;
+  tx: number; ty: number;   // ao longo do cais, sentido de quem entra
+  nx: number; ny: number;   // normal apontando para a água
+  half: number;             // meia extensão do cais
+  berthHalf: number;        // tolerância de posição ao longo do cais
+  fender: number;
+}
+function mkQuay(id: string, name: string, seg: typeof SEG[number], along: number, side: 1 | -1): Quay {
+  const s = seg.s0 + along, [cx, cy] = pointAt(s, -200 * side);
+  return { id, name, s, side, cx, cy, tx: seg.tx, ty: seg.ty, nx: seg.ty * side, ny: -seg.tx * side, half: 170, berthHalf: 40, fender: 1.2 };
+}
+export const QUAYS: Quay[] = [
+  mkQuay('cais', 'Cais de Santos', SEG[5], 550, 1),        // depois da segunda curva, margem de Santos
+  mkQuay('ilha', 'Terminal da Ilha', SEG[6], 620, -1),     // fundo do canal, margem norte: atracação por boreste
+];
+/** Berço de destino desta viagem. Os outros continuam existindo como cais. */
+export let QUAY: Quay = QUAYS[0];
+export let QUAY_S = QUAY.s;   // posição do berço de destino ao longo do canal
+export function setQuay(id: string) { QUAY = QUAYS.find(q => q.id === id) ?? QUAYS[0]; QUAY_S = QUAY.s; }
+/** Coordenadas locais de um cais: a = ao longo, b = distância da face (b > 0 na água). */
+export function quayLocal(x: number, y: number, q: Quay = QUAY): [number, number] {
+  const px = x - q.cx, py = y - q.cy;
+  return [px * q.tx + py * q.ty, px * q.nx + py * q.ny];
 }
 
 export const ANCHORAGE = { x: -2100, y: -3600, r: 500 };
@@ -89,9 +99,11 @@ function coastY(x: number) {
 
 /** Profundidade em metros; valor <= 0 é terra (o módulo é a altura). */
 export function depth(x: number, y: number): number {
-  const [a, b] = quayLocal(x, y);
-  if (Math.abs(a) <= QUAY.half && b <= 0 && b >= -220) return -3;
-  if (Math.abs(a) <= QUAY.half + 50 && b > 0 && b <= 120) return 11; // bacia do berço
+  for (const q of QUAYS) {
+    const [a, b] = quayLocal(x, y, q);
+    if (Math.abs(a) <= q.half && b <= 0 && b >= -220) return -3;
+    if (Math.abs(a) <= q.half + 50 && b > 0 && b <= 120) return 11; // bacia do berço
+  }
   const n = nearest(x, y);
   if (n.s > S_MOUTH) {
     if (n.d >= EST_HALF) return -landHeight(x, y);
@@ -126,8 +138,7 @@ export function current(x: number, y: number, tide = 1): [number, number] {
   let drift = 0;
   if (n.s > S_MOUTH) {
     mag = 0.55 * Math.max(0.2, 1 - (n.d / EST_HALF) ** 2);
-    const [a, b] = quayLocal(x, y);
-    if (Math.abs(a) < 260 && b < 100) mag *= 0.45; // remanso junto ao cais
+    for (const q of QUAYS) { const [a, b] = quayLocal(x, y, q); if (Math.abs(a) < 260 && b < 100) { mag *= 0.45; break; } } // remanso junto ao cais
   } else {
     mag = 0.55 * Math.exp(-(S_MOUTH - n.s) / 1800) * Math.exp(-((n.d / 500) ** 2));
     drift = 0.18 * Math.min(1, (coastY(x) - y) / 600); // corrente costeira para leste

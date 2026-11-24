@@ -1,5 +1,5 @@
 // Rebocadores: recebem ordens pelo rádio e aplicam força no costado de boreste.
-// Empurrar leva o navio para bombordo (para o cais); puxar, para boreste.
+// Empurrar leva o navio para o cais; puxar, para longe dele.
 import { BodyForce, KN, ShipState } from '../sim/ship';
 import * as W from '../world/santos';
 import type { Game } from './game';
@@ -45,14 +45,14 @@ export class Tug {
     const toWorld = (xf: number, ys: number): [number, number] => [s.x + xf * sin + ys * cos, s.y + xf * cos - ys * sin];
     if (this.state === 'called') {
       this.eta -= dt;
-      const k = Math.max(0, Math.min(1, 1 - this.eta / ETA)), [tx, ty] = toWorld(this.xf, 60);
+      const k = Math.max(0, Math.min(1, 1 - this.eta / ETA)), [tx, ty] = toWorld(this.xf, 60 * W.QUAY.side);
       let nx = this.x0 + (tx - this.x0) * k, ny = this.y0 + (ty - this.y0) * k;
       // contorna o navio em vez de atravessá-lo
       const dx = nx - s.x, dy = ny - s.y, [cf, cs] = clearOfHull(dx * sin + dy * cos, dx * cos - dy * sin, g.p.L, g.p.B);
       [nx, ny] = toWorld(cf, cs);
       if (Math.hypot(nx - this.x, ny - this.y) > 0.01) this.psi = Math.atan2(nx - this.x, ny - this.y);
       this.x = nx; this.y = ny;
-      if (this.eta <= 0) { this.state = 'waiting'; this.bx = this.xf; this.by = 60; this.bh = 0; }
+      if (this.eta <= 0) { this.state = 'waiting'; this.bx = this.xf; this.by = 60 * W.QUAY.side; this.bh = 0; }
       return;
     }
     const inside = W.nearest(s.x, s.y).s > W.S_MOUTH - 200;
@@ -77,8 +77,8 @@ export class Tug {
     let wantF = 0, wantB = 0;
     if (this.state === 'fast') {
       if (this.repos > 0) this.repos -= dt;
-      else if (this.doing === 'push') wantF = -FMAX * this.doingPower;
-      else if (this.doing === 'pull') wantF = FMAX * this.doingPower;
+      else if (this.doing === 'push') wantF = -FMAX * this.doingPower * W.QUAY.side;   // empurrar é sempre para o cais
+      else if (this.doing === 'pull') wantF = FMAX * this.doingPower * W.QUAY.side;
       else if (this.doing === 'brake') wantB = BRAKE_MAX * this.doingPower;
     }
     const step = (v: number, t: number, max: number) => (v < t ? Math.min(t, v + max * RAMP * dt) : Math.max(t, v - max * RAMP * dt));
@@ -90,9 +90,10 @@ export class Tug {
 
     // --- posição para o desenho
     const d = this.state === 'fast' ? this.doing : 'stop', hb = g.p.B / 2;
-    const [gx, gy, gh] = this.state !== 'fast' ? [this.xf, 45, 0]
-      : d === 'push' ? [this.xf, hb + 10, -Math.PI / 2] : d === 'pull' ? [this.xf, hb + 41, Math.PI / 2]
-      : d === 'brake' ? [this.xf - 45, 3, 0] : [this.xf, hb + 13, 0];
+    const sd = W.QUAY.side; // trabalham no bordo oposto ao cais
+    const [gx, gy, gh] = this.state !== 'fast' ? [this.xf, 45 * sd, 0]
+      : d === 'push' ? [this.xf, (hb + 10) * sd, -Math.PI / 2 * sd] : d === 'pull' ? [this.xf, (hb + 41) * sd, Math.PI / 2 * sd]
+      : d === 'brake' ? [this.xf - 45, 3 * sd, 0] : [this.xf, (hb + 13) * sd, 0];
     const k = Math.min(1, dt * 0.25);
     this.bx += (gx - this.bx) * k; this.by += (gy - this.by) * k; this.bh += (gh - this.bh) * k;
     // empurrando o rebocador encosta a proa no costado; fora isso, guarda distância do casco

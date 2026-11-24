@@ -39,6 +39,7 @@ export class Game {
   freeShip: ShipClass = 'coaster';
   /** Céu desta viagem: muda o que se vê da ponte, não a física. */
   sky: Sky = 'dia'; freeSky: Sky = 'dia';
+  freeBerth = 'cais';
   /** Limite de velocidade no canal: 8 nós, 6 com nevoeiro. */
   get limitKn() { return this.sky === 'nevoeiro' ? 6 : W.SPEED_LIMIT_KN; }
   /** Alcance visual, em metros. */
@@ -98,6 +99,7 @@ export class Game {
     this.geo = shipGeo(this.p); this.size = this.p.mass / makeCoaster(1).mass;
     if (ct) this.tidePreset = ct.tide;
     this.sky = ct ? ct.sky ?? 'dia' : this.free ? this.freeSky : 'dia';
+    W.setQuay(ct ? ct.berth ?? 'cais' : this.free ? this.freeBerth : 'cais');
     if (!this.free) { applyCareer(this.p, this.career); this.equip = equipOf(this.career); }
     if (sc === 'entrada') {
       const [x, y] = W.pointAt(W.S_MOUTH - 1500);
@@ -124,7 +126,7 @@ export class Game {
       if (this.sky === 'nevoeiro') this.say('Imediato', 'Nevoeiro fechado, uns 300 metros de visibilidade. Limite de 6 nós no canal; navegamos pelo radar e pelas boias.', 'warn');
       if (this.sky === 'noite') this.say('Imediato', 'Noite sem lua. Encarnada a boreste, verde a bombordo: siga as luzes das boias.', 'info');
       this.say('Imediato', 'Precisamos da autorização do VTS antes da barra. Prático é opcional: chame pelo rádio se quiser.', 'info');
-      this.say('Imediato', `Berço no cais de bombordo, depois da segunda curva. Calado ${this.p.T.toFixed(1).replace('.', ',')} m. Temos ar para ${this.p.airStarts} partidas de máquina.`, 'info');
+      this.say('Imediato', `Berço: ${W.QUAY.name}, ${W.QUAY.side > 0 ? 'por bombordo, depois da segunda curva' : 'por boreste, no fundo do canal'}. Calado ${this.p.T.toFixed(1).replace('.', ',')} m. Temos ar para ${this.p.airStarts} partidas de máquina.`, 'info');
     } else {
       this.say('Capitania', 'Berço ocupado. Fundeie no fundeadouro a noroeste e aguarde.', 'info');
       this.say('Imediato', 'Há três navios fundeados. Precisamos de uns 280 m de folga do ferro de cada um.', 'info');
@@ -242,8 +244,9 @@ export class Game {
   /** Situação do navio em relação ao berço. */
   berth() {
     const [ac] = W.quayLocal(this.s.x, this.s.y);
-    const bow = W.quayLocal(...bodyToWorld(this.s, ...this.geo.berthBow))[1] - W.QUAY.fender;
-    const stern = W.quayLocal(...bodyToWorld(this.s, ...this.geo.berthStern))[1] - W.QUAY.fender;
+    const m = W.QUAY.side, [bf, bs] = this.geo.berthBow, [sf, ss] = this.geo.berthStern; // no cais a boreste, encosta o outro bordo
+    const bow = W.quayLocal(...bodyToWorld(this.s, bf, bs * m))[1] - W.QUAY.fender;
+    const stern = W.quayLocal(...bodyToWorld(this.s, sf, ss * m))[1] - W.QUAY.fender;
     return { along: ac, bow, stern };
   }
   moor() {
@@ -353,7 +356,8 @@ export class Game {
     }
     // amarrando: os cabos e os guinchos trazem o navio para o cais, devagar
     if (this.mooring > 0) {
-      for (const [xf, ys] of [this.geo.berthBow, this.geo.berthStern]) {
+      for (const [xf, y0] of [this.geo.berthBow, this.geo.berthStern]) {
+        const ys = y0 * Q.side;
         const gap = W.quayLocal(...bodyToWorld(s, xf, ys))[1] - Q.fender;
         const [vx, vy] = pointVelocity(s, xf, ys);
         const F = (Math.max(0, Math.min(60e3, 8e3 * gap)) + 4e5 * (vx * Q.nx + vy * Q.ny)) * this.size;

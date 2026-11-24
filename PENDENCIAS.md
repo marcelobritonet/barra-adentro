@@ -32,7 +32,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 13 | Prático no cenário de fundeio | Hoje só orienta a entrada |
 | 15 | Calibrar rebocadores jogando | Empurrar a 25% por 45 s já encosta a 0,3 nó; ver se as potências fazem sentido |
 | 5 | Mais tráfego | Atracar a contrabordo, sucção entre navios, mais de um navio em movimento |
-| 7 | Resto do canal de Santos | O mapa já tem as curvas; faltam berços e missões |
+| 7 | Mais berços e manobras | Giro na bacia de evolução, atracar a contrabordo, um terceiro berço; o mundo já aceita vários cais |
 | 8 | Mais progressão | Terceiro navio, tripulantes com nome, manutenção, contratos com validade |
 | 19 | Prático com o graneleiro | Atraca com dois rebocadores, mas abre demais na segunda curva e chega torto; sem rebocadores não foi testado |
 | 18 | Calibrar a economia jogando | Caixa inicial de R$ 8.000, preços e fretes são primeiro chute |
@@ -69,3 +69,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.10.0: graneleiro de 130 m, estaleiro, reputação e ofertas que mudam |
 | v0.11.0: noite e nevoeiro; rebocadores não atravessam mais o casco (relatado em teste) |
 | v0.12.0: som sintetizado e apito do navio |
+| v0.13.0: Terminal da Ilha, segundo berço, por boreste |

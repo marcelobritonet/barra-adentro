@@ -140,8 +140,9 @@ export class Pilot {
       const lead = a + (this.grade === 'senior' ? 110 : 80) * (g.p.L / 90) ** 1.5;  // o bom prático já prepara a próxima pernada
       // rumo desejado em relação ao cais (+ = abrindo); nunca aponta de frente para o cais
       const want = Math.max(-24 * D2R, Math.min(18 * D2R, Math.atan(slope(lead)) - Math.atan((bc - pathB(a)) / Lk)));
-      const dh = wrap(s.psi - qh);
-      const track = (max: number) => Math.max(-max, Math.min(max, (wrap(want - dh) / D2R) * P.kp * 1.6 - (s.r / D2R) * P.kd));
+      // m = +1 com o cais a bombordo, -1 a boreste: "abrir" do cais troca de bordo
+      const m = Q.side, dh = m * wrap(s.psi - qh);
+      const track = (max: number) => Math.max(-max, Math.min(max, m * (wrap(want - dh) / D2R) * P.kp * 1.6 - (s.r / D2R) * P.kd));
       const u = s.u, rem = -a;                                 // quanto falta até o meio do berço
       const brakeK = (g.p.Tb / g.p.mass) / (180e3 / 4.83e6);   // navio maior tem menos máquina por tonelada
       const stopDist = u > 0 ? u * 30 + u * u / (0.012 * Math.min(1, brakeK)) : 0; // o navio é pesado: começa a parar cedo
@@ -175,8 +176,8 @@ export class Pilot {
         // cada rebocador fecha a sua ponta devagar: mais rápido longe, quase parado ao tocar
         if (this.tugThink <= 0) {
           this.tugThink = 6;
-          ([[0, ...g.geo.berthBow, b.bow], [1, ...g.geo.berthStern, b.stern]] as [number, number, number, number][]).forEach(([i, xf, ys, gap]) => {
-            const [vx, vy] = pointVelocity(s, xf, ys), closing = -(vx * Q.nx + vy * Q.ny);
+          ([[0, ...g.geo.berthBow, b.bow], [1, ...g.geo.berthStern, b.stern]] as [number, number, number, number][]).forEach(([i, xf, y0, gap]) => {
+            const [vx, vy] = pointVelocity(s, xf, y0 * m), closing = -(vx * Q.nx + vy * Q.ny);
             const wantV = gap > 12 ? 0.14 : gap > 4 ? 0.08 : 0.03;
             if (closing < wantV - 0.03) this.tug(g, i, 'push', gap > 25 ? 0.5 : gap > 6 ? 0.25 : 0.1);
             else if (closing > wantV + 0.10) this.tug(g, i, 'pull', 0.25);
@@ -209,7 +210,7 @@ export class Pilot {
       if (u > 0.15 && rem < stopDist + 8) return [0, u > 0.5 ? 1 : 2];        // quebra o seguimento a ré; o hélice puxa a popa para o cais
       if (rem > 25) return [track(20), u < 0.35 ? 5 : 4];                     // falta avançar
       if (!sternIn) return [0, u > -0.15 ? 1 : 4];                             // popa muito aberta: ré forte, o hélice puxa a popa para o cais
-      if (!bowIn) { if (this.kick <= -40) this.kick = 16; return [-35, this.kick > 0 ? 5 : 4]; } // proa aberta: toque de máquina com leme a bombordo
+      if (!bowIn) { if (this.kick <= -40) this.kick = 16; return [-35 * m, this.kick > 0 ? 5 : 4]; } // proa aberta: toque de máquina com leme para o lado do cais
       return [0, 4];
     }
 

@@ -55,7 +55,7 @@ export function updateTraffic(g: Game, dt: number) {
       continue;
     }
     if (o.phase === 'gone') continue;
-    const Q = W.QUAY, lane = 200 + OUT_OFFSET, home = Q.fender + o.B / 2;
+    const Q = W.QUAY, lane = 200 + OUT_OFFSET * Q.side, home = Q.fender + o.B / 2;
     if (o.phase === 'berthed' || o.phase === 'unberthing') {
       if (o.phase === 'berthed' && g.time >= o.departAt) {
         o.phase = 'unberthing';

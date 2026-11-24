@@ -155,3 +155,5 @@ table.shop button { padding: 5px 8px; font-size: 12px; }
 #skyflag[hidden] { display: none; }
 
 .contracts .sky { color: #9fd0e8; }
+
+.contracts { grid-template-columns: 1fr 1fr; }

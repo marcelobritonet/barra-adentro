@@ -3,12 +3,14 @@ import { D2R, KN } from '../sim/ship';
 import * as W from '../world/santos';
 import { Game } from './game';
 import { PilotGrade } from './pilot';
+import { CONTRACTS } from './career';
 import { TidePreset } from '../world/tide';
 
 /** Comandante obediente: executa exatamente o que o prático manda. */
-function voyage(grade: PilotGrade, tide: TidePreset = 'vazante', ask = true, tugs = false, big = false) {
+function voyage(grade: PilotGrade, tide: TidePreset = 'vazante', ask = true, tugs = false, big = false, berth = 'cais') {
   const g = new Game();
   if (big) g.career.ship = 'handy';
+  if (berth !== 'cais') g.contract = { ...CONTRACTS.find(c => c.id === 'cheia')!, tide, berth };
   g.trust = 0; g.tidePreset = tide; g.start('entrada'); g.callVTS(); g.callPilot(grade); if (ask) g.callShip(); if (tugs) { g.callTug(0); g.callTug(1); }
   g.warp = 8;
   let maxOff = 0, orders = 0, moorAt = 0;
@@ -24,7 +26,7 @@ function voyage(grade: PilotGrade, tide: TidePreset = 'vazante', ask = true, tug
   }
   orders = g.msgs.filter(m => m.level === 'pilot').length;
   const r = g.result;
-  console.log(big ? 'GRANELEIRO' : '', grade, tide, tugs ? 'com rebocadores' : '', '→', r?.title ?? g.status, '|', (g.time / 60).toFixed(0), 'min | fora do eixo máx', maxOff.toFixed(0), 'm | sog', (g.sog / KN).toFixed(1),
+  console.log(big ? 'GRANELEIRO' : '', berth === 'cais' ? '' : 'ILHA', grade, tide, tugs ? 'com rebocadores' : '', '→', r?.title ?? g.status, '|', (g.time / 60).toFixed(0), 'min | fora do eixo máx', maxOff.toFixed(0), 'm | sog', (g.sog / KN).toFixed(1),
     '| berço', JSON.stringify(Object.fromEntries(Object.entries(g.berth()).map(([k, v]) => [k, +v.toFixed(0)]))), '| total', r?.total, '| confiança', g.trust, '| espias aos', (moorAt / 60).toFixed(0), 'min');
   console.log(g.msgs.slice(-14).map(m => `${(m.t / 60).toFixed(1)} ${m.who}: ${m.text}`).join('\n'));
   return { g, maxOff, orders };
@@ -68,6 +70,15 @@ describe('prático', () => {
   }
   it('graneleiro de 130 m: sênior e dois rebocadores atracam na vazante', () => {
     const { g } = voyage('senior', 'vazante', true, true, true);
+    expect(g.result?.ok).toBe(true);
+  });
+  it('Terminal da Ilha, por boreste: sênior e dois rebocadores atracam', () => {
+    const { g } = voyage('senior', 'vazante', true, true, false, 'ilha');
+    expect(W.QUAY.id).toBe('ilha');
+    expect(g.result?.ok).toBe(true);
+  });
+  it('Terminal da Ilha sem rebocadores: o prático leva o navio até lá', () => {
+    const { g } = voyage('senior', 'vazante', true, false, false, 'ilha');
     expect(g.result?.ok).toBe(true);
   });
   it('padrão também chega, com mais desvio', () => {

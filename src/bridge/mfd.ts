@@ -111,6 +111,8 @@ export class Ecdis {
     W.CENTER.forEach(([x, y], i) => (i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y)))); c.stroke();
     c.strokeStyle = '#e04fc0'; c.beginPath(); c.arc(X(W.ANCHORAGE.x), Y(W.ANCHORAGE.y), W.ANCHORAGE.r, 0, TAU); c.stroke(); c.setLineDash([]);
     const Q = W.QUAY;
+    c.strokeStyle = '#6b5a3a'; c.lineWidth = 3 * px;
+    for (const q of W.QUAYS) { c.beginPath(); c.moveTo(X(q.cx - q.tx * q.half), Y(q.cy - q.ty * q.half)); c.lineTo(X(q.cx + q.tx * q.half), Y(q.cy + q.ty * q.half)); c.stroke(); }
     c.strokeStyle = '#ffe14a'; c.lineWidth = 3 * px; c.beginPath();
     c.moveTo(X(Q.cx - Q.tx * Q.berthHalf * 1.4 + Q.nx * 3), Y(Q.cy - Q.ty * Q.berthHalf * 1.4 + Q.ny * 3));
     c.lineTo(X(Q.cx + Q.tx * Q.berthHalf * 1.4 + Q.nx * 3), Y(Q.cy + Q.ty * Q.berthHalf * 1.4 + Q.ny * 3)); c.stroke();

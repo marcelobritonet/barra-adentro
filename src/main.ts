@@ -44,7 +44,8 @@ function steps(): [string, boolean][] {
       ['Cruzar a barra; dali em diante, máximo de 8 nós', n.s > W.S_MOUTH],
       ['Primeira curva a bombordo; cruzar com o navio que sai, bombordo com bombordo', n.s > W.TURNS[3].s + 150],
       ['Segunda curva a bombordo', n.s > W.TURNS[4].s + 150],
-      ['Encostar a proa no berço amarelo, por bombordo', done || game.mooring > 0 || (Math.abs(b.along) <= W.QUAY.berthHalf && b.bow <= 8)],
+      ...(W.QUAY.id === 'ilha' ? [['Terceira curva a bombordo, passando pelo Cais de Santos', n.s > W.TURNS[5].s + 150] as [string, boolean]] : []),
+      [`Encostar a proa no berço amarelo (${W.QUAY.name}), por ${W.QUAY.side > 0 ? 'bombordo' : 'boreste'}`, done || game.mooring > 0 || (Math.abs(b.along) <= W.QUAY.berthHalf && b.bow <= 8)],
       ['Parar e passar as espias (M)', done || game.mooring > 0],
     ];
   }
@@ -135,6 +136,7 @@ function menu() {
         <button data-sc="fundeio">▶ Fundeio<small>Fundear entre os navios do fundeadouro externo. Mais curto, bom para aprender.</small></button>
       </div>
       <div class="preset">Navio: ${(Object.keys(SHIPS) as ShipClass[]).map(k => `<button data-freeship="${k}" class="${game.freeShip === k ? 'on' : ''}">${SHIPS[k].label}</button>`).join('')}</div>
+      <div class="preset">Berço: ${W.QUAYS.map(q => `<button data-berth="${q.id}" class="${game.freeBerth === q.id ? 'on' : ''}">${q.name} (${q.side > 0 ? 'bombordo' : 'boreste'})</button>`).join('')}</div>
       <div class="preset">Céu: ${(Object.keys(SKY) as Sky[]).map(k => `<button data-sky="${k}" class="${game.freeSky === k ? 'on' : ''}">${SKY[k].label}</button>`).join('')}<span class="dim">${SKY[game.freeSky].hint}</span></div>
       <div class="preset">Maré: ${(Object.keys(TIDE_PRESETS) as TidePreset[]).map(k => `<button data-tide="${k}" class="${game.tidePreset === k ? 'on' : ''}">${TIDE_PRESETS[k].label}</button>`).join('')}</div>
       <p class="dim" style="margin-top:0">${TIDE_PRESETS[game.tidePreset].hint} A maré corre 2× mais rápido que a real.</p>
@@ -153,7 +155,7 @@ function menu() {
   const body = portTab === 'contratos'
     ? `<div class="contracts">${list.map(ct => { const locked = ct.stars > stars; return `<button data-contract="${ct.id}" ${locked ? 'disabled' : ''}>
         <span class="stars">${'★'.repeat(ct.stars)}${'☆'.repeat(5 - ct.stars)}${locked ? ` · exige reputação ${repFor(ct.stars)}` : ''}</span><b>${ct.title}</b><span class="pay">${brl(ct.freight)}</span>
-        <small>${ct.cargo} · calado ${(SHIPS[c.ship].Tmin + (SHIPS[c.ship].Tmax - SHIPS[c.ship].Tmin) * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min${ct.sky && ct.sky !== 'dia' ? ` · <b class="sky">${SKY[ct.sky].label.toUpperCase()} +${Math.round((SKY[ct.sky].bonus - 1) * 100)}%</b>` : ''}<br>${ct.note}${ct.sky && ct.sky !== 'dia' ? ' ' + SKY[ct.sky].hint : ''}</small></button>`; }).join('')}</div>
+        <small>${ct.cargo} · calado ${(SHIPS[c.ship].Tmin + (SHIPS[c.ship].Tmax - SHIPS[c.ship].Tmin) * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min${ct.berth === 'ilha' ? ' · <b class="sky">TERMINAL DA ILHA</b>' : ''}${ct.sky && ct.sky !== 'dia' ? ` · <b class="sky">${SKY[ct.sky].label.toUpperCase()} +${Math.round((SKY[ct.sky].bonus - 1) * 100)}%</b>` : ''}<br>${ct.note}${ct.sky && ct.sky !== 'dia' ? ' ' + SKY[ct.sky].hint : ''}</small></button>`; }).join('')}</div>
        <p class="dim">As ofertas mudam a cada viagem. Entregar bem aumenta a reputação, que libera contratos com mais estrelas e navios maiores.</p>`
     : portTab === 'estaleiro' ? yard : shopRows(portTab === 'oficina' ? 'part' : 'crew');
   overlay.innerHTML = `<div class="card wide">${head}
@@ -198,6 +200,7 @@ overlay.addEventListener('click', e => {
   if (d.ship) { portMsg = buyShip(game.career, d.ship as ShipClass) ?? ''; saveCareer(game.career); return menu(); }
   if (d.freeship) { game.freeShip = d.freeship as ShipClass; return menu(); }
   if (d.sky) { game.freeSky = d.sky as Sky; return menu(); }
+  if (d.berth) { game.freeBerth = d.berth; return menu(); }
   if (d.again) return launch(game.scenario); // repete o mesmo contrato, com a mesma oferta
   if (d.sc) { game.contract = null; return launch(d.sc as Scenario); }
 });
@@ -274,4 +277,4 @@ menu(); syncSound();
 requestAnimationFrame(frame);
 
 // acesso para depuração e testes no navegador
-Object.assign(window, { game, view, panel });
+Object.assign(window, { game, view, panel, W });
