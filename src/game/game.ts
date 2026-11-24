@@ -49,6 +49,11 @@ export class Game {
   equip = { gps: false, rot: false, radar: false, ecdis: false, doppler: false, thruster: false };
   shackles = 4;
   msgs: Msg[] = [];
+  /** Acontecimentos para o som: 'horn', 'horn5', 'thud', 'splash', 'tug', 'lines'. */
+  events: string[] = [];
+  private emit(e: string) { if (this.events.length < 40) this.events.push(e); }
+  /** Apito do navio, um toque longo. */
+  sound() { if (this.status === 'running') { this.emit('horn'); this.say('Maré Mansa', 'Um apito longo.', 'info', 'horn', 6); } }
   result: Result | null = null;
   ledger = { fuel: 0, speeding: 0, buoys: 0, contact: 0, anchor: 0, pilot: 0, vts: 0, tugs: 0 };
   tugs = makeTugs();
@@ -218,6 +223,7 @@ export class Game {
     }
     const [bx, by] = bodyToWorld(this.s, this.geo.bow, 0);
     letGo(a, bx, by, this.shackles, this.env.depth(bx, by));
+    this.emit('splash');
     this.say('Proa', `Ferro largado. Arriando ${this.shackles} quartéis.`, 'info');
   }
   heaveAnchor() {
@@ -249,7 +255,7 @@ export class Game {
     if (b.bow > 8 || b.stern > 35) return this.say('Imediato', `Longe demais para passar espias: proa ${Math.max(0, b.bow).toFixed(0)} m (máx. 8), popa ${Math.max(0, b.stern).toFixed(0)} m (máx. 35).`, 'warn');
     if (this.sog > 0.25) return this.say('Imediato', 'Ainda com seguimento. Pare o navio antes de amarrar.', 'warn');
     this.mooring = 40 * this.crewFactor * (!this.free && this.career.crew.mate >= 2 ? 0.5 : 1);
-    this.setTelegraph(4);
+    this.setTelegraph(4); this.emit('lines');
     this.say('Imediato', b.stern > 8 ? 'Lançante de proa em terra. Virando a popa nos cabos.' : 'Passando espias. Lançante e espringue em terra.', 'info');
   }
 
@@ -321,7 +327,7 @@ export class Game {
         this.say(`N/M ${o.name}`, `Maré Mansa, o senhor passou a ${dmin.toFixed(0)} metros de mim!`, 'bad');
       }
       if (o.kind === 'outbound' && !o.warned && dmin < 700 && W.nearest(s.x, s.y).side > 0 && W.nearest(s.x, s.y).d > 5) {
-        o.warned = true; this.say(`N/M ${o.name}`, 'Maré Mansa, o senhor está no meu lado do canal. Guine para boreste!', 'bad');
+        o.warned = true; this.emit('horn5'); this.say(`N/M ${o.name}`, 'Maré Mansa, o senhor está no meu lado do canal. Guine para boreste! (cinco apitos curtos)', 'bad');
       }
     }
     for (const o of this.traffic) {
@@ -459,6 +465,7 @@ export class Game {
 
   private onImpact(v: number) {
     const kn = (v / KN).toFixed(1);
+    this.emit('thud');
     if (v > 0.6) return this.finish(false, 'Avaria grave no cais', `Tocou o cais a ${kn} nós.`, 60000);
     if (v > 0.3) { this.ledger.contact += 15000; this.trustEvent(-18, 'pancada no cais'); this.say('Imediato', `Pancada forte no cais: ${kn} nós. Vai ter vistoria.`, 'bad'); }
     else if (v > 0.15) { this.ledger.contact += 3000; this.trustEvent(-6, 'encostou duro'); this.say('Imediato', `Encostou duro: ${kn} nós.`, 'warn'); }

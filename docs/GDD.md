@@ -124,6 +124,22 @@ Estado do prático por maré, com comandante obediente (teste automático):
 
 O céu não muda a física, só o que se vê da ponte; por isso radar, ECDIS e GPS passam a valer o que custam. A fazer: sinais sonoros de nevoeiro, noite com nevoeiro, chuva.
 
+## Som
+
+Sintetizado em `src/audio/sound.ts`, que só observa o jogo.
+
+| Som | Quando |
+|---|---|
+| Diesel | Sempre; tom e volume seguem a rotação real, não a ordem |
+| Água e vento | Seguem a velocidade na água e o vento relativo |
+| Sinos do telégrafo | Um na ordem, dois quando a máquina responde |
+| Rádio | Estalo por mensagem; sons próprios para prático, aviso e erro |
+| Alarme | Menos de 1,5 m sob o casco |
+| Amarra, ferro, pancada, rebocador | Nos eventos |
+| Apito | Tecla B; automático no nevoeiro a cada 2 min; cinco curtos do navio que sai |
+
+A fazer: ajuste de ouvido, som ambiente do porto, música no porto.
+
 ## Confiança da tripulação
 
 Uma medida só, de −100 a +100, que começa em 0 e persiste entre viagens. O comandante ganha e perde.

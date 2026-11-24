@@ -2,6 +2,17 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.12.0 — Som
+
+- Todo o som é sintetizado no navegador, sem arquivos de áudio.
+- Contínuos: diesel que sobe de tom e volume com a rotação, água no casco com o seguimento, vento com o vento relativo, amarra correndo ao largar e ao virar.
+- Sinos do telégrafo: um toque na ordem e dois quando a máquina responde, o que deixa o atraso audível.
+- Rádio: estalo a cada mensagem, com som próprio para ordem do prático, aviso e erro grave.
+- Alarme do ecobatímetro, pancada no cais, ferro na água, rebocador ao passar o cabo, fim de viagem.
+- Apito do navio na tecla B. No nevoeiro, um apito longo a cada 2 minutos, o seu e o do navio que vem, mais fraco com a distância. O navio que sai dá cinco apitos curtos se você estiver no lado dele.
+- Liga e desliga na tecla N ou no botão Som; a escolha fica guardada.
+- Não foi ouvido por uma pessoa: os volumes e timbres saíram de cálculo e precisam de ajuste de ouvido.
+
 ## v0.11.0 — Noite e nevoeiro
 
 - Noite: a vista escurece e só se veem as luzes. As boias piscam na cor delas, os navios e rebocadores mostram luzes de navegação (mastro, bordos encarnado e verde, alcançado), a cidade e o cais se acendem.

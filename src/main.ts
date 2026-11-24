@@ -1,3 +1,4 @@
+import { Sound } from './audio/sound';
 import { Panel } from './bridge/panel';
 import { Game, Scenario } from './game/game';
 import { makeWaterCanvas, View } from './render/view';
@@ -15,6 +16,9 @@ const game = new Game();
 const grid = buildGrid();
 const view = new View(document.getElementById('world')!, grid, game.p);
 const panel = new Panel(game, grid, makeWaterCanvas(grid, 20));
+const sound = new Sound();
+addEventListener('pointerdown', () => sound.unlock(), true);
+addEventListener('keydown', () => sound.unlock(), true);
 const overlay = document.getElementById('overlay')!;
 const mission = document.getElementById('mission')!;
 const help = document.getElementById('help')!;
@@ -69,6 +73,7 @@ help.innerHTML = `<h2>AJUDA</h2><p>Clique ou aperte <kbd>H</kbd> para fechar.</p
     <tr><td><kbd>1</kbd>–<kbd>4</kbd>, <kbd>P</kbd></td><td>Tempo 1×, 2×, 4×, 8× / pausa</td></tr>
     <tr><td><kbd>Q</kbd> <kbd>E</kbd>, <kbd>Z</kbd> <kbd>X</kbd></td><td>Girar a vista / zoom</td></tr>
     <tr><td><kbd>C</kbd>, <kbd>T</kbd></td><td>Carta grande / vista superior de teste</td></tr>
+    <tr><td><kbd>B</kbd>, <kbd>N</kbd></td><td>Apito do navio / ligar e desligar o som</td></tr>
   </table></div>
   <div><h3>O que lembrar</h3><table>
     <tr><td>Ordem ≠ efeito</td><td>A máquina leva 6 s para começar a cumprir e 47 s até meia força; o leme, 2 s e mais 19 s até 35°.</td></tr>
@@ -81,11 +86,13 @@ help.innerHTML = `<h2>AJUDA</h2><p>Clique ou aperte <kbd>H</kbd> para fechar.</p
     <tr><td>Confiança</td><td>Erros e sustos derrubam; manobras limpas levantam. Ela muda a rapidez das ordens e os avisos.</td></tr>
   </table></div></div>`;
 help.addEventListener('click', () => { help.hidden = true; });
+function syncSound() { const b = document.querySelector<HTMLElement>('[data-cam="sound"]'); if (b) { b.textContent = sound.on ? 'Som' : 'Mudo'; b.classList.toggle('on', sound.on); } }
 document.getElementById('camctl')!.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button'); if (!b) return;
   const c = b.dataset.cam;
   if (c === 'rl') view.rotate(-1); if (c === 'rr') view.rotate(1); if (c === 'zi') view.zoom(-1); if (c === 'zo') view.zoom(1);
   if (c === 'chart') panel.bigChart = !panel.bigChart; if (c === 'help') help.hidden = !help.hidden;
+  if (c === 'sound') { sound.toggle(); syncSound(); } if (c === 'horn') game.sound();
   b.blur();
 });
 const money = (v: number) => `<span class="${v >= 0 ? 'pos' : 'neg'}">${v < 0 ? '−' : ''}R$ ${Math.abs(v).toLocaleString('pt-BR')}</span>`;
@@ -217,6 +224,8 @@ addEventListener('keydown', e => {
   else if (k === 't') view.top = !view.top;
   else if (k === 'c') panel.bigChart = !panel.bigChart;
   else if (k === 'h') help.hidden = !help.hidden;
+  else if (k === 'b') game.sound();
+  else if (k === 'n') { sound.toggle(); syncSound(); }
   else if (k === 'j') game.setThruster(Math.round((s.thrusterOrder - 0.25) * 4) / 4);
   else if (k === 'l') game.setThruster(Math.round((s.thrusterOrder + 0.25) * 4) / 4);
   else if (k === 'k') game.setThruster(0);
@@ -241,6 +250,7 @@ function frame(now: number) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   game.update(dt);
   view.render(game, dt);
+  sound.update(game, dt);
   panel.update(dt);
   north.style.transform = `rotate(${view.compassDeg}deg)`;
   if (game.status !== 'menu') drawMission();
@@ -260,7 +270,7 @@ function frame(now: number) {
   if (game.status === 'done' && !shown) { shown = true; showResult(); }
   requestAnimationFrame(frame);
 }
-menu();
+menu(); syncSound();
 requestAnimationFrame(frame);
 
 // acesso para depuração e testes no navegador

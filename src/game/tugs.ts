@@ -59,7 +59,7 @@ export class Tug {
     if (this.state === 'waiting') {
       if (!inside) g.say(`Rebocador ${this.name}`, 'Aguardando o senhor da barra para dentro.', 'info', 'tugbar' + this.where, 120);
       else if (Math.abs(s.stw) > 5 * KN) g.say(`Rebocador ${this.name}`, 'Muito seguimento. Reduza para 5 nós para eu passar o cabo.', 'warn', 'tugfast' + this.where, 40);
-      else { this.state = 'fast'; this.mode = this.doing = 'stop'; g.say(`Rebocador ${this.name}`, `Cabo passado na ${this.where}. Às ordens.`, 'info'); }
+      else { this.state = 'fast'; this.mode = this.doing = 'stop'; g.events.push('tug'); g.say(`Rebocador ${this.name}`, `Cabo passado na ${this.where}. Às ordens.`, 'info'); }
     } else {
       g.ledger.tugs += TUG_PER_MIN / 60 * dt;
       if (Math.abs(s.stw) > 6.5 * KN) {

@@ -39,7 +39,7 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 10 | Mais céu | Sinais sonoros de nevoeiro, noite com nevoeiro, chuva |
 | 16 | Prático sem rebocadores na corrente parada e a favor | Com os dois rebocadores atraca em qualquer maré. Sem eles, na preamar atraca quase sem lucro e na enchente recusa |
 | 17 | Prazo da viagem conforme a maré | Hoje é fixo em 75 min; esperar a virada estoura o prazo |
-| 11 | Som | |
+| 11 | Ajustar o som de ouvido | Feito por cálculo na v0.12.0; ninguém ouviu ainda |
 
 ## Feito
 
@@ -68,3 +68,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.9.0: carreira com contratos, oficina, tripulação e modo livre |
 | v0.10.0: graneleiro de 130 m, estaleiro, reputação e ofertas que mudam |
 | v0.11.0: noite e nevoeiro; rebocadores não atravessam mais o casco (relatado em teste) |
+| v0.12.0: som sintetizado e apito do navio |
