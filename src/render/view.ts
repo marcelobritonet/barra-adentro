@@ -317,7 +317,13 @@ function makeZones() {
     const a = (k / 72) * Math.PI * 2;
     pts.push(new THREE.Vector3(A.x + A.r * Math.sin(a), 0.3, -(A.y + A.r * Math.cos(a))));
   }
-  return new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xff7ad9 }));
+  const zones = new THREE.Group();
+  zones.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xff7ad9 })));
+  // bacia de evolução, tracejada em azul claro
+  const bp: THREE.Vector3[] = [];
+  for (let i = 0; i < 60; i += 2) for (const k of [i, i + 1]) { const a = (k / 60) * Math.PI * 2; bp.push(new THREE.Vector3(W.BASIN.x + W.BASIN.r * Math.sin(a), 0.3, -(W.BASIN.y + W.BASIN.r * Math.cos(a)))); }
+  zones.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(bp), new THREE.LineBasicMaterial({ color: 0x9fd0e8 })));
+  return zones;
 }
 
 function makeBuoy(kind: string) {

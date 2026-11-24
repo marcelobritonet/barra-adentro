@@ -10,7 +10,8 @@ import { TidePreset } from '../world/tide';
 function voyage(grade: PilotGrade, tide: TidePreset = 'vazante', ask = true, tugs = false, big = false, berth = 'cais') {
   const g = new Game();
   if (big) g.career.ship = 'handy';
-  if (berth !== 'cais') g.contract = { ...CONTRACTS.find(c => c.id === 'cheia')!, tide, berth };
+  if (berth === 'giro') g.contract = { ...CONTRACTS.find(c => c.id === 'giro')!, tide };
+  else if (berth !== 'cais') g.contract = { ...CONTRACTS.find(c => c.id === 'cheia')!, tide, berth };
   g.trust = 0; g.tidePreset = tide; g.start('entrada'); g.callVTS(); g.callPilot(grade); if (ask) g.callShip(); if (tugs) { g.callTug(0); g.callTug(1); }
   g.warp = 8;
   let maxOff = 0, orders = 0, moorAt = 0;
@@ -26,7 +27,7 @@ function voyage(grade: PilotGrade, tide: TidePreset = 'vazante', ask = true, tug
   }
   orders = g.msgs.filter(m => m.level === 'pilot').length;
   const r = g.result;
-  console.log(big ? 'GRANELEIRO' : '', berth === 'cais' ? '' : 'ILHA', grade, tide, tugs ? 'com rebocadores' : '', '→', r?.title ?? g.status, '|', (g.time / 60).toFixed(0), 'min | fora do eixo máx', maxOff.toFixed(0), 'm | sog', (g.sog / KN).toFixed(1),
+  console.log(big ? 'GRANELEIRO' : '', berth === 'cais' ? '' : berth === 'giro' ? 'GIRO' : 'ILHA', grade, tide, tugs ? 'com rebocadores' : '', '→', r?.title ?? g.status, '|', (g.time / 60).toFixed(0), 'min | fora do eixo máx', maxOff.toFixed(0), 'm | sog', (g.sog / KN).toFixed(1),
     '| berço', JSON.stringify(Object.fromEntries(Object.entries(g.berth()).map(([k, v]) => [k, +v.toFixed(0)]))), '| total', r?.total, '| confiança', g.trust, '| espias aos', (moorAt / 60).toFixed(0), 'min');
   console.log(g.msgs.slice(-14).map(m => `${(m.t / 60).toFixed(1)} ${m.who}: ${m.text}`).join('\n'));
   return { g, maxOff, orders };
@@ -80,6 +81,29 @@ describe('prático', () => {
   it('Terminal da Ilha sem rebocadores: o prático leva o navio até lá', () => {
     const { g } = voyage('senior', 'vazante', true, false, false, 'ilha');
     expect(g.result?.ok).toBe(true);
+  });
+  it('aproado ao mar, com rebocadores: passa do cais, gira na bacia e atraca por boreste', () => {
+    const { g } = voyage('senior', 'enchente', true, true, false, 'giro');
+    expect(g.headOut).toBe(true); expect(g.pilot.turned).toBe(true);
+    expect(g.result?.ok).toBe(true);
+    const out = Math.atan2(W.QUAY.tx, W.QUAY.ty); let e = Math.abs(g.s.psi - out); if (e > Math.PI) e = 2 * Math.PI - e;
+    expect(e).toBeLessThan(0.35);   // terminou de proa para o mar
+  });
+  it('aproado ao mar, sem rebocadores: o prático devolve o giro ao comandante e não encalha o navio antes', () => {
+    const g = new Game(); g.trust = 0; g.contract = { ...CONTRACTS.find(c => c.id === 'giro')! }; g.start('entrada'); g.callVTS(); g.callPilot('senior'); g.callShip(); g.warp = 8;
+    for (let i = 0; i < 6000 && g.status === 'running' && !g.pilot.handsOff; i++) {
+      const s = g.s, n = W.nearest(s.x, s.y);
+      if (g.pilot.state === 'aboard') { g.setRudderDeg(g.pilot.helm); g.setTelegraph(g.pilot.tel); }
+      else { const [x, y] = W.pointAt(n.s + 300); let e = Math.atan2(x - s.x, y - s.y) - s.psi; while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI; g.setRudderDeg(Math.round(Math.max(-20, Math.min(20, e / D2R * 1.5 - s.r / D2R * 50)) / 5) * 5); g.setTelegraph(6); }
+      g.update(0.1);
+    }
+    expect(g.status).toBe('running');
+    expect(g.pilot.handsOff).toBe(true);
+    expect(g.msgs.some(m => m.text.includes('não giro o navio'))).toBe(true);
+    // o comandante gira por conta própria: o prático retoma quando a proa aponta para o mar
+    g.s.psi = Math.atan2(W.QUAY.tx, W.QUAY.ty); g.s.u = 0.3; g.s.r = 0;
+    for (let i = 0; i < 20; i++) g.update(0.1);
+    expect(g.pilot.turned).toBe(true); expect(g.pilot.handsOff).toBe(false);
   });
   it('padrão também chega, com mais desvio', () => {
     const { g } = voyage('padrao');

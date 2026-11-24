@@ -40,6 +40,8 @@ export class Game {
   /** Céu desta viagem: muda o que se vê da ponte, não a física. */
   sky: Sky = 'dia'; freeSky: Sky = 'dia';
   freeBerth = 'cais';
+  /** Atracar aproado ao mar: passar do berço, girar na bacia de evolução e voltar. */
+  headOut = false; freeHeadOut = false;
   /** Limite de velocidade no canal: 8 nós, 6 com nevoeiro. */
   get limitKn() { return this.sky === 'nevoeiro' ? 6 : W.SPEED_LIMIT_KN; }
   /** Alcance visual, em metros. */
@@ -112,6 +114,8 @@ export class Game {
     if (ct) this.tidePreset = ct.tide;
     this.sky = ct ? ct.sky ?? 'dia' : this.free ? this.freeSky : 'dia';
     W.setQuay(ct ? ct.berth ?? 'cais' : this.free ? this.freeBerth : 'cais');
+    this.headOut = sc === 'entrada' && (ct ? !!ct.headOut : this.free && this.freeHeadOut) && W.QUAY.id === 'cais';
+    if (this.headOut) W.useQuay(W.headOut(W.QUAY));
     if (!this.free) { applyCareer(this.p, this.career); this.equip = equipOf(this.career); }
     if (sc === 'entrada') {
       const [x, y] = W.pointAt(W.S_MOUTH - 1500);
@@ -146,7 +150,7 @@ export class Game {
       if (this.sky === 'nevoeiro') this.say('Imediato', 'Nevoeiro fechado, uns 300 metros de visibilidade. Limite de 6 nós no canal; navegamos pelo radar e pelas boias.', 'warn');
       if (this.sky === 'noite') this.say('Imediato', 'Noite sem lua. Encarnada a boreste, verde a bombordo: siga as luzes das boias.', 'info');
       this.say('Imediato', 'Precisamos da autorização do VTS antes da barra. Prático é opcional: chame pelo rádio se quiser.', 'info');
-      this.say('Imediato', `Berço: ${W.QUAY.name}, ${W.QUAY.side > 0 ? 'por bombordo, depois da segunda curva' : 'por boreste, no fundo do canal'}. Calado ${this.p.T.toFixed(1).replace('.', ',')} m. Temos ar para ${this.p.airStarts} partidas de máquina.`, 'info');
+      this.say('Imediato', `Berço: ${W.QUAY.name}, ${this.headOut ? 'aproado ao mar: passamos dele, giramos na bacia de evolução e voltamos para atracar por boreste' : W.QUAY.side > 0 ? 'por bombordo, depois da segunda curva' : 'por boreste, no fundo do canal'}. Calado ${this.p.T.toFixed(1).replace('.', ',')} m. Temos ar para ${this.p.airStarts} partidas de máquina.`, 'info');
     } else if (sc === 'contrabordo') {
       this.say('Capitania', `Atraque a contrabordo do N/M ${this.sts!.name}, fundeado, pelo boreste dele, para o transbordo.`, 'info');
       this.say('Imediato', 'Ele está aproado ao vento e gira devagar. Chegue paralelo, quase parado, e encoste a proa nas defensas. Depois, espias (M).', 'info');

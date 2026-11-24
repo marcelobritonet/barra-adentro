@@ -73,6 +73,8 @@ export function updateTraffic(g: Game, dt: number) {
       if (g.time < o.yieldUntil + 1 && ahead > -500 && ahead < 350) o.yieldUntil = Math.max(o.yieldUntil, g.time + 5);
       const yielding = g.time < o.yieldUntil, wantOff = yielding ? 135 : 45;
       o.u = (yielding ? 0.3 : DREDGE_KN) * KN;
+      // não entra na bacia de evolução enquanto há um navio girando nela
+      if (o.s < W.BASIN.s + 100 && W.BASIN.s - o.s < 750 && Math.hypot(g.s.x - W.BASIN.x, g.s.y - W.BASIN.y) < 420) o.u = 0;
       o.offset += Math.max(-0.6 * dt, Math.min(0.6 * dt, wantOff - o.offset));
       o.s += o.u * dt;
       if (o.s > W.CHANNEL_LENGTH - 250) { o.active = false; o.phase = 'gone'; continue; }
@@ -82,7 +84,7 @@ export function updateTraffic(g: Game, dt: number) {
       continue;
     }
     // na manobra a contrabordo o "cais" de destino é um navio; o navio do berço continua no Cais de Santos
-    const Q = g.sts ? W.QUAYS[0] : W.QUAY, lane = 200 + OUT_OFFSET * Q.side, home = Q.fender + o.B / 2;
+    const Q = g.sts ? W.QUAYS[0] : W.QUAY.base ?? W.QUAY, lane = 200 + OUT_OFFSET * Q.side, home = Q.fender + o.B / 2;
     if (o.phase === 'berthed' || o.phase === 'unberthing') {
       if (o.phase === 'berthed' && g.time >= o.departAt) {
         o.phase = 'unberthing';

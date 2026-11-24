@@ -32,7 +32,8 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 13 | Prático no cenário de fundeio | Hoje só orienta a entrada |
 | 15 | Calibrar rebocadores jogando | Empurrar a 25% por 45 s já encosta a 0,3 nó; ver se as potências fazem sentido |
 | 5 | Mais tráfego | Navio entrando atrás de você, navio que recusa pedido, mais variedade a cada viagem |
-| 7 | Mais berços e manobras | Giro na bacia de evolução, contrabordo de navio atracado, um terceiro berço |
+| 7 | Mais berços e manobras | Contrabordo de navio atracado, um terceiro berço, giro na bacia para o Terminal da Ilha |
+| 22 | Prático girar sem rebocadores | Hoje devolve o giro ao comandante; a tentativa com leme e máquina encalhou |
 | 21 | Conferir na tela a manobra a contrabordo | Testada só por script na v0.14.0 |
 | 8 | Mais progressão | Terceiro navio, tripulantes com nome, manutenção, contratos com validade |
 | 19 | Prático com o graneleiro | Atraca com dois rebocadores, mas abre demais na segunda curva e chega torto; sem rebocadores não foi testado |
@@ -73,3 +74,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.13.0: Terminal da Ilha, segundo berço, por boreste |
 | v0.14.0: atracar a contrabordo de um navio fundeado |
 | v0.15.0: sucção entre cascos e draga à frente, com pedido de passagem |
+| v0.16.0: giro na bacia de evolução e atracação aproado ao mar |

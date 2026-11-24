@@ -56,6 +56,7 @@ export interface Quay {
   cx: number; cy: number;
   tx: number; ty: number;   // ao longo do cais, sentido de quem entra
   nx: number; ny: number;   // normal apontando para a água
+  base?: Quay;              // berço "aproado ao mar": o mesmo cais, visto de quem vem de dentro
   half: number;             // meia extensão do cais
   berthHalf: number;        // tolerância de posição ao longo do cais
   fender: number;
@@ -68,6 +69,10 @@ export const QUAYS: Quay[] = [
   mkQuay('cais', 'Cais de Santos', SEG[5], 550, 1),        // depois da segunda curva, margem de Santos
   mkQuay('ilha', 'Terminal da Ilha', SEG[6], 620, -1),     // fundo do canal, margem norte: atracação por boreste
 ];
+/** Bacia de evolução: trecho largo e dragado depois do Cais de Santos, para girar o navio. */
+export const BASIN = (() => { const s = SEG[6].s0 + 40, [x, y] = pointAt(s); return { x, y, r: 250, s, depth: 12 }; })();
+/** O mesmo cais para quem chega de dentro, aproado ao mar: sentido invertido e o cais no outro bordo. */
+export function headOut(q: Quay): Quay { return { ...q, id: q.id + '-mar', tx: -q.tx, ty: -q.ty, side: -q.side as 1 | -1, base: q }; }
 /** Berço de destino desta viagem. Os outros continuam existindo como cais. */
 export let QUAY: Quay = QUAYS[0];
 export let QUAY_S = QUAY.s;   // posição do berço de destino ao longo do canal
@@ -110,6 +115,7 @@ export function depth(x: number, y: number): number {
   if (n.s > S_MOUTH) {
     if (n.d >= EST_HALF) return -landHeight(x, y);
     if (n.d < DREDGED_HALF) return DREDGED_DEPTH;
+    if (Math.hypot(x - BASIN.x, y - BASIN.y) < BASIN.r) return BASIN.depth;
     if (n.d < 170) return lerp(DREDGED_DEPTH, 7, (n.d - DREDGED_HALF) / 60);
     return lerp(7, 0.4, (n.d - 170) / (EST_HALF - 170));
   }

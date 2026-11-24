@@ -47,7 +47,7 @@ Um porto só, aprofundado. A carta é uma aproximação estilizada (baía ao sul
 | 3 | Duas curvas a bombordo | Antecipar a guinada e quebrá-la a tempo, com corrente | No protótipo |
 | 4 | Berço depois da segunda curva | Atracação por bombordo, sem rebocador | No protótipo |
 | 5 | Terminal da Ilha, no fundo do canal | Terceira curva e atracação por boreste, em que a ré joga a popa para fora | No jogo desde a v0.13.0 |
-| 5b | Giro na bacia de evolução | Girar o navio para atracar aproado ao mar | A fazer |
+| 5b | Giro na bacia de evolução | Passar do cais, girar na bacia (250 m de raio) e atracar aproado ao mar, por boreste, com a enchente pela proa | No jogo desde a v0.16.0 |
 | 6 | Tráfego | Pedir a navio que saia/aguarde, cruzamento, a contrabordo | A fazer |
 
 ## Física do navio

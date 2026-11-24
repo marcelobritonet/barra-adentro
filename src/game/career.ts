@@ -72,6 +72,7 @@ export interface Contract {
   tide: TidePreset; freight: number; parMin: number; stars: number; note: string;
   sky?: Sky;
   berth?: string;         // berço de destino; sem isso, o Cais de Santos
+  headOut?: boolean;      // atracar aproado ao mar: passa do berço, gira na bacia e volta
 }
 export type Sky = 'dia' | 'noite' | 'nevoeiro';
 export const SKY: Record<Sky, { label: string; bonus: number; hint: string }> = {
@@ -86,6 +87,7 @@ export const CONTRACTS: Contract[] = [
   { id: 'cheia', title: 'Fertilizante, carga completa', cargo: '2.900 t de fertilizante', scenario: 'entrada', load: 1, tide: 'vazante', freight: 28000, parMin: 75, stars: 3, note: 'Calado de 5,2 m: mais pesado e com menos água sob a quilha.' },
   { id: 'acucar', title: 'Açúcar na preamar', cargo: '2.900 t de açúcar', scenario: 'entrada', load: 1, tide: 'preamar', freight: 34000, parMin: 80, stars: 4, note: 'Corrente parada: o navio não freia sozinho e custa a governar devagar.' },
   { id: 'ilha', title: 'Granel líquido no Terminal da Ilha', cargo: '2.900 t de etanol', scenario: 'entrada', load: 1, tide: 'vazante', freight: 38000, parMin: 100, stars: 4, berth: 'ilha', note: 'Mais 1 km de canal e uma terceira curva. Atracação por boreste: em ré, a popa foge do cais.' },
+  { id: 'giro', title: 'Girar e atracar aproado ao mar', cargo: '2.900 t de contêineres', scenario: 'entrada', load: 1, tide: 'enchente', freight: 42000, parMin: 100, stars: 4, headOut: true, note: 'Entra com a enchente a favor, passa do cais, gira na bacia de evolução e volta para atracar por boreste, de proa para a corrente.' },
   { id: 'trigo', title: 'Trigo na baixa-mar', cargo: '2.900 t de trigo', scenario: 'entrada', load: 1, tide: 'baixamar', freight: 40000, parMin: 90, stars: 5, note: 'Pouca água nos bancos, e a maré vira para enchente no meio da viagem.' },
   { id: 'urgente', title: 'Carga urgente na enchente', cargo: '2.900 t de peças', scenario: 'entrada', load: 1, tide: 'enchente', freight: 48000, parMin: 70, stars: 5, note: 'Corrente a favor no berço. Sem rebocadores, é para poucos.' },
 ];

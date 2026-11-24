@@ -157,3 +157,8 @@ table.shop button { padding: 5px 8px; font-size: 12px; }
 .contracts .sky { color: #9fd0e8; }
 
 .contracts { grid-template-columns: 1fr 1fr; }
+
+#camctl button.on { background: #b8860b; color: #10151a; }
+
+#log div { max-width: min(100%, 760px); }
+#mission { max-width: calc(100% - 330px); }

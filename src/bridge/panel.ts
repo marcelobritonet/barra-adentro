@@ -289,6 +289,7 @@ export class Panel {
     pb.classList.toggle('off', pl.state === 'none');
     if (pl.state === 'none') pb.innerHTML = 'Sem prático: a manobra é por sua conta';
     else if (pl.state === 'called') pb.innerHTML = pl.eta > 0 ? `${pl.name} embarca em ${fmtTime(pl.eta).slice(3)}` : '<span class="neg">Lancha ao costado: reduza para 7 nós</span>';
+    else if (pl.handsOff) pb.innerHTML = '<span class="neg">O prático devolveu a manobra</span><br>gire o navio na bacia; ele retoma com a proa para o mar';
     else {
       const helmOk = Math.round(s.rudderOrder / D2R) === pl.helm, telOk = s.telegraph === pl.tel;
       const hd = pl.helm === 0 ? 'A MEIO' : `${pl.helm < 0 ? 'BB' : 'BE'} ${Math.abs(pl.helm)}`;
@@ -296,7 +297,9 @@ export class Panel {
     }
     // faixa com as ordens do prático sobre a vista
     const hud = $('pilothud');
-    if (pl.state === 'aboard' && g.status === 'running') {
+    if (pl.state === 'aboard' && g.status === 'running' && pl.handsOff) {
+      hud.hidden = false; hud.innerHTML = `<small>${pl.name}</small><span class="todo">O GIRO É COM O SENHOR</span>`;
+    } else if (pl.state === 'aboard' && g.status === 'running') {
       const helmOk = Math.round(s.rudderOrder / D2R) === pl.helm, telOk = s.telegraph === pl.tel;
       const hd = pl.helm === 0 ? 'LEME A MEIO' : `${pl.helm < 0 ? 'BOMBORDO' : 'BORESTE'} ${Math.abs(pl.helm)}`;
       hud.hidden = false;
@@ -438,6 +441,7 @@ export class Panel {
     W.CENTER.forEach(([x, y], i) => (i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y)))); c.stroke(); c.setLineDash([]);
     // fundeadouro e berço
     c.strokeStyle = '#c42fa0'; c.setLineDash([3, 3]); c.beginPath(); c.arc(X(W.ANCHORAGE.x), Y(W.ANCHORAGE.y), W.ANCHORAGE.r * sx, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.strokeStyle = '#1f5f99'; c.setLineDash([2, 3]); c.beginPath(); c.arc(X(W.BASIN.x), Y(W.BASIN.y), W.BASIN.r * sx, 0, TAU); c.stroke(); c.setLineDash([]);
     for (const q of W.QUAYS) {
       c.strokeStyle = q.id === W.QUAY.id && g.scenario === 'entrada' ? '#ffe14a' : '#6b5a3a'; c.lineWidth = big ? 5 : 3;
       c.beginPath(); c.moveTo(X(q.cx - q.tx * q.half), Y(q.cy - q.ty * q.half)); c.lineTo(X(q.cx + q.tx * q.half), Y(q.cy + q.ty * q.half)); c.stroke();
@@ -460,6 +464,7 @@ export class Panel {
       c.fillStyle = '#7a1f7a'; c.fillText('FUNDEADOURO', X(W.ANCHORAGE.x), Y(W.ANCHORAGE.y));
       c.fillStyle = '#3a2a1a'; c.font = '10px ui-monospace, monospace';
       for (const q of W.QUAYS) c.fillText(q.name, X(q.cx - q.nx * 260), Y(q.cy - q.ny * 260));
+      c.fillText('Bacia de evolução', X(W.BASIN.x), Y(W.BASIN.y + W.BASIN.r + 60));
       c.fillStyle = '#3a2a1a'; c.font = '10px ui-monospace, monospace'; c.textAlign = 'left';
       c.fillText('Carta estilizada: NÃO USAR PARA NAVEGAÇÃO. Sondagens em metros.', 8, h - 8);
     }

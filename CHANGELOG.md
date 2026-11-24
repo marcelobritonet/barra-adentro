@@ -2,6 +2,15 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.16.0 — Giro na bacia de evolução
+
+- Nova manobra: atracar aproado ao mar. Você entra com a enchente a favor, passa do Cais de Santos, para na bacia de evolução, gira o navio e volta para atracar por boreste, de proa para a corrente.
+- Bacia de evolução: um círculo de 250 m de raio, dragado a 12 m, logo depois do cais; aparece na vista, na carta e no ECDIS.
+- Novo contrato de quatro estrelas, "Girar e atracar aproado ao mar" (R$ 42.000, com enchente). No modo livre é uma opção do Cais de Santos.
+- Com os dois rebocadores, o prático conduz tudo: para na bacia, gira com o de proa empurrando e o de popa puxando, e leva ao cais. Sem rebocadores ele avisa que não gira o navio, devolve a manobra ao comandante e retoma quando a proa estiver para o mar.
+- A draga não entra na bacia enquanto há um navio girando nela.
+- 2 testes novos.
+
 ## v0.15.0 — Navio à frente e sucção entre cascos
 
 - Sucção entre navios: ao passar perto de outro casco, os dois se puxam quando estão de través; com o outro pela proa a sua proa é jogada para fora, e com ele pela popa, puxada para dentro. Cresce com o quadrado da velocidade e some com distância. A 6 nós e 40 m, são 25 kN.

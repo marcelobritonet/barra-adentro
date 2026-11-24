@@ -31,6 +31,11 @@ export class Pilot {
   declined = false;
   private meetSaid = false; private waitSaid = false; private paceSaid = false; private dredgeSaid = false;
   private tugThink = 0; private tugSaid = false;
+  /** Manobra aproado ao mar: girando na bacia, e giro concluído. */
+  turning = false; turned = false;
+  /** O prático devolveu a manobra ao comandante (giro sem rebocadores). */
+  handsOff = false;
+  private basinSaid = false;
   /** O prático fala com os rebocadores ele mesmo, como na vida real. */
   private tug(g: Game, i: number, mode: TugMode, power = 0.25) {
     const t = g.tugs[i];
@@ -67,12 +72,60 @@ export class Pilot {
     const P0 = PILOTS[this.grade], s = g.s, Q = W.QUAY;
     // navio maior guarda mais a guinada: o prático quebra mais cedo e anda mais devagar
     const big = g.p.L / 90, P = { ...P0, kd: P0.kd * big ** 2 };
-    const n = W.nearest(s.x, s.y), ds = W.QUAY_S - n.s, b = g.berth();
+    const n = W.nearest(s.x, s.y), b = g.berth(), ho = g.headOut;
+    // aproado ao mar: só há "distância ao berço" depois do giro, e ela é medida vindo de dentro
+    const ds = ho ? (this.turned ? n.s - W.QUAY_S : 9999) : W.QUAY_S - n.s;
+    // corrente pela proa (+) ou pela popa (-), no sentido em que o navio vai atracar
+    const flow = g.tide.flow * (ho && this.turned ? -1 : 1);
     const steer = (tx: number, ty: number, max: number) => {
       const e = wrap(Math.atan2(tx - s.x, ty - s.y) - s.psi) / D2R;
       return Math.max(-max, Math.min(max, e * P.kp - (s.r / D2R) * P.kd));
     };
     if (g.mooring > 0) return [0, 4];
+
+    // --- aproado ao mar: passa do cais, para na bacia de evolução e gira por boreste
+    if (ho && !this.turned) {
+      const dB = W.BASIN.s - n.s, tugs = g.tugs.every(t => t.state === 'fast');
+      const err = wrap(Math.atan2(W.QUAY.tx, W.QUAY.ty) - s.psi);       // quanto falta girar
+      this.tugThink -= 1;
+      // sem os dois rebocadores o prático não gira o navio: com a corrente pela popa ele não para nem governa na bacia
+      if (!tugs && (dB < 1300 || this.turning)) {
+        if (!this.handsOff) {
+          this.handsOff = true; this.turning = false;
+          g.say(this.name, 'Sem os dois rebocadores eu não giro o navio na bacia. Chame-os agora, ou o giro é por sua conta; quando a proa estiver para o mar eu levo ao cais.', 'warn');
+        }
+        if (Math.abs(err) < 24 * D2R && dB > -350) { this.turned = true; this.handsOff = false; g.say(this.name, 'Proa para o mar. Agora o cais, por boreste.', 'info'); return [0, 4]; }
+        return [Math.round(s.rudderOrder / D2R / P.step) * P.step, s.telegraph];   // repete o que o comandante fizer
+      }
+      this.handsOff = false;
+      if (!this.turning) {
+        if (dB < 80 && g.sog < 0.5) {
+          this.turning = true;
+          g.say(this.name, 'Estamos na bacia. Giramos por boreste com os rebocadores.', 'info');
+        } else if (dB < 1300) {
+          if (!this.basinSaid) { this.basinSaid = true; g.say(this.name, 'Passamos do cais e paramos na bacia de evolução para girar.', 'info'); }
+          const vT = dB > 700 ? 1.4 : dB > 300 ? 0.9 : dB > 0 ? 0.35 : 0;
+          let tel = g.sog > vT + 0.5 ? 2 : g.sog > vT + 0.15 ? 4 : g.sog < vT - 0.1 ? (vT > 1.2 ? 6 : 5) : Math.min(this.tel, 5);
+          if (dB < -30) tel = s.u > -0.2 ? 2 : 4;                         // passou do centro: volta
+          if (tugs && this.tugThink <= 0) { this.tugThink = 6; if (g.sog > vT + 0.25 && s.u > 0) this.tug(g, 1, 'brake', g.sog > vT + 0.7 ? 1 : 0.5); else this.tug(g, 1, 'stop'); this.tug(g, 0, 'stop'); }
+          const [bx, by] = W.pointAt(n.s + P.look, 0);
+          return [steer(bx, by, 25), tel];
+        }
+      } else {
+        if (Math.abs(err) < 24 * D2R) {
+          this.turned = true; this.turning = false;
+          this.tug(g, 0, 'stop'); this.tug(g, 1, 'stop');
+          g.say(this.name, 'Giro feito, proa para o mar. Agora o cais, por boreste.', 'info');
+          return [0, 4];
+        }
+        if (tugs) {
+          // proa empurrada para boreste, popa puxada para bombordo: o navio gira no lugar
+          if (this.tugThink <= 0) { this.tugThink = 6; const pw = Math.abs(err) > 50 * D2R ? 0.5 : 0.25; this.tug(g, 0, 'push', pw); this.tug(g, 1, 'pull', pw); }
+          return [0, s.u > 0.2 ? 2 : s.u < -0.2 ? 5 : 4];
+        }
+        return [0, 4];
+      }
+    }
 
     // --- berço ocupado, ou o navio que largou ainda não passou por nós: segura o navio no canal, a boreste
     const other = berthShip(g);
@@ -99,17 +152,17 @@ export class Pilot {
     if (ds < 1000 && !this.final && g.mooring <= 0) {
       const helped = g.tugs.every(t => t.state === 'fast');
       if (this.declined && helped) { this.declined = false; g.say(this.name, 'Com os dois rebocadores eu atraco mesmo com esta corrente. Vamos.', 'info'); }
-      if (g.tide.flow < -0.1 && !this.declined && !helped) {
+      if (flow < -0.1 && !this.declined && !helped) {
         this.declined = true;
         g.say(this.name, `Corrente a favor no berço: assim eu não atraco. Tire o seguimento, largue o ferro e aguarde a maré virar, em ${Math.round(g.tide.toSlack / 60)} min. Ou chame os dois rebocadores, que com eles eu atraco.`, 'warn');
       }
       if (this.declined) {
         const anchored = g.anchor.state === 'down' || g.anchor.state === 'heaving';
-        if (g.tide.flow > 0.12 && !anchored && b.along < -200) {
+        if (flow > 0.12 && !anchored && b.along < -200) {
           this.declined = false;
           g.say(this.name, 'A maré virou, corrente pela proa. Vamos atracar.', 'info');
         } else {
-          if (g.tide.flow > 0.12 && anchored) g.say(this.name, 'A maré virou. Suspenda o ferro e eu levo o navio ao berço.', 'info', 'pilotheave', 120);
+          if (flow > 0.12 && anchored) g.say(this.name, 'A maré virou. Suspenda o ferro e eu levo o navio ao berço.', 'info', 'pilotheave', 120);
           return [0, anchored ? 4 : s.u > 0.25 ? 2 : s.u < -0.25 ? 5 : 4]; // só segura o navio
         }
       }
