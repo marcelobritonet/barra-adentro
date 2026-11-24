@@ -157,6 +157,8 @@ export class Panel {
       if (t.mode === 'stop') t.power = +sel.value; else g.tugOrder(i, t.mode, +sel.value);
     }));
     $<HTMLSelectElement>('shackles').addEventListener('change', e => { g.shackles = +(e.target as HTMLSelectElement).value; });
+    // depois de escolher numa lista o foco ficava preso nela e o teclado parava de comandar o navio
+    br.querySelectorAll('select').forEach(sel => sel.addEventListener('change', () => sel.blur()));
     br.querySelectorAll<HTMLInputElement>('[data-eq]').forEach(cb => cb.addEventListener('change', () => {
       g.equip[cb.dataset.eq as keyof Game['equip']] = cb.checked;
       if (cb.checked && (cb.dataset.eq === 'radar' || cb.dataset.eq === 'ecdis')) this.mfd = cb.dataset.eq;
@@ -291,7 +293,7 @@ export class Panel {
     const a = g.anchor;
     $('anchor').innerHTML = a.state === 'stowed' ? 'Ferro a bordo, pronto a largar'
       : a.state === 'lost' ? '<span class="neg">FERRO PERDIDO</span>'
-      : `${a.state === 'heaving' ? 'Virando' : a.paid < a.target - 0.5 ? 'Arriando' : 'Fundeado'}: ${(a.paid / SHACKLE).toFixed(1)} quartéis<br>tensão ${(a.tension / 1000).toFixed(0)} kN ${a.dragging ? '<span class="neg">GARRANDO</span>' : ''}${g.scenario === 'fundeio' && g.holdTime > 0 ? `<br>confirmando: ${Math.max(0, 45 - g.holdTime).toFixed(0)} s` : ''}`;
+      : `${a.state === 'heaving' ? `Virando (${Math.floor(g.heaveLeft / 60)}:${String(Math.floor(g.heaveLeft % 60)).padStart(2, '0')})` : a.paid < a.target - 0.5 ? 'Arriando' : 'Fundeado'}: ${(a.paid / SHACKLE).toFixed(1)} quartéis<br>tensão ${(a.tension / 1000).toFixed(0)} kN ${a.dragging ? '<span class="neg">GARRANDO</span>' : ''}${g.scenario === 'fundeio' && g.holdTime > 0 ? `<br>confirmando: ${Math.max(0, 45 - g.holdTime).toFixed(0)} s` : ''}`;
     const bb = $('berthbox');
     if (!entry) bb.innerHTML = 'não se aplica';
     else if (g.mooring > 0) bb.innerHTML = 'Passando espias…';

@@ -17,6 +17,7 @@ export class View {
   private chain: THREE.Line;
   private mark = box(5, 5, 5, 0xffd21a);
   private tugs: { mesh: THREE.Group; line: THREE.Line }[] = [];
+  private others: { mesh: THREE.Group; line: THREE.Line }[] = [];
   private wake: THREE.Mesh[] = [];
   private wakeI = 0; private wakeT = 0;
   private buoys: THREE.Group[] = [];
@@ -93,6 +94,24 @@ export class View {
       const mat = m.material as THREE.MeshBasicMaterial;
       if (mat.opacity > 0 && !g.paused) { mat.opacity = Math.max(0, mat.opacity - dt * g.warp * 0.02); m.scale.x += dt * g.warp * 0.35; }
     }
+
+    // outros navios
+    while (this.others.length < g.traffic.length) {
+      const o = g.traffic[this.others.length];
+      const mesh = makeShip({ L: o.L, B: o.B, T: 0 } as ShipParams, o.color, o.L / 90), line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0x20242c }));
+      line.frustumCulled = false; this.others.push({ mesh, line }); this.scene.add(mesh, line);
+    }
+    this.others.forEach((v, i) => {
+      const o = g.traffic[i];
+      v.mesh.visible = !!o && o.active; v.line.visible = v.mesh.visible && o.kind === 'anchored';
+      if (!o) return;
+      v.mesh.position.set(o.x, 0, -o.y); v.mesh.rotation.y = -o.psi;
+      if (v.line.visible) {
+        const pos = v.line.geometry.attributes.position as THREE.BufferAttribute;
+        pos.setXYZ(0, o.x + Math.sin(o.psi) * o.L * 0.47, 4, -(o.y + Math.cos(o.psi) * o.L * 0.47)); pos.setXYZ(1, o.ax, 0.5, -o.ay); pos.needsUpdate = true;
+      }
+    });
 
     // rebocadores
     g.tugs.forEach((t, i) => {
@@ -279,7 +298,7 @@ function makeTug() {
   return g;
 }
 
-function makeShip(p: ShipParams) {
+function makeShip(p: ShipParams, hullColor = 0x1d2733, k = 1) {
   const g = new THREE.Group(), hb = p.B / 2, hl = p.L / 2;
   const outline = (inset: number) => {
     const b = hb - inset, l = hl - inset, sh = new THREE.Shape();
@@ -287,20 +306,21 @@ function makeShip(p: ShipParams) {
     sh.lineTo(b * 0.7, -l); sh.lineTo(-b * 0.7, -l); sh.lineTo(-b, -l + 6); sh.lineTo(-b, l - 22); sh.lineTo(-b * 0.55, l - 9);
     sh.closePath(); return sh;
   };
-  const free = 8 - p.T;
+  const free = (8 - p.T) * (k > 1 ? 0.8 : 1);
   const ex = (inset: number, h: number, y: number, color: number) => {
     const m = new THREE.Mesh(new THREE.ExtrudeGeometry(outline(inset), { depth: h, bevelEnabled: false }).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color }));
     m.position.y = y; return m;
   };
   g.add(ex(0, 1.6, -0.6, 0x9c2b25));          // obras vivas
-  g.add(ex(0, free - 1, 1, 0x1d2733));        // costado
+  g.add(ex(0, free - 1, 1, hullColor));       // costado
   g.add(ex(0.7, 0.3, free, 0x5e7d5a));        // convés
-  g.add(box(9.5, 1.6, 22, 0x3c5a48, 0, free + 1.1, -10), box(9.5, 1.6, 20, 0x3c5a48, 0, free + 1.1, 14)); // escotilhas
-  g.add(box(1, 12, 1, 0xe8c040, 0, free + 6, 2));                                                           // pau de carga
-  g.add(box(4, 2, 5, 0x1d2733, 0, free + 1, -36));                                                          // castelo
-  g.add(box(12, 6, 10, 0xf1f1ea, 0, free + 3, 33), box(14, 2.6, 7, 0xf1f1ea, 0, free + 7.3, 31.5));        // superestrutura + passadiço
-  g.add(box(11, 0.5, 4.5, 0x2a3d55, 0, free + 7.6, 28.2));                                                  // vidros
-  g.add(box(3.2, 5, 3.2, 0xd9622b, 0, free + 9.5, 37), box(3.4, 1, 3.4, 0x1a1a1a, 0, free + 12.4, 37));   // chaminé
-  g.add(box(0.6, 6, 0.6, 0xf1f1ea, 0, free + 11.5, 31));                                                    // mastro
+  const hw = p.B - 4.5, aft = hl - 12, n = Math.max(2, Math.round((p.L - 40) / 24)), span = (p.L - 44) / n;
+  for (let i = 0; i < n; i++) g.add(box(hw, 1.6, span - 3, 0x3c5a48, 0, free + 1.1, -hl + 20 + span * (i + 0.5))); // escotilhas
+  g.add(box(1, 12, 1, 0xe8c040, 0, free + 6, -hl + 20 + span));                                                     // pau de carga
+  g.add(box(4, 2, 5, hullColor, 0, free + 1, -hl + 9));                                                              // castelo
+  g.add(box(p.B - 2, 6 * k, 10, 0xf1f1ea, 0, free + 3 * k, aft), box(p.B, 2.6, 7, 0xf1f1ea, 0, free + 6 * k + 1.3, aft - 1.5)); // superestrutura + passadiço
+  g.add(box(p.B - 3, 0.5, 4.5, 0x2a3d55, 0, free + 6 * k + 1.6, aft - 4.8));                                         // vidros
+  g.add(box(3.2, 5, 3.2, 0xd9622b, 0, free + 6 * k + 3.5, aft + 4), box(3.4, 1, 3.4, 0x1a1a1a, 0, free + 6 * k + 6.4, aft + 4)); // chaminé
+  g.add(box(0.6, 6, 0.6, 0xf1f1ea, 0, free + 6 * k + 5.5, aft - 2));                                                 // mastro
   return g;
 }

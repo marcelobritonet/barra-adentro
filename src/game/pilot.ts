@@ -27,6 +27,7 @@ export class Pilot {
   private final = false; private kick = 0; private retry = false;
   /** Recusou atracar com corrente a favor; volta a orientar quando a maré virar. */
   declined = false;
+  private meetSaid = false;
 
   get name() { return PILOTS[this.grade].label; }
 
@@ -144,7 +145,10 @@ export class Pilot {
     }
 
     // --- canal: mira num ponto do eixo à frente e quebra a guinada antes
-    const [tx, ty] = W.pointAt(n.s + P.look);
+    // navio saindo pela frente: fica a boreste do eixo para cruzar bombordo com bombordo
+    const meeting = g.traffic.some(o => o.kind === 'outbound' && o.active && o.s > n.s - 150 && o.s - n.s < 3200);
+    if (meeting && !this.meetSaid) { this.meetSaid = true; g.say(this.name, 'Navio saindo. Vamos pelo boreste do canal e cruzar bombordo com bombordo.', 'info'); }
+    const [tx, ty] = W.pointAt(n.s + P.look, meeting ? 50 : 0);
     let tel = n.s < W.S_MOUTH - 500 ? 7 : 6;
     if (n.s >= W.S_MOUTH - 500 && g.sog > 6 * KN) tel = 5;       // folga do limite de 8 nós, mesmo com a corrente a favor
     if (ds < 1900 && g.sog > 1.6) tel = g.sog > 2.4 ? 2 : g.sog > 1.9 ? 4 : 5; // já vai tirando seguimento para o berço

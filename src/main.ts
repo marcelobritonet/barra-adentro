@@ -137,7 +137,8 @@ overlay.addEventListener('click', e => {
 });
 
 addEventListener('keydown', e => {
-  if (e.target instanceof HTMLSelectElement || e.metaKey || e.ctrlKey) return;
+  if (e.metaKey || e.ctrlKey) return;
+  if (e.target instanceof HTMLSelectElement) { if (e.key.startsWith('Arrow') || e.key === ' ' || e.key === 'Enter') return; e.target.blur(); }
   const k = e.key.toLowerCase(), s = game.s;
   const helm = (d: number) => game.setRudderDeg(Math.round(s.rudderOrder / D2R / 5) * 5 + d);
   if (k === 'a' || k === 'arrowleft') helm(-5);

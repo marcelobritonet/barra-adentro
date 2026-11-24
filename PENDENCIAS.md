@@ -31,10 +31,9 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | 13 | Prático no cenário de fundeio | Hoje só orienta a entrada |
 | 14 | Prático comandar os rebocadores | Hoje quem ordena é o comandante |
 | 15 | Calibrar rebocadores jogando | Empurrar a 25% por 45 s já encosta a 0,3 nó; ver se as potências fazem sentido |
-| 5 | Tráfego e interação entre navios | Inclui atracar a contrabordo |
+| 5 | Mais tráfego | Berço ocupado, atracar a contrabordo, sucção entre navios, mais de um navio em movimento |
 | 7 | Resto do canal de Santos | O mapa já tem as curvas; faltam berços e missões |
 | 8 | Oficina, tripulação e contratos | Parâmetros do navio já estão isolados em `makeCoaster` |
-| 9 | AIS e alvos de tráfego no radar | Depende do tráfego |
 | 10 | Noite e nevoeiro | O radar já existe para isso |
 | 16 | Prático na corrente parada e a favor | Na preamar ele atraca mal (84 min, prejuízo); na enchente recusa. Falta girar o navio para aproar a corrente ou comandar rebocadores |
 | 17 | Prazo da viagem conforme a maré | Hoje é fixo em 75 min; esperar a virada estoura o prazo |
@@ -61,3 +60,4 @@ Fonte da verdade do projeto. Design em [docs/GDD.md](docs/GDD.md).
 | v0.3.0: passos da missão, botões de câmera, ajuda, alertas nas abas, predefinições de equipamento |
 | v0.4.0: efeito de margem; prático refaz aproximação ruim |
 | v0.5.0: marés (altura, corrente que inverte, 4 condições), prático recusa atracar com corrente a favor |
+| v0.6.0: tráfego (fundeados, navio saindo, abalroamento, radar e AIS); correções do teclado e do molinete |

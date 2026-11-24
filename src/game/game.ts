@@ -1,4 +1,4 @@
-import { anchorForce, letGo, makeAnchor, SHACKLE } from '../sim/anchor';
+import { anchorForce, HEAVE_RATE, letGo, makeAnchor, SHACKLE } from '../sim/anchor';
 import {
   BodyForce, bodyToWorld, D2R, Env, KN, makeCoaster, makeState, pointVelocity, ShipState,
   stepShip, TELEGRAPH, TELEGRAPH_LABELS, worldForceAt,
@@ -6,6 +6,7 @@ import {
 import * as W from '../world/santos';
 import { Pilot, PilotGrade, PILOTS } from './pilot';
 import { makeTugs, TugMode } from './tugs';
+import { bearingText, hullDistance, makeTraffic, Other, swingRadius, updateTraffic } from './traffic';
 import { Tide, tideAt, TidePreset, tideText } from '../world/tide';
 
 export type Scenario = 'entrada' | 'fundeio';
@@ -40,6 +41,7 @@ export class Game {
   result: Result | null = null;
   ledger = { fuel: 0, speeding: 0, buoys: 0, contact: 0, anchor: 0, pilot: 0, vts: 0, tugs: 0 };
   tugs = makeTugs();
+  traffic: Other[] = makeTraffic();
   pilot = new Pilot();
   /** Autorização de entrada do VTS. */
   vts: 'none' | 'asked' | 'ok' = 'none';
@@ -57,6 +59,7 @@ export class Game {
   private trustStart = 0; private baseAck = 0; private baseHelm = 0;
   private telTimes: number[] = [];
   private anchorPhase = '';
+  private heaveQ = 0;
   private berthSig = ''; private berthAt = -99;
   private said = new Map<string, number>();
   private windBase = 7; private windFromBase = 160 * D2R;
@@ -86,6 +89,7 @@ export class Game {
     this.msgs = []; this.result = null; this.hitBuoys.clear();
     this.ledger = { fuel: 0, speeding: 0, buoys: 0, contact: 0, anchor: 0, pilot: 0, vts: 0, tugs: 0 };
     this.tugs = makeTugs();
+    this.traffic = makeTraffic(); updateTraffic(this, 0);
     this.pilot = new Pilot(); this.vts = sc === 'entrada' ? 'none' : 'ok'; this.vtsTimer = 0;
     this.mooring = 0; this.holdTime = 0; this.anchorPhase = 'stowed'; this.berthSig = ''; this.berthAt = -99; this.said.clear(); this.lastContact = -99;
     this.status = 'running';
@@ -97,6 +101,7 @@ export class Game {
       this.say('Imediato', 'Berço no cais de bombordo, depois da segunda curva. Calado 5,2 m. Temos ar para 5 partidas de máquina.', 'info');
     } else {
       this.say('Capitania', 'Berço ocupado. Fundeie no fundeadouro a noroeste e aguarde.', 'info');
+      this.say('Imediato', 'Há três navios fundeados. Precisamos de uns 280 m de folga do ferro de cada um.', 'info');
       this.say('Imediato', `Fundo de 17 m na carta. Sugiro 4 quartéis, aproado ao vento, quase parado. Maré: ${tideText(this.tide)}.`, 'info');
     }
   }
@@ -185,8 +190,17 @@ export class Game {
     this.say('Proa', `Ferro largado. Arriando ${this.shackles} quartéis.`, 'info');
   }
   heaveAnchor() {
-    if (this.anchor.state === 'down') { this.anchor.state = 'heaving'; this.say('Proa', 'Virando o ferro.', 'info'); }
+    if (this.status !== 'running') return;
+    const a = this.anchor;
+    if (a.state === 'down') {
+      a.state = 'heaving';
+      this.say('Proa', `Virando o ferro: ${(a.paid / SHACKLE).toFixed(1).replace('.', ',')} quartéis n'água, uns ${Math.ceil(a.paid / HEAVE_RATE / 60)} minutos.`, 'info');
+    } else if (a.state === 'heaving') this.say('Proa', `Já estamos virando: faltam ${(a.paid / SHACKLE).toFixed(1).replace('.', ',')} quartéis.`, 'info', 'heaving', 5);
+    else if (a.state === 'stowed') this.say('Proa', 'O ferro já está a bordo.', 'info', 'stowed', 5);
+    else this.say('Proa', 'Não temos mais ferro, comandante.', 'bad', 'lost', 5);
   }
+  /** Segundos que faltam para o ferro chegar a bordo. */
+  get heaveLeft() { return this.anchor.state === 'heaving' ? this.anchor.paid / HEAVE_RATE : 0; }
 
   /** Situação do navio em relação ao berço. */
   berth() {
@@ -239,18 +253,46 @@ export class Game {
     const [bvx, bvy] = pointVelocity(s, 42, 0);
     const [fx, fy] = anchorForce(this.anchor, bx, by, bvx, bvy, Math.max(env.depth(bx, by), 1), DT);
     if (fx || fy) worldForceAt(s, fx, fy, 42, 0, ext);
+    if (this.anchor.stalled) this.say('Proa', 'Amarra tesa, o molinete não vence. Dê um toque de máquina adiante para aliviar.', 'warn', 'stall', 20);
+    if (this.anchor.state === 'heaving') {
+      const q = Math.ceil(this.anchor.paid / SHACKLE);
+      if (q !== this.heaveQ) { if (this.heaveQ && q < this.heaveQ) this.say('Proa', q <= 1 ? 'Ferro a pique, quase em cima.' : `${q} quartéis n'água.`, 'info'); this.heaveQ = q; }
+    } else this.heaveQ = 0;
     if (this.anchor.dragging) { this.say('Proa', 'O ferro está garrando!', 'warn', 'drag', 15); this.trustEvent(-3, 'ferro garrando', 'drag', 90); }
     {
       const a = this.anchor;
       const ph = a.state !== 'down' ? a.state : a.paid < a.target - 0.5 ? 'paying' : 'set';
       if (ph !== this.anchorPhase) {
         if (ph === 'set') this.say('Proa', `${(a.paid / SHACKLE).toFixed(0)} quartéis n'água, amarra aboçada.`, 'info');
-        if (ph === 'stowed' && this.anchorPhase === 'heaving') this.say('Proa', 'Ferro a bordo.', 'info');
+        if (ph === 'stowed' && this.anchorPhase === 'heaving') this.say('Proa', 'Ferro a bordo. Navio livre para manobrar.', 'info');
         this.anchorPhase = ph;
       }
     }
 
     for (const t of this.tugs) t.update(this, DT, ext);
+
+    // --- outros navios: abalroamento encerra a viagem; passar raspando custa confiança
+    updateTraffic(this, DT);
+    for (const o of this.traffic) {
+      if (!o.active) continue;
+      if (Math.hypot(o.x - s.x, o.y - s.y) > o.L / 2 + 160) { o.near = false; continue; }
+      let dmin = 1e9;
+      for (const [xf, ys] of HULL) dmin = Math.min(dmin, hullDistance(o, ...bodyToWorld(s, xf, ys)));
+      if (dmin <= 0.5) return this.finish(false, 'Abalroamento', `O Maré Mansa abalroou o N/M ${o.name}${o.kind === 'anchored' ? ', que estava fundeado' : ''}.`, 120000);
+      const limit = o.kind === 'anchored' ? 25 : 35;
+      if (dmin < limit && !o.near) {
+        o.near = true; this.trustEvent(-6, `passou a ${dmin.toFixed(0)} m do ${o.name}`);
+        this.say(`N/M ${o.name}`, `Maré Mansa, o senhor passou a ${dmin.toFixed(0)} metros de mim!`, 'bad');
+      }
+      if (o.kind === 'outbound' && !o.warned && dmin < 700 && W.nearest(s.x, s.y).side > 0 && W.nearest(s.x, s.y).d > 5) {
+        o.warned = true; this.say(`N/M ${o.name}`, 'Maré Mansa, o senhor está no meu lado do canal. Guine para boreste!', 'bad');
+      }
+    }
+    for (const o of this.traffic) {
+      if (o.kind !== 'outbound' || !o.active) continue;
+      const d = Math.hypot(o.x - s.x, o.y - s.y);
+      if (d < 1300) this.say('Imediato', `N/M ${o.name} ${bearingText(this, o)}, a ${(d / 1852).toFixed(1).replace('.', ',')} milha, vindo em sentido contrário.`, 'info', 'meet' + o.name, 90);
+    }
 
     // --- defensas do cais
     const Q = W.QUAY;
@@ -365,6 +407,13 @@ export class Game {
       const inZone = Math.hypot(a.ax - W.ANCHORAGE.x, a.ay - W.ANCHORAGE.y) < W.ANCHORAGE.r;
       const holding = a.state === 'down' && a.paid >= a.target - 0.5 && !a.dragging;
       if (holding && this.sog < 0.25) this.holdTime += DT; else this.holdTime = 0;
+      // fundeado em cima do giro de outro navio não vale
+      const crowd = holding ? this.traffic.find(o => o.kind === 'anchored' && Math.hypot(a.ax - o.ax, a.ay - o.ay) < Math.max(swingRadius(o), a.paid + 90) + 40) : undefined;
+      if (crowd) {
+        this.holdTime = 0;
+        this.say('Santos VTS', `Maré Mansa, o senhor fundeou dentro do giro do N/M ${crowd.name}. Suspenda (G) e fundeie com mais folga.`, 'bad', 'crowd', 45);
+        this.trustEvent(-4, 'fundeou perto demais', 'crowd', 120);
+      }
       if (holding && !inZone) this.say('Capitania', 'Vocês fundearam fora do fundeadouro (círculo rosa). Suspendam (G) e fundeiem dentro dele.', 'warn', 'zone', 40);
       else if (holding && this.sog >= 0.25) this.say('Imediato', `Ferro no fundo, mas o navio ainda tem ${(this.sog / KN).toFixed(1)} nó de seguimento. Tire o seguimento.`, 'warn', 'way', 25);
       if (this.holdTime > 45 && inZone) return this.finish(true, 'Navio fundeado', `Ferro unhado com ${(a.paid / SHACKLE).toFixed(0)} quartéis.`);

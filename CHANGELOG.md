@@ -2,6 +2,17 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.6.0 — Tráfego
+
+- Três navios fundeados no fundeadouro, que giram com o vento e a corrente. Para fundear é preciso achar um lugar com cerca de 280 m de folga do ferro de cada um; fundear dentro do giro de outro não é aceito.
+- Um navio de 180 m sai pelo canal a 6 nós pouco depois do início e cruza com quem entra perto da primeira curva. Ele mantém o lado dele e não desvia: o cruzamento é bombordo com bombordo.
+- Abalroamento encerra a viagem (R$ 120.000). Passar a menos de 35 m de um navio em movimento, ou 25 m de um fundeado, custa confiança e rende um protesto pelo rádio.
+- O VTS avisa a saída do navio, o imediato informa marcação e distância, e o navio reclama se você estiver do lado errado do canal.
+- Os navios aparecem na vista, dão eco no radar e são alvos AIS no ECDIS, com casco em escala, vetor de 3 minutos, distância e velocidade.
+- O prático vai para o boreste do canal quando há navio saindo.
+- Correção: depois de usar uma lista (quartéis, potência do rebocador) o teclado parava de comandar o navio.
+- Correção: virar o ferro parecia não funcionar. O molinete ficou mais rápido (4 quartéis em 3 min), a proa canta cada quartel e o painel mostra o tempo que falta.
+
 ## v0.5.0 — Marés
 
 - Maré semidiurna que corre 2× mais rápido que a real (um ciclo em 6 h 12 min de jogo): numa viagem de 1 h a altura e a corrente mudam de verdade.

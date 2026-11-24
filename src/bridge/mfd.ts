@@ -50,6 +50,8 @@ export class Radar {
     }
     const targets: [number, number, number][] = W.BUOYS.map(b => [b.x, b.y, 4]);
     for (const t of g.tugs) if (t.state !== 'none') targets.push([t.x, t.y, 6]);
+    // navios dão eco grande, do tamanho do casco
+    for (const o of g.traffic) if (o.active) for (let f = -0.5; f <= 0.5; f += 0.25) targets.push([o.x + Math.sin(o.psi) * o.L * f, o.y + Math.cos(o.psi) * o.L * f, 7]);
     for (const [tx, ty, sz] of targets) {
       const dx = tx - s.x, dy = ty - s.y, r = Math.hypot(dx, dy);
       if (r > range) continue;
@@ -117,6 +119,14 @@ export class Ecdis {
       c.fillRect(X(b.x) - 2.5 * px, Y(b.y) - 2.5 * px, 5 * px, 5 * px);
     }
     for (const t of g.tugs) if (t.state !== 'none') { c.fillStyle = '#ff9a2e'; c.beginPath(); c.arc(X(t.x), Y(t.y), 3.5 * px, 0, TAU); c.fill(); }
+    // alvos AIS: casco em escala, vetor de 3 minutos e nome
+    for (const o of g.traffic) {
+      if (!o.active) continue;
+      const sn = Math.sin(o.psi), cs = Math.cos(o.psi), pts: [number, number][] = [[o.L / 2, 0], [o.L / 3, o.B / 2], [-o.L / 2, o.B / 2], [-o.L / 2, -o.B / 2], [o.L / 3, -o.B / 2]];
+      c.beginPath(); pts.forEach(([f, r], i) => { const wx = o.x + f * sn + r * cs, wy = o.y + f * cs - r * sn; i ? c.lineTo(X(wx), Y(wy)) : c.moveTo(X(wx), Y(wy)); }); c.closePath();
+      c.fillStyle = '#2a7bd6'; c.fill(); c.strokeStyle = '#04213f'; c.lineWidth = px; c.stroke();
+      if (o.u > 0.2) { c.beginPath(); c.moveTo(X(o.x), Y(o.y)); c.lineTo(X(o.x + sn * o.u * 180), Y(o.y + cs * o.u * 180)); c.stroke(); }
+    }
     if (g.anchor.state === 'down' || g.anchor.state === 'heaving') { c.fillStyle = '#ffd21a'; c.fillRect(X(g.anchor.ax) - 3 * px, Y(g.anchor.ay) - 3 * px, 6 * px, 6 * px); }
 
     // navio em escala, e a previsão de onde ele vai estar se nada mudar
@@ -152,6 +162,8 @@ export class Ecdis {
     line(`eixo do canal: ${n.d.toFixed(0)} m a ${n.side > 0 ? 'BB' : 'BE'}`, S - 32, n.d > W.DREDGED_HALF ? '#ff7a6a' : '#7dffb0');
     line(turn ? `curva em ${(turn.s - n.s).toFixed(0)} m → rumo ${String(Math.round(turn.course)).padStart(3, '0')}°` : 'sem curvas à frente', S - 18);
     line(`fundo ${(g.sog / KN).toFixed(1)} nós  ·  tracejado: 3 min`, S - 4);
+    const tgt = g.traffic.filter(o => o.active && o.kind === 'outbound')[0];
+    if (tgt) line(`AIS ${tgt.name}: ${(Math.hypot(tgt.x - s.x, tgt.y - s.y) / 1852).toFixed(2).replace('.', ',')} MN, ${(tgt.u / KN).toFixed(0)} nós`, 27, '#7dd3ff');
   }
 }
 

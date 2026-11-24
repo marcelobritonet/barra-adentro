@@ -70,7 +70,7 @@ Três graus de liberdade (avanço, deriva, guinada), passo fixo de 0,05 s, deter
 | Ferro | Amarra em quartéis; unha conforme o filame; garra se o esforço passa do limite | Feito (simples) |
 | Defensas do cais | Mola e atrito; multa pela velocidade do toque | Feito |
 | Efeito de margem | Sucção da popa para a margem e proa empurrada para fora; cresce com o quadrado da velocidade e com a pouca água; sondado a até 62 m de cada bordo | Feito |
-| Interação entre navios | Sucção ao passar perto de outro navio | A fazer (depende do tráfego) |
+| Interação entre navios | Sucção ao passar perto de outro navio | A fazer |
 | Rebocadores | Forças externas na proa e na popa, com atraso | Feito |
 | Impelidor de proa | Força lateral na proa, com atraso e perda de rendimento com o seguimento | Feito |
 | Carga e lastro | Calado e área vélica mudam com a carga (`makeCoaster(load)`) | Parâmetro existe, sem uso no jogo |
@@ -182,6 +182,19 @@ Ideias ainda não feitas:
 - O prático **só dá ordens** ("leme 10 a boreste", "devagar adiante") e o jogador executa. Prático melhor (mais caro) ordena mais cedo e com mais precisão.
 - Rebocadores recebem ordens por rádio (empurrar/puxar, proa/popa, potência) e cobram por hora.
 - VHF por menu: pedir entrada, pedir a um navio que aguarde ou saia, avisar intenção.
+
+## Tráfego
+
+| Tópico | Regra |
+|---|---|
+| Fundeados | Três navios de 120 a 150 m no fundeadouro; aproam a resultante de vento e corrente e giram quando a maré vira |
+| Folga para fundear | Cerca de 280 m do ferro de cada um; dentro do giro de outro o fundeio não é confirmado e a confiança cai |
+| Navio saindo | Um navio de 180 m larga aos 3 min, desce o canal a 6 nós (8 na baía) pelo lado dele e não desvia |
+| Cruzamento | Bombordo com bombordo; quem entra fica a boreste do eixo |
+| Abalroamento | Fim da viagem, R$ 120.000 |
+| Passar raspando | Menos de 35 m de navio em movimento ou 25 m de fundeado: −6 de confiança e protesto pelo rádio |
+| Como ver | Na vista; eco no radar; alvo AIS no ECDIS com vetor, distância e velocidade |
+| A fazer | Interação hidrodinâmica entre navios, berço ocupado, pedir passagem pelo rádio, mais de um navio em movimento |
 
 ## Economia
 
