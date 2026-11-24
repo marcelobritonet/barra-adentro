@@ -2,6 +2,16 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.18.0 — Progressão do lado certo e publicação
+
+Retorno do teste: "navio sem nada é praticamente impossível; em vez de navio iniciante tem cara de avançado".
+
+- O navio de partida já vem com GPS, indicador de guinada e doppler. A dificuldade passa a vir do contrato (maré, noite, nevoeiro, berço, giro) e do navio; o dinheiro compra navios maiores, máquina melhor, radar, ECDIS e impelidor.
+- Carreiras já começadas ganham esses três instrumentos ao carregar.
+- "À moda antiga": o navio sem instrumentos virou desafio de fim de jogo. Alguns contratos de quatro estrelas ou mais aparecem com os instrumentos eletrônicos apagados (pane no quadro de 24 volts), valem cinco estrelas e pagam 40% a mais. Restam agulha, odômetro, ecobatímetro e o plano de bordo.
+- No modo livre, a predefinição sem equipamentos passou a se chamar "À moda antiga".
+- O jogo passa a ser publicado no GitHub Pages a cada versão, por um fluxo que roda os testes antes de publicar.
+
 ## v0.17.1 — Onde fazer cada chamado de rádio
 
 Pedido em teste: "tem que dizer em que momento devo pedir autorização de entrada; hoje a posição está vaga".

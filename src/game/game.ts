@@ -41,6 +41,8 @@ export class Game {
   /** Céu desta viagem: muda o que se vê da ponte, não a física. */
   sky: Sky = 'dia'; freeSky: Sky = 'dia';
   freeBerth = 'cais';
+  /** "À moda antiga": viagem com os instrumentos eletrônicos apagados. */
+  blind = false;
   /** Atracar aproado ao mar: passar do berço, girar na bacia de evolução e voltar. */
   headOut = false; freeHeadOut = false;
   /** Limite de velocidade no canal: 8 nós, 6 com nevoeiro. */
@@ -129,7 +131,11 @@ export class Game {
     W.setQuay(ct ? ct.berth ?? 'cais' : this.free ? this.freeBerth : 'cais');
     this.headOut = sc === 'entrada' && (ct ? !!ct.headOut : this.free && this.freeHeadOut) && W.QUAY.id === 'cais';
     if (this.headOut) W.useQuay(W.headOut(W.QUAY));
-    if (!this.free) { applyCareer(this.p, this.career); this.equip = equipOf(this.career); }
+    this.blind = !this.free && !!ct?.blind;
+    if (!this.free) {
+      applyCareer(this.p, this.career); this.equip = equipOf(this.career);
+      if (this.blind) Object.assign(this.equip, { gps: false, rot: false, radar: false, ecdis: false, doppler: false });
+    }
     if (sc === 'entrada') {
       const [x, y] = W.pointAt(W.S_MOUTH - 1500);
       const [x2, y2] = W.pointAt(W.S_MOUTH - 1400);
@@ -162,6 +168,7 @@ export class Game {
       this.say('Imediato', `Vento sueste. Maré: ${tideText(this.tide)}.`, 'info');
       if (this.sky === 'nevoeiro') this.say('Imediato', 'Nevoeiro fechado, uns 300 metros de visibilidade. Limite de 6 nós no canal; navegamos pelo radar e pelas boias.', 'warn');
       if (this.sky === 'noite') this.say('Imediato', 'Noite sem lua. Encarnada a boreste, verde a bombordo: siga as luzes das boias.', 'info');
+      if (this.blind) this.say('Chefe de máquinas', 'Pane no quadro de 24 volts: GPS, guinada, doppler, radar e ECDIS apagados. Agulha, odômetro e ecobatímetro seguem vivos.', 'bad');
       this.say('Imediato', 'Precisamos da autorização do VTS antes da barra. Prático é opcional: chame pelo rádio se quiser.', 'info');
       this.say('Imediato', `Berço: ${W.QUAY.name}, ${this.headOut ? 'aproado ao mar: passamos dele, giramos na bacia de evolução e voltamos para atracar por boreste' : W.QUAY.side > 0 ? 'por bombordo, depois da segunda curva' : 'por boreste, no fundo do canal'}. Calado ${this.p.T.toFixed(1).replace('.', ',')} m. Temos ar para ${this.p.airStarts} partidas de máquina.`, 'info');
     } else if (sc === 'contrabordo') {

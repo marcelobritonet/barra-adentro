@@ -8,7 +8,7 @@ import * as W from './world/santos';
 import { buildGrid } from './world/santos';
 import { TIDE_PRESETS, TidePreset } from './world/tide';
 import { berthBusy } from './game/traffic';
-import { Sky, SKY } from './game/career';
+import { BLIND_BONUS, Sky, SKY } from './game/career';
 import { buy, buyShip, CREW, CrewId, Level, loadCareer, maxStars, newCareer, offers, PARTS, PartId, repFor, salaries, saveCareer, shipCost, SHIP_REP } from './game/career';
 import { ShipClass, SHIPS } from './sim/ship';
 
@@ -209,7 +209,7 @@ function menu() {
   const c = game.career;
   const head = `<h1>BARRA ADENTRO</h1>
     <div class="modes"><button data-mode="career" class="${game.free ? '' : 'on'}">Carreira</button><button data-mode="free" class="${game.free ? 'on' : ''}">Modo livre</button>
-      <span class="dim">${game.free ? 'Sem dinheiro: escolha cenário, maré e equipamentos à vontade.' : 'Entregue cargas, pague as contas e equipe o navio.'}</span></div>`;
+      <span class="dim">${game.free ? 'Sem dinheiro: escolha cenário, maré e equipamentos à vontade.' : 'O navio já sai com o básico. A dificuldade vem do contrato e do navio; o dinheiro compra navios maiores e máquina melhor.'}</span></div>`;
   const foot = `<p class="dim">Confiança da tripulação: <b>${sign(game.trust)}</b> (−100 a +100) <button data-reset="1">Zerar</button> · Ajuda no jogo: <kbd>H</kbd> · A carta é estilizada e não serve para navegação.</p>`;
   if (game.free) {
     overlay.innerHTML = `<div class="card">${head}
@@ -224,7 +224,7 @@ function menu() {
       <div class="preset">Céu: ${(Object.keys(SKY) as Sky[]).map(k => `<button data-sky="${k}" class="${game.freeSky === k ? 'on' : ''}">${SKY[k].label}</button>`).join('')}<span class="dim">${SKY[game.freeSky].hint}</span></div>
       <div class="preset">Maré: ${(Object.keys(TIDE_PRESETS) as TidePreset[]).map(k => `<button data-tide="${k}" class="${game.tidePreset === k ? 'on' : ''}">${TIDE_PRESETS[k].label}</button>`).join('')}</div>
       <p class="dim" style="margin-top:0">${TIDE_PRESETS[game.tidePreset].hint} A maré corre 2× mais rápido que a real.</p>
-      <div class="preset">Equipamentos: <button data-eq="off" class="${Object.values(game.equip).some(Boolean) ? '' : 'on'}">Navio básico</button><button data-eq="on" class="${Object.values(game.equip).every(Boolean) ? 'on' : ''}">Tudo ligado</button><span class="dim">(ou um a um, na aba Equip. do painel)</span></div>
+      <div class="preset">Equipamentos: <button data-eq="off" class="${Object.values(game.equip).some(Boolean) ? '' : 'on'}">À moda antiga (nada)</button><button data-eq="on" class="${Object.values(game.equip).every(Boolean) ? 'on' : ''}">Tudo ligado</button><span class="dim">(ou um a um, na aba Equip. do painel)</span></div>
       ${foot}</div>`;
     return;
   }
@@ -239,7 +239,7 @@ function menu() {
   const body = portTab === 'contratos'
     ? `<div class="contracts">${list.map(ct => { const locked = ct.stars > stars; return `<button data-contract="${ct.id}" ${locked ? 'disabled' : ''}>
         <span class="stars">${'★'.repeat(ct.stars)}${'☆'.repeat(5 - ct.stars)}${locked ? ` · exige reputação ${repFor(ct.stars)}` : ''}</span><b>${ct.title}</b><span class="pay">${brl(ct.freight)}</span>
-        <small>${ct.cargo} · calado ${(SHIPS[c.ship].Tmin + (SHIPS[c.ship].Tmax - SHIPS[c.ship].Tmin) * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min${ct.berth === 'ilha' ? ' · <b class="sky">TERMINAL DA ILHA</b>' : ''}${ct.headOut ? ' · <b class="sky">GIRO NA BACIA</b>' : ''}${ct.sky && ct.sky !== 'dia' ? ` · <b class="sky">${SKY[ct.sky].label.toUpperCase()} +${Math.round((SKY[ct.sky].bonus - 1) * 100)}%</b>` : ''}<br>${ct.note}${ct.sky && ct.sky !== 'dia' ? ' ' + SKY[ct.sky].hint : ''}</small></button>`; }).join('')}</div>
+        <small>${ct.cargo} · calado ${(SHIPS[c.ship].Tmin + (SHIPS[c.ship].Tmax - SHIPS[c.ship].Tmin) * ct.load).toFixed(1).replace('.', ',')} m · maré: ${TIDE_PRESETS[ct.tide].label.toLowerCase()} · prazo ${ct.parMin} min${ct.blind ? ` · <b class="sky" style="color:#ff9a8a">À MODA ANTIGA +${Math.round((BLIND_BONUS - 1) * 100)}%</b>` : ''}${ct.berth === 'ilha' ? ' · <b class="sky">TERMINAL DA ILHA</b>' : ''}${ct.headOut ? ' · <b class="sky">GIRO NA BACIA</b>' : ''}${ct.sky && ct.sky !== 'dia' ? ` · <b class="sky">${SKY[ct.sky].label.toUpperCase()} +${Math.round((SKY[ct.sky].bonus - 1) * 100)}%</b>` : ''}<br>${ct.note}${ct.sky && ct.sky !== 'dia' ? ' ' + SKY[ct.sky].hint : ''}${ct.blind ? ' Instrumentos eletrônicos apagados: só agulha, odômetro, ecobatímetro e o plano de bordo.' : ''}</small></button>`; }).join('')}</div>
        <p class="dim">As ofertas mudam a cada viagem. Entregar bem aumenta a reputação, que libera contratos com mais estrelas e navios maiores.</p>`
     : portTab === 'estaleiro' ? yard : shopRows(portTab === 'oficina' ? 'part' : 'crew');
   overlay.innerHTML = `<div class="card wide">${head}

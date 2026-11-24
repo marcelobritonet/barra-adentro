@@ -8,7 +8,8 @@ describe('carreira', () => {
     const a = makeCoaster(1), b = makeCoaster(1); applyCareer(b, newCareer());
     expect(b.nUp).toBe(a.nUp); expect(b.rudderRate).toBeCloseTo(a.rudderRate); expect(b.ackDelay).toBe(6); expect(b.helmDelay).toBe(2);
     expect(b.thrusterMax).toBe(0);
-    expect(Object.values(equipOf(newCareer())).some(Boolean)).toBe(false);
+    // de série: GPS, indicador de guinada e doppler; radar, ECDIS e impelidor se compram
+    expect(equipOf(newCareer())).toEqual({ gps: true, rot: true, doppler: true, radar: false, ecdis: false, thruster: false });
   });
   it('comprar exige dinheiro, desconta o preço e sobe um nível por vez', () => {
     const c = newCareer();
@@ -94,5 +95,19 @@ describe('carreira', () => {
     for (let v = 0; v < 40; v++) { c.voyages = v; for (const o of offers(c)) { if (o.sky === 'noite') night++; if (o.sky === 'nevoeiro') fog++; if (o.stars < 3 && o.sky !== 'dia' && o.sky !== undefined) low++; } }
     expect(night).toBeGreaterThan(5); expect(fog).toBeGreaterThan(3); expect(low).toBe(0);
     const k = new Game(); k.contract = { ...offers(c)[2], sky: 'nevoeiro' }; k.start('entrada'); expect(k.sky).toBe('nevoeiro');
+  });
+
+  it('contrato à moda antiga apaga os instrumentos só naquela viagem e paga mais', () => {
+    const g = new Game(); g.career.parts.radar = 1; g.career.parts.ecdis = 1; g.career.parts.thruster = 1;
+    const base = offers(g.career).find(c => c.id === 'cheia')!;
+    g.contract = { ...base, blind: true }; g.start('entrada');
+    expect(g.blind).toBe(true);
+    expect(g.equip).toEqual({ gps: false, rot: false, radar: false, ecdis: false, doppler: false, thruster: true });
+    expect(g.msgs.some(m => m.text.includes('Pane no quadro'))).toBe(true);
+    g.contract = { ...base, blind: false }; g.start('entrada');
+    expect(g.equip.radar).toBe(true); expect(g.equip.gps).toBe(true);
+    const c = newCareer(); c.rep = 100; let blind = 0, low = 0;
+    for (let v = 0; v < 60; v++) { c.voyages = v; for (const o of offers(c)) { if (o.blind) { blind++; if (o.stars < 5) low++; } } }
+    expect(blind).toBeGreaterThan(5); expect(low).toBe(0);   // só aparece como desafio de cinco estrelas
   });
 });

@@ -280,7 +280,9 @@ Ideias ainda não feitas:
 
 ## Progressão
 
-Estado na v0.9.0: há carreira com caixa, contratos, oficina e tripulação, e um modo livre sem dinheiro. Catálogo em `src/game/career.ts`.
+Catálogo em `src/game/career.ts`. Há carreira com caixa, contratos, oficina e tripulação, e um modo livre sem dinheiro.
+
+Princípio (decidido no teste da v0.17.1): **o começo tem de ser o mais fácil**. Neste jogo equipamento é informação e controle, então começar sem nada deixava o primeiro navio mais difícil que o último. Desde a v0.18.0 o navio de partida já vem com GPS, indicador de guinada e doppler; a dificuldade vem do contrato e do navio. O navio sem instrumentos virou o desafio "à moda antiga": contrato de cinco estrelas, +40% de frete.
 
 | Contrato | Estrelas | Carga e calado | Maré | Frete | Prazo |
 |---|---|---|---|---|---|

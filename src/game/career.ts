@@ -29,15 +29,15 @@ export const PARTS: Record<PartId, { label: string; group: 'Máquina e governo' 
   ] },
   gps: { label: 'GPS', group: 'Instrumentos', levels: [
     { name: 'Não tem', price: 0, effect: 'Posição só por marcação visual' },
-    { name: 'Receptor GPS', price: 4000, effect: 'Velocidade e rumo no fundo; posição na carta' },
+    { name: 'Receptor GPS (de série)', price: 4000, effect: 'Velocidade e rumo no fundo; posição na carta' },
   ] },
   rot: { label: 'Indicador de guinada', group: 'Instrumentos', levels: [
     { name: 'Não tem', price: 0, effect: 'Guinada só pela agulha' },
-    { name: 'Indicador de taxa de guinada', price: 3000, effect: 'Mostra a guinada em graus por minuto' },
+    { name: 'Indicador de taxa de guinada (de série)', price: 3000, effect: 'Mostra a guinada em graus por minuto' },
   ] },
   doppler: { label: 'Doppler de atracação', group: 'Instrumentos', levels: [
     { name: 'Não tem', price: 0, effect: 'Distância e velocidade ao cais só pelo rádio da proa' },
-    { name: 'Doppler de dois eixos', price: 9000, effect: 'Velocidade lateral da proa e da popa' },
+    { name: 'Doppler de dois eixos (de série)', price: 9000, effect: 'Velocidade lateral da proa e da popa' },
   ] },
   radar: { label: 'Radar', group: 'Instrumentos', levels: [
     { name: 'Não tem', price: 0, effect: 'Tráfego só à vista' },
@@ -72,6 +72,7 @@ export interface Contract {
   tide: TidePreset; freight: number; parMin: number; stars: number; note: string;
   sky?: Sky;
   berth?: string;         // berço de destino; sem isso, o Cais de Santos
+  blind?: boolean;        // "à moda antiga": instrumentos eletrônicos apagados nesta viagem
   headOut?: boolean;      // atracar aproado ao mar: passa do berço, gira na bacia e volta
 }
 export type Sky = 'dia' | 'noite' | 'nevoeiro';
@@ -92,18 +93,21 @@ export const CONTRACTS: Contract[] = [
   { id: 'urgente', title: 'Carga urgente na enchente', cargo: '2.900 t de peças', scenario: 'entrada', load: 1, tide: 'enchente', freight: 48000, parMin: 70, stars: 5, note: 'Corrente a favor no berço. Sem rebocadores, é para poucos.' },
 ];
 
-export interface Career { money: number; voyages: number; ship: ShipClass; rep: number; parts: Record<PartId, number>; crew: Record<CrewId, number> }
+export interface Career { v: number; money: number; voyages: number; ship: ShipClass; rep: number; parts: Record<PartId, number>; crew: Record<CrewId, number> }
 const KEY = 'barra-adentro.carreira';
 export const newCareer = (): Career => ({
-  money: 8000, voyages: 0, ship: 'coaster', rep: 0,
-  parts: { engine: 0, rudder: 0, air: 0, thruster: 0, gps: 0, rot: 0, doppler: 0, radar: 0, ecdis: 0 },
+  // o navio de partida já vem com o básico para navegar: o difícil tem de ser o navio e a manobra, não a falta de instrumento
+  v: 2, money: 8000, voyages: 0, ship: 'coaster', rep: 0,
+  parts: { engine: 0, rudder: 0, air: 0, thruster: 0, gps: 1, rot: 1, doppler: 1, radar: 0, ecdis: 0 },
   crew: { helm: 0, engineer: 0, mate: 0 },
 });
 export function loadCareer(): Career {
   const c = newCareer();
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null');
-    if (raw) { c.money = +raw.money || 0; c.voyages = +raw.voyages || 0; c.rep = +raw.rep || 0; if (raw.ship in SHIPS) c.ship = raw.ship; Object.assign(c.parts, raw.parts); Object.assign(c.crew, raw.crew); }
+    if (raw) { c.money = +raw.money || 0; c.voyages = +raw.voyages || 0; c.rep = +raw.rep || 0; if (raw.ship in SHIPS) c.ship = raw.ship; Object.assign(c.parts, raw.parts); Object.assign(c.crew, raw.crew);
+      // carreiras antigas começavam sem nada: ganham os instrumentos de série
+      if (!(raw.v >= 2)) { c.parts.gps = Math.max(1, c.parts.gps); c.parts.rot = Math.max(1, c.parts.rot); c.parts.doppler = Math.max(1, c.parts.doppler); } }
   } catch { /* sem armazenamento */ }
   return c;
 }
@@ -156,6 +160,8 @@ const RESALE = 0.6;
 export const maxStars = (c: Career) => Math.min(5, 2 + Math.floor(c.rep / 10));
 export const repFor = (stars: number) => Math.max(0, (stars - 2) * 10);
 
+/** "À moda antiga": GPS, guinada, doppler, radar e ECDIS apagados. Paga 40% a mais. */
+export const BLIND_BONUS = 1.4;
 const CARGOES = ['fertilizante', 'açúcar', 'trigo', 'sal', 'soja', 'bobinas de aço', 'celulose'];
 const LIQUIDS = ['etanol', 'óleo vegetal', 'suco de laranja', 'gasolina'];
 /** Contratos oferecidos neste porto: mudam de carga e de frete a cada viagem, e dependem do navio. */
@@ -169,10 +175,12 @@ export function offers(c: Career): Contract[] {
     const tons = Math.round(t.load * ship.capacity / 100) * 100;
     // contratos de três estrelas ou mais podem cair à noite ou com nevoeiro, pagando mais
     const roll = rnd(), sky: Sky = t.stars >= 4 && roll < 0.3 ? 'nevoeiro' : t.stars >= 3 && roll < 0.6 ? 'noite' : 'dia';
+    // desafio de fim de jogo: a mesma viagem com os instrumentos apagados, pagando bem mais
+    const blind = t.stars >= 4 && rnd() < 0.25;
     return {
-      ...t, sky, cargo: `${tons.toLocaleString('pt-BR')} t de ${name}`,
+      ...t, sky, blind, stars: Math.min(5, t.stars + (blind ? 1 : 0)), cargo: `${tons.toLocaleString('pt-BR')} t de ${name}`,
       title: t.title.replace(/^(Fertilizante|Açúcar|Trigo|Granel líquido)/, name[0].toUpperCase() + name.slice(1)),
-      freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing * SKY[sky].bonus / 100) * 100,
+      freight: Math.round(t.freight * FREIGHT_FACTOR[c.ship] * swing * SKY[sky].bonus * (blind ? BLIND_BONUS : 1) / 100) * 100,
       parMin: t.parMin + (c.ship === 'handy' ? 15 : 0) + (sky === 'nevoeiro' ? 10 : 0),
     };
   });
