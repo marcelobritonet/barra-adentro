@@ -2,6 +2,14 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.24.1 — Celular: Carta e Tela não travam mais
+
+Defeito achado em teste no aparelho: "cliquei em carta e em tela e travou".
+
+- "Tela" trocava para a tela de mesa mesmo num aparelho pequeno: o painel cobria tudo, o botão sumia e a escolha ficava guardada, então recarregar não resolvia. Agora, em janela pequena, a tela é sempre a de celular e o botão "Tela" nem aparece; uma escolha "mesa" guardada antes é ignorada.
+- "Carta" abria a carta grande por cima do botão que a fecha. Agora um toque na carta a fecha (vale também na tela de mesa).
+- Em janela grande o botão "Tela" continua trocando entre celular e mesa.
+
 ## v0.24.0 — ECDIS 2× maior e três arrumações do painel
 
 Pedido do teste: "primeiro de tudo é o ECDIS ficar maior, talvez 2× maior" e "quero testar as possibilidades de os consoles terem outras posições na tela".

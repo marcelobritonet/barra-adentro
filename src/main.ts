@@ -195,6 +195,8 @@ function drawPlanBox() {
 }
 
 function syncSound() { const b = document.querySelector<HTMLElement>('[data-cam="sound"]'); if (b) { b.textContent = sound.on ? 'Som' : 'Mudo'; b.classList.toggle('on', sound.on); } }
+// a carta grande fecha com um toque nela: no celular ela cobre o botão que a abriu
+document.getElementById('bigchart')!.addEventListener('click', () => { panel.bigChart = false; });
 document.getElementById('camctl')!.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button'); if (!b) return;
   const c = b.dataset.cam;

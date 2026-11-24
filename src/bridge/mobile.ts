@@ -27,8 +27,9 @@ const deg3 = (rad: number) => String(Math.round(((rad / D2R) % 360 + 360) % 360)
 
 export class Mobile {
   active = false;
-  /** 'auto' segue o tamanho da janela; os outros dois são escolha de quem joga. */
-  pref: 'auto' | 'celular' | 'mesa' = 'auto';
+  /** 'auto' segue o tamanho da janela; 'celular' força a tela de celular numa janela grande.
+   *  Não existe forçar a tela de mesa numa janela pequena: o painel cobria tudo e não havia como voltar. */
+  pref: 'auto' | 'celular' = 'auto';
   private open = new Set<string>();
   private home = new Map<HTMLElement, { parent: Node; next: Node | null }>();
   private shell: HTMLElement; private sheets: HTMLElement; private bar: HTMLElement; private side: HTMLElement;
@@ -37,7 +38,7 @@ export class Mobile {
 
   constructor(private g: Game, private panel: Panel, private onChange: () => void) {
     const q = new URLSearchParams(location.search).get('tela');
-    try { const v = q ?? localStorage.getItem(KEY); if (v === 'celular' || v === 'mesa') this.pref = v; } catch { /* sem armazenamento */ }
+    try { const v = q ?? localStorage.getItem(KEY); if (v === 'celular') this.pref = v; } catch { /* sem armazenamento */ }
     this.shell = document.createElement('div'); this.shell.id = 'mshell';
     this.shell.innerHTML = `<div id="mside">${SIDE.map(([k, l, t]) => `<button data-sheet="${k}" ${t ? `data-optab="${t}"` : ''}>${l}</button>`).join('')}</div><div id="msheets"></div><div id="mbar"></div>`;
     document.body.appendChild(this.shell);
@@ -61,7 +62,8 @@ export class Mobile {
 
   /** Alterna entre a tela de celular e a de mesa, e guarda a escolha. */
   flip() {
-    this.pref = this.active ? 'mesa' : 'celular';
+    if (this.mq.matches) return;
+    this.pref = this.active ? 'auto' : 'celular';
     try { localStorage.setItem(KEY, this.pref); } catch { /* sem armazenamento */ }
     this.apply();
   }
@@ -73,7 +75,8 @@ export class Mobile {
   closeAll() { for (const k of [...this.open]) this.toggle(k, false); }
 
   apply() {
-    const want = this.pref === 'auto' ? this.mq.matches : this.pref === 'celular';
+    const want = this.mq.matches || this.pref === 'celular';
+    const flipBtn = document.querySelector<HTMLElement>('[data-cam="layout"]'); if (flipBtn) flipBtn.hidden = this.mq.matches;
     if (want === this.active) return;
     this.active = want;
     document.body.classList.toggle('mobile', want);

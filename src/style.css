@@ -304,3 +304,4 @@ body.desk-console:not(.mobile) #bridge { grid-area: 1 / 2 / 3 / 3; }
 #strip .inst { flex: 0 0 auto !important; margin: 0; }
 #strip .inst:has(#cRudder) { width: 222px; } #strip .inst:has(#stw) { width: 150px; } #strip .inst:has(#telegraph) { width: 128px; }
 body.mobile #strip, body.mobile #dock, body.mobile [data-cam="desk"] { display: none; }
+#bigchart { cursor: pointer; }
