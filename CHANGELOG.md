@@ -2,6 +2,13 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.24.2 — Celular sem a carta grande; versão na tela do porto
+
+Retorno do teste no aparelho, com print: a carta grande abria por cima dos botões e não fechava.
+
+- No celular o botão da carta grande saiu. A mesma carta abre na folha "Carta" (botão da esquerda), que tem ✕ para fechar. Se a carta grande estiver aberta por qualquer motivo, a tela de celular a fecha sozinha.
+- A tela do porto mostra a versão ao lado do título, para dar para conferir se o aparelho já pegou a atualização.
+
 ## v0.24.1 — Celular: Carta e Tela não travam mais
 
 Defeito achado em teste no aparelho: "cliquei em carta e em tela e travou".

@@ -103,6 +103,8 @@ export class Mobile {
 
   update() {
     if (!this.active) return;
+    // no celular não há carta grande: ela cobria os botões e a mesma carta já abre na folha "Carta"
+    if (this.panel.bigChart) this.panel.bigChart = false;
     const g = this.g, s = g.s, run = g.status !== 'menu';
     // plano, ajuda e telas do porto ocupam a tela toda: a barra e os botões saem da frente
     const covered = ['plan', 'help'].some(id => !document.getElementById(id)!.hidden) || !document.getElementById('overlay')!.hidden;

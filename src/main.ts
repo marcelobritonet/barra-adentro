@@ -1,3 +1,6 @@
+declare const __VERSAO__: string;
+// o servidor de desenvolvimento pode estar no ar desde antes de a versão existir na configuração
+const VERSAO = typeof __VERSAO__ !== 'undefined' ? 'v' + __VERSAO__ : 'dev';
 import { Mobile } from './bridge/mobile';
 import { Desk, DESKS } from './bridge/desk';
 import { Sound } from './audio/sound';
@@ -237,7 +240,7 @@ function shopRows(kind: 'part' | 'crew') {
 function menu() {
   overlay.hidden = false;
   const c = game.career;
-  const head = `<h1>BARRA ADENTRO</h1>
+  const head = `<h1>BARRA ADENTRO <small class="ver">${VERSAO}</small></h1>
     <div class="modes"><button data-mode="career" class="${game.free ? '' : 'on'}">Carreira</button><button data-mode="free" class="${game.free ? 'on' : ''}">Modo livre</button>
       <span class="dim">${game.free ? 'Sem dinheiro: escolha cenário, maré e equipamentos à vontade.' : 'O navio já sai com o básico. A dificuldade vem do contrato e do navio; o dinheiro compra navios maiores e máquina melhor.'}</span></div>`;
   const foot = `<p class="dim">Confiança da tripulação: <b>${sign(game.trust)}</b> (−100 a +100) <button data-reset="1">Zerar</button> · Ajuda no jogo: <kbd>H</kbd> · A carta é estilizada e não serve para navegação.</p>`;
