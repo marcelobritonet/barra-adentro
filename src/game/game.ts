@@ -8,6 +8,7 @@ import { Pilot, PilotGrade, PILOTS } from './pilot';
 import { makeTugs, TugMode } from './tugs';
 import { bearingText, berthBusy, berthShip, DEPART_ON_REQUEST, DREDGE_KN, hullDistance, interaction, makeTraffic, Other, slowAhead, swingRadius, updateTraffic, YIELD_TIME } from './traffic';
 import { Tide, tideAt, TidePreset, tideText } from '../world/tide';
+import { makePlan, Plan } from './plan';
 import { applyCareer, bestHired, Career, Contract, CREW, equipOf, mateLead, newCareer, reputation, salaries, saveCareer, Sky, wearFactor } from './career';
 
 export type Scenario = 'entrada' | 'fundeio' | 'contrabordo';
@@ -52,6 +53,18 @@ export class Game {
   equip = { gps: false, rot: false, radar: false, ecdis: false, doppler: false, thruster: false };
   shackles = 4;
   msgs: Msg[] = [];
+  /** Plano de viagem desta manobra; calculado na primeira vez que alguém pede. */
+  private planCache: Plan | null = null;
+  get plan(): Plan { return this.planCache ??= makePlan(this); }
+  get hasPlan() { return !!this.planCache; }
+  private planRefs = new Set<number>();
+  /** Perna do plano em que o navio está (só na entrada, que segue o canal). */
+  get planStep() {
+    const st = this.plan.steps; if (this.scenario !== 'entrada') return 0;
+    const s = W.nearest(this.s.x, this.s.y).s; let i = 0;
+    for (let k = 0; k < st.length; k++) if (st[k].s <= s + 1) i = k;
+    return i;
+  }
   /** Acontecimentos para o som: 'horn', 'horn5', 'thud', 'splash', 'tug', 'lines'. */
   events: string[] = [];
   private emit(e: string) { if (this.events.length < 40) this.events.push(e); }
@@ -141,7 +154,7 @@ export class Game {
     }
     this.pilot = new Pilot(); this.vts = sc === 'entrada' ? 'none' : 'ok'; this.vtsTimer = 0;
     this.mooring = 0; this.holdTime = 0; this.anchorPhase = 'stowed'; this.berthSig = ''; this.berthAt = -99; this.said.clear(); this.lastContact = -99;
-    this.status = 'running';
+    this.status = 'running'; this.planCache = null; this.planRefs.clear();
     this.s.air = this.p.airStarts;
     this.trustStart = this.trust; this.trustNote = ''; this.trustNoteAt = -99; this.telTimes = [];
     this.baseAck = this.p.ackDelay; this.baseHelm = this.p.helmDelay;
@@ -376,6 +389,17 @@ export class Game {
       }
       if (o.kind === 'outbound' && !o.warned && dmin < 700 && W.nearest(s.x, s.y).side > 0 && W.nearest(s.x, s.y).d > 5) {
         o.warned = true; this.emit('horn5'); this.say(`N/M ${o.name}`, 'Maré Mansa, o senhor está no meu lado do canal. Guine para boreste! (cinco apitos curtos)', 'bad');
+      }
+    }
+    // a proa canta a boia que marca cada guinada do plano
+    if (this.planCache && this.scenario === 'entrada') {
+      for (const st of this.planCache.steps) {
+        const t = st.turn; if (!t || t.buoy < 0 || this.planRefs.has(t.buoy)) continue;
+        const b = W.BUOYS[t.buoy], dx = b.x - s.x, dy = b.y - s.y, sn = Math.sin(s.psi), cs = Math.cos(s.psi), ahead = dx * sn + dy * cs, side = dx * cs - dy * sn;
+        if (Math.abs(ahead) < 25 && Math.abs(side) < 400 && Math.abs(side) < this.visibility) {
+          this.planRefs.add(t.buoy);
+          this.say('Proa', `Boia ${b.id} pelo través de ${side > 0 ? 'boreste' : 'bombordo'}: é a marca da guinada para ${String(Math.round(t.to)).padStart(3, '0')}°.`, 'warn');
+        }
       }
     }
     const dr = slowAhead(this);

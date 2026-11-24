@@ -2,6 +2,21 @@
 
 Cada entrega vira uma tag `vX.Y.Z` com as notas abaixo.
 
+## v0.17.0 — Plano de viagem e vista que se arrasta
+
+Pedido em teste: "está difícil fazer as coisas no olho; fica tudo tentativa e erro".
+
+- Plano de bordo antes de zarpar: uma tabela por perna com rumo a governar, distância, máquina, velocidade prevista no fundo e tempo, e a derrota desenhada na carta. O tempo só começa a correr quando você zarpa.
+- Ponto de guinada calculado para cada curva: onde começar (amarrado a uma boia que se enxerga), quanto leme, e a quantos graus do rumo novo quebrar com leme contrário. Sai de simular o seu navio, com a carga, a máquina e o leme que ele tem; por isso muda com o graneleiro e com as peças da oficina.
+- Parada calculada do mesmo jeito: a que distância do berço parar a máquina e quando dar ré.
+- Durante a manobra, um quadro mostra a perna atual, o rumo e a máquina do plano e a próxima ação. Na guinada ele mostra o rumo em que quebrar. Com GPS ou ECDIS, mostra quantos metros e minutos faltam.
+- A proa canta a boia de referência de cada guinada quando ela passa pelo través.
+- A derrota e os pontos de guinada aparecem na carta e no ECDIS.
+- Há plano também para fundeio, contrabordo, Terminal da Ilha e giro na bacia.
+- Arrastar a vista com o mouse para olhar adiante; o botão Centrar, a tecla V ou um duplo clique voltam ao navio.
+- Tecla O e botão Plano reabrem o plano durante a viagem.
+- 4 testes novos, incluindo um que segue o plano à risca e confere que o navio termina sobre o rumo novo, a menos de 30 m do eixo.
+
 ## v0.16.0 — Giro na bacia de evolução
 
 - Nova manobra: atracar aproado ao mar. Você entra com a enchente a favor, passa do Cais de Santos, para na bacia de evolução, gira o navio e volta para atracar por boreste, de proa para a corrente.

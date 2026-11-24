@@ -3,7 +3,7 @@ import { Panel } from './bridge/panel';
 import { Game, Scenario } from './game/game';
 import { makeWaterCanvas, View } from './render/view';
 import { D2R } from './sim/ship';
-import { KN } from './sim/ship';
+import { KN, TELEGRAPH_LABELS } from './sim/ship';
 import * as W from './world/santos';
 import { buildGrid } from './world/santos';
 import { TIDE_PRESETS, TidePreset } from './world/tide';
@@ -93,7 +93,9 @@ help.innerHTML = `<h2>AJUDA</h2><p>Clique ou aperte <kbd>H</kbd> para fechar.</p
     <tr><td><kbd>M</kbd></td><td>Passar espias</td></tr>
     <tr><td><kbd>1</kbd>–<kbd>4</kbd>, <kbd>P</kbd></td><td>Tempo 1×, 2×, 4×, 8× / pausa</td></tr>
     <tr><td><kbd>Q</kbd> <kbd>E</kbd>, <kbd>Z</kbd> <kbd>X</kbd></td><td>Girar a vista / zoom</td></tr>
+    <tr><td>Arrastar, <kbd>V</kbd></td><td>Arrastar a vista com o mouse para olhar adiante / voltar a centrar no navio</td></tr>
     <tr><td><kbd>C</kbd>, <kbd>T</kbd></td><td>Carta grande / vista superior de teste</td></tr>
+    <tr><td><kbd>O</kbd></td><td>Plano de viagem: rumos, velocidades e pontos de guinada</td></tr>
     <tr><td><kbd>B</kbd>, <kbd>N</kbd></td><td>Apito do navio / ligar e desligar o som</td></tr>
   </table></div>
   <div><h3>O que lembrar</h3><table>
@@ -107,12 +109,70 @@ help.innerHTML = `<h2>AJUDA</h2><p>Clique ou aperte <kbd>H</kbd> para fechar.</p
     <tr><td>Confiança</td><td>Erros e sustos derrubam; manobras limpas levantam. Ela muda a rapidez das ordens e os avisos.</td></tr>
   </table></div></div>`;
 help.addEventListener('click', () => { help.hidden = true; });
+// ---------------------------------------------------------------- plano de viagem
+const planEl = document.getElementById('plan')!, planBox = document.getElementById('planbox')!;
+const c3 = (c: number) => String(Math.round((c + 360) % 360) % 360).padStart(3, '0') + '°';
+const dec = (v: number, d = 1) => v.toFixed(d).replace('.', ',');
+/** Abre o plano de bordo. No começo da viagem o jogo fica parado até zarpar. */
+function showPlan(briefing: boolean) {
+  const pl = game.plan;
+  const rows = pl.steps.map((st, i) => `<tr class="${st.turn ? 'turn' : ''}"><td class="n">${i + 1}</td><td>${st.title}</td>
+    <td class="num">${st.course !== undefined ? c3(st.course) : ''}</td><td class="num">${st.dist !== undefined ? Math.round(st.dist / 10) * 10 + ' m' : ''}</td>
+    <td>${st.tel !== undefined ? TELEGRAPH_LABELS[st.tel].toLowerCase() : ''}</td><td class="num">${st.sog !== undefined ? dec(st.sog / KN) + ' nós' : ''}</td>
+    <td class="num">${st.min !== undefined ? Math.round(st.min) + ' min' : ''}</td><td class="act">${st.action}</td></tr>`).join('');
+  const total = pl.steps.reduce((a, st) => a + (st.min ?? 0), 0);
+  planEl.innerHTML = `<canvas width="360" height="588"></canvas><div class="body">
+    <h2>${pl.title}</h2>
+    <table><tr><th>Nº</th><th>Perna</th><th>Rumo</th><th>Dist.</th><th>Máquina</th><th>No fundo</th><th>Tempo</th><th>Ao fim da perna</th></tr>${rows}</table>
+    ${total ? `<p>Tempo previsto até o berço: <b>${Math.round(total)} min</b>, sem contar a atracação. Na carta: a derrota a lápis e, em vermelho, onde começa cada guinada.</p>` : ''}
+    <ul>${pl.notes.map(n => `<li>${n}</li>`).join('')}</ul>
+    <div class="btns">${briefing ? '<button data-plan="go" class="on">⚓ Zarpar</button><button data-plan="back">Voltar ao porto</button>' : '<button data-plan="close" class="on">Fechar (O)</button>'}</div>
+  </div>`;
+  panel.drawChart(planEl.querySelector('canvas')!.getContext('2d')!, 360, 588);
+  planEl.hidden = false;
+}
+planEl.addEventListener('click', e => {
+  const b = (e.target as HTMLElement).closest('button'); if (!b) return;
+  if (b.dataset.plan === 'back') { planEl.hidden = true; game.status = 'menu'; game.paused = false; return menu(); }
+  planEl.hidden = true; game.paused = false;
+});
+let planHtml = '';
+/** Quadro com a perna atual do plano e a próxima ação. */
+function drawPlanBox() {
+  if (game.status !== 'running' || !game.hasPlan) { planBox.hidden = true; return; }
+  const pl = game.plan, s = game.s, i = game.planStep, st = pl.steps[i], hasPos = game.equip.gps || game.equip.ecdis;
+  let html: string;
+  if (game.scenario !== 'entrada') {
+    html = `<b>Plano</b>` + pl.steps.map((x, k) => `<div>${k + 1}. ${x.action}</div>`).join('');
+  } else {
+    const n = W.nearest(s.x, s.y), t = st.turn, endS = st.s + (st.dist ?? 0);
+    let hdg = s.psi * 180 / Math.PI;
+    const left = (to: number) => Math.abs(((to - hdg + 540) % 360) - 180);
+    const turning = t && n.s >= t.s - 5 && left(t.to) > 2;
+    html = `<b>Plano · perna ${i + 1} de ${pl.steps.length} · ${st.title}</b>
+      <div class="steer">Governar ${c3(st.course!)} · ${TELEGRAPH_LABELS[st.tel!].toLowerCase()}</div>
+      <div>previsto ${dec(st.sog! / KN)} nós no fundo</div>`;
+    if (turning) html += `<div><span class="now">GUINANDO para ${c3(t!.to)}</span> quebrar com leme contrário aos ${c3(t!.to - Math.sign(t!.helm) * t!.counter)}${left(t!.to) <= t!.counter + 1 ? ' — <b style="display:inline;color:#ffcf6a">AGORA</b>' : ''}</div>`;
+    else html += `<div class="next">Depois: ${st.action}</div>`;
+    if (hasPos) {
+      const d = (t && !turning ? t.s : endS) - n.s;
+      if (d > 0) html += `<div class="gps">GPS: faltam ${Math.round(d / 10) * 10} m${game.sog > 0.3 ? ` (${dec(d / game.sog / 60)} min)` : ''} para ${t && !turning ? 'começar a guinada' : 'o fim da perna'}</div>`;
+    } else html += `<div class="dim">Sem GPS: vá pelas boias; a proa avisa a de referência.</div>`;
+    const toBerth = (W.QUAY.base ?? W.QUAY).s - n.s;
+    if (!game.headOut && toBerth > 0 && toBerth < pl.stopAt + 250) html += `<div class="next">Parada: máquina parada a ${Math.round(pl.stopAt / 10) * 10} m do berço${hasPos ? ` (faltam ${Math.round(toBerth / 10) * 10} m)` : ''}</div>`;
+  }
+  if (html !== planHtml) planBox.innerHTML = planHtml = html;
+  planBox.hidden = false;
+}
+
 function syncSound() { const b = document.querySelector<HTMLElement>('[data-cam="sound"]'); if (b) { b.textContent = sound.on ? 'Som' : 'Mudo'; b.classList.toggle('on', sound.on); } }
 document.getElementById('camctl')!.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button'); if (!b) return;
   const c = b.dataset.cam;
   if (c === 'rl') view.rotate(-1); if (c === 'rr') view.rotate(1); if (c === 'zi') view.zoom(-1); if (c === 'zo') view.zoom(1);
+  if (c === 'center') view.recenter();
   if (c === 'chart') panel.bigChart = !panel.bigChart; if (c === 'help') help.hidden = !help.hidden;
+  if (c === 'plan' && game.status === 'running') { if (planEl.hidden) showPlan(false); else planEl.hidden = true; }
   if (c === 'sound') { sound.toggle(); syncSound(); } if (c === 'horn') game.sound();
   b.blur();
 });
@@ -201,8 +261,10 @@ function showResult() {
   </div>`;
 }
 function launch(sc: Scenario) {
-  game.start(sc);
+  game.start(sc); view.recenter();
   panel.reset(); overlay.hidden = true; shown = false; help.hidden = true;
+  // antes de zarpar, o plano de bordo; o tempo só corre depois
+  game.paused = true; showPlan(true);
 }
 overlay.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button'); if (!b) return;
@@ -249,6 +311,8 @@ addEventListener('keydown', e => {
   else if (k === 't') view.top = !view.top;
   else if (k === 'c') panel.bigChart = !panel.bigChart;
   else if (k === 'h') help.hidden = !help.hidden;
+  else if (k === 'v' || k === 'home') view.recenter();
+  else if (k === 'o' && game.status === 'running') { if (planEl.hidden) showPlan(false); else { planEl.hidden = true; game.paused = false; } }
   else if (k === 'b') game.sound();
   else if (k === 'n') { sound.toggle(); syncSound(); }
   else if (k === 'j') game.setThruster(Math.round((s.thrusterOrder - 0.25) * 4) / 4);
@@ -257,6 +321,19 @@ addEventListener('keydown', e => {
   else return;
   e.preventDefault();
 });
+// arrastar a vista com o mouse para olhar adiante; V ou o botão Centrar volta ao navio
+{
+  const worldEl = document.getElementById('world')!, centerBtn = document.querySelector<HTMLElement>('[data-cam="center"]')!;
+  let dragging = false, lx = 0, ly = 0;
+  worldEl.addEventListener('pointerdown', e => {
+    if ((e.target as HTMLElement).tagName !== 'CANVAS' || (e.target as HTMLElement).id === 'bigchart') return;
+    dragging = true; lx = e.clientX; ly = e.clientY; worldEl.setPointerCapture(e.pointerId); worldEl.style.cursor = 'grabbing';
+  });
+  worldEl.addEventListener('pointermove', e => { if (!dragging) return; view.drag(e.clientX - lx, e.clientY - ly); lx = e.clientX; ly = e.clientY; centerBtn.hidden = !view.panned; });
+  const end = () => { dragging = false; worldEl.style.cursor = ''; centerBtn.hidden = !view.panned; };
+  worldEl.addEventListener('pointerup', end); worldEl.addEventListener('pointercancel', end);
+  worldEl.addEventListener('dblclick', e => { if ((e.target as HTMLElement).tagName === 'CANVAS') { view.recenter(); centerBtn.hidden = true; } });
+}
 document.getElementById('world')!.addEventListener('wheel', e => { view.zoom(e.deltaY > 0 ? 1 : -1); e.preventDefault(); }, { passive: false });
 
 // se o painel não couber na altura da janela, ele encolhe inteiro, sem rolagem
@@ -279,13 +356,15 @@ function frame(now: number) {
   panel.update(dt);
   north.style.transform = `rotate(${view.compassDeg}deg)`;
   if (game.status !== 'menu') drawMission();
+  drawPlanBox();
+  const cb = document.querySelector<HTMLElement>('[data-cam="center"]'); if (cb && cb.hidden === view.panned) cb.hidden = !view.panned;
   const flag = game.status === 'running' ? (game.paused ? 'PAUSA' : game.warp > 1 ? `TEMPO ${game.warp}×` : '') : '';
   warpflag.hidden = !flag; if (flag && warpflag.textContent !== flag) warpflag.textContent = flag;
   // nevoeiro: elipse de visibilidade em volta do navio, que fica sempre no centro da vista
   let css = '';
   if (game.sky === 'nevoeiro' && game.status !== 'menu') {
     const r = game.visibility / view.mpp * 3;
-    css = `radial-gradient(ellipse ${r.toFixed(0)}px ${(r * view.squash).toFixed(0)}px at center, rgba(196,206,212,0.18) 35%, rgba(196,206,212,0.97) 100%)`;
+    css = `radial-gradient(ellipse ${r.toFixed(0)}px ${(r * view.squash).toFixed(0)}px at ${(view.shipAt.x * 100).toFixed(1)}% ${(view.shipAt.y * 100).toFixed(1)}%, rgba(196,206,212,0.18) 35%, rgba(196,206,212,0.97) 100%)`;
   }
   if (css !== fogCss) fogEl.style.background = fogCss = css;
   const skyTxt = game.status === 'menu' || game.sky === 'dia' ? '' : game.sky === 'noite' ? 'NOITE' : `NEVOEIRO · limite ${game.limitKn} nós`;

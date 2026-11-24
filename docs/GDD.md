@@ -115,6 +115,24 @@ Estado do prático por maré, com comandante obediente (teste automático):
 | Enchente e baixa-mar | Leva o navio inteiro até perto do berço e recusa atracar |
 | Qualquer maré, com os dois rebocadores | Atraca em cerca de 50 min, com resultado de uns R$ 9.000 (os rebocadores custam perto de R$ 7.500) |
 
+## Plano de viagem
+
+Nasceu do teste: sem plano, manobra antecipada vira tentativa e erro. Código em `src/game/plan.ts`.
+
+| Parte | Regra |
+|---|---|
+| Pernas | Do ponto de partida ao berço, cortadas nas curvas do canal (de 4° ou mais) e nas mudanças de máquina |
+| Por perna | Rumo, distância, máquina, velocidade no fundo (já com a corrente de agora) e tempo |
+| Ponto de guinada | Simula-se o navio desta viagem fazendo a curva com o leme do plano (10°, 15° ou 20° conforme o ângulo); daí sai quantos metros antes do vértice começar e a quantos graus quebrar |
+| Referência | Cada ponto é dito em relação à boia mais próxima: "com a boia 12 pelo través", "170 m antes da boia 17" |
+| Parada | Simulada: distância para cair a 1 nó só parando a máquina, mais a distância com devagar ré |
+| Sem GPS | O plano vale pelas boias; a proa avisa a de referência |
+| Com GPS ou ECDIS | O quadro mostra metros e minutos até a próxima ação |
+
+Números do costeiro carregado: a curva de 31° para o cais começa 250 m antes do vértice, com leme BB 15, quebrando aos 7°. O graneleiro começa uns 420 m antes.
+
+A fazer: desenhar ou editar a derrota à mão na carta, escolher a velocidade do plano, plano que se recalcula quando a maré vira.
+
 ## Céu: dia, noite e nevoeiro
 
 | Céu | O que muda | Frete |

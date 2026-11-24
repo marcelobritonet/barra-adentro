@@ -22,6 +22,20 @@ export class View {
   private water!: THREE.Mesh;
   private sky = '';
   get mpp() { return ZOOMS[this.zoomI]; }
+  /** Deslocamento da vista em relação ao navio, quando o jogador arrasta o mapa (metros no mundo). */
+  pan = new THREE.Vector3();
+  /** Onde o navio aparece na vista, em fração da largura e da altura (0,5 e 0,5 = centro). */
+  shipAt = { x: 0.5, y: 0.5 };
+  get panned() { return this.pan.lengthSq() > 25; }
+  recenter() { this.pan.set(0, 0, 0); }
+  /** Arrasta a vista: dx e dy em pixels de tela. */
+  drag(dx: number, dy: number) {
+    const c = this.cam, right = new THREE.Vector3().setFromMatrixColumn(c.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(c.matrixWorld, 1);
+    const fwd = new THREE.Vector3(up.x, 0, up.z), k = fwd.length() || 1; fwd.divideScalar(k);   // direção do chão que sobe na tela
+    const m = this.mpp / PX;
+    this.pan.addScaledVector(right, -dx * m).addScaledVector(fwd, dy * m / k);
+    const lim = 4000; this.pan.clampLength(0, lim);
+  }
   /** Achatamento vertical de um círculo no chão, visto pela câmera. */
   get squash() { return this.top ? 1 : Math.sin(ELEV); }
   private tugs: { mesh: THREE.Group; line: THREE.Line }[] = [];
@@ -164,7 +178,7 @@ export class View {
     const c = this.cam;
     c.left = -size.x * mpp / 2; c.right = size.x * mpp / 2; c.top = size.y * mpp / 2; c.bottom = -size.y * mpp / 2;
     c.updateProjectionMatrix();
-    const target = new THREE.Vector3(s.x, 0, -s.y);
+    const shipPos = new THREE.Vector3(s.x, 0, -s.y), target = shipPos.clone().add(this.pan);
     if (this.top) {
       c.up.set(0, 0, -1);
       c.position.set(target.x, 3000, target.z);
@@ -180,6 +194,8 @@ export class View {
     const up = new THREE.Vector3().setFromMatrixColumn(c.matrixWorld, 1);
     const ox = c.position.dot(right), oy = c.position.dot(up);
     c.position.addScaledVector(right, Math.round(ox / mpp) * mpp - ox).addScaledVector(up, Math.round(oy / mpp) * mpp - oy);
+    c.updateMatrixWorld();
+    const ndc = shipPos.project(c); this.shipAt.x = ndc.x * 0.5 + 0.5; this.shipAt.y = 0.5 - ndc.y * 0.5;
     this.renderer.render(this.scene, c);
   }
 }

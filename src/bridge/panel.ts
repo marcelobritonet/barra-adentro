@@ -430,6 +430,8 @@ export class Panel {
     if (alarm && Math.floor(performance.now() / 400) % 2) { c.font = 'bold 10px ui-monospace, monospace'; c.fillText('ALARME', Wd - 6, 44); }
   }
 
+  /** A carta, para quem precisar desenhá-la fora do painel (o plano de viagem). */
+  drawChart(c: CanvasRenderingContext2D, w: number, h: number) { this.chart(c, w, h, true); }
   private chart(c: CanvasRenderingContext2D, w: number, h: number, big: boolean) {
     const g = this.g, B = W.BOUNDS, sx = w / (B.x1 - B.x0), sy = h / (B.y1 - B.y0);
     const X = (x: number) => (x - B.x0) * sx, Y = (y: number) => (B.y1 - y) * sy;
@@ -467,6 +469,17 @@ export class Panel {
       c.fillText('Bacia de evolução', X(W.BASIN.x), Y(W.BASIN.y + W.BASIN.r + 60));
       c.fillStyle = '#3a2a1a'; c.font = '10px ui-monospace, monospace'; c.textAlign = 'left';
       c.fillText('Carta estilizada: NÃO USAR PARA NAVEGAÇÃO. Sondagens em metros.', 8, h - 8);
+    }
+    // a derrota do plano, a lápis, com os pontos de guinada
+    if (g.hasPlan && g.status !== 'menu') {
+      const pl = g.plan;
+      c.strokeStyle = '#5a3d1e'; c.lineWidth = big ? 2 : 1.2; c.beginPath();
+      pl.track.forEach(([x, y], i) => (i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y)))); c.stroke();
+      pl.steps.forEach((st, i) => {
+        if (!st.turn) return;
+        c.fillStyle = '#b3261e'; c.beginPath(); c.arc(X(st.turn.x), Y(st.turn.y), big ? 5 : 2.5, 0, TAU); c.fill();
+        if (big) { c.font = 'bold 11px ui-monospace, monospace'; c.textAlign = 'left'; c.fillText(String(i + 1), X(st.turn.x) + 8, Y(st.turn.y) + 4); }
+      });
     }
     if (g.equip.gps || g.equip.ecdis) {
       const s = g.s;
